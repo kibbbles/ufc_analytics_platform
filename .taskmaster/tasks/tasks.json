@@ -1,0 +1,215 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Database Schema Setup",
+        "description": "Design and implement the PostgreSQL database schema with core entities (Fighter, Fight, FightStats, Event) as specified in the PRD.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "details": "Create a Supabase PostgreSQL database with the following tables:\n\n1. fighters table with columns:\n   - id (SERIAL, primary key)\n   - name (varchar)\n   - height_cm (float)\n   - weight_lbs (float)\n   - reach_inches (float)\n   - stance (varchar)\n   - birth_date (date)\n   - wins (integer)\n   - losses (integer)\n   - draws (integer)\n   - no_contests (integer)\n\n2. events table with columns:\n   - id (SERIAL, primary key)\n   - name (varchar)\n   - date (timestamp)\n   - city (varchar)\n   - country (varchar)\n   - venue (varchar)\n\n3. fights table with columns:\n   - id (SERIAL, primary key)\n   - event_id (integer, foreign key)\n   - fighter_a_id (integer, foreign key)\n   - fighter_b_id (integer, foreign key)\n   - winner_id (integer, foreign key, nullable)\n   - method (varchar)\n   - round (integer)\n   - time (time)\n   - weight_class (varchar)\n   - is_title_fight (boolean)\n\n4. fight_stats table with columns:\n   - id (SERIAL, primary key)\n   - fight_id (integer, foreign key)\n   - fighter_id (integer, foreign key)\n   - total_strikes (integer)\n   - total_takedowns (integer)\n   - total_control_time (interval)\n\n5. round_stats table with columns:\n   - id (SERIAL, primary key)\n   - fight_stats_id (integer, foreign key)\n   - round_number (integer)\n   - strikes_landed (integer)\n   - strikes_attempted (integer)\n   - takedowns (integer)\n   - control_time (interval)\n\nImplement using SQLAlchemy 2.0 ORM with appropriate relationships and indexes. Create Alembic migrations for version control of the schema.",
+        "testStrategy": "1. Write unit tests for SQLAlchemy models to verify relationships and constraints\n2. Create test fixtures with sample data\n3. Test database migrations (up and down)\n4. Verify foreign key constraints and cascading deletes\n5. Benchmark query performance with test data\n6. Validate SERIAL primary key generation and constraints",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Data Scraping Pipeline",
+        "description": "Enhance the existing Greko scraper to extract UFC fight data from UFCStats.com, including fighter profiles, event information, fight results, and round-by-round statistics.",
+        "status": "pending",
+        "dependencies": [
+          1
+        ],
+        "priority": "high",
+        "details": "Extend and improve the existing Greko scraper API to efficiently collect UFC data:\n\n1. Enhance Greko scraper modules for:\n   - Fighter profiles (physical attributes, record)\n   - Event listings (date, location, card details)\n   - Fight results (winners, methods, times)\n   - Round-by-round statistics\n\n2. Improve rate limiting and retry logic in Greko to avoid IP bans:\n   - Random delays between requests (1-3 seconds)\n   - Exponential backoff for failed requests\n   - Rotate user agents\n\n3. Extend Greko's data transformation functions to normalize scraped data:\n   - Convert height from ft/in to cm\n   - Standardize weight class names\n   - Parse time strings to proper time objects\n\n4. Integrate data validation using Great Expectations:\n   - Validate data types and ranges\n   - Check for missing required fields\n   - Verify referential integrity\n\n5. Add incremental scraping logic to Greko:\n   - Track last scraped date\n   - Only fetch new or updated content\n\n6. Create a scheduler using Airflow to run daily updates with the enhanced Greko scraper\n\nStore raw scraped data in JSON format before processing to allow for reprocessing if needed.",
+        "testStrategy": "1. Create mock responses from UFCStats.com for testing Greko enhancements\n2. Verify enhanced Greko parser accuracy with known sample pages\n3. Test improved rate limiting and retry logic\n4. Validate extended data transformation functions\n5. Test incremental scraping with modified content\n6. Verify error handling with malformed HTML\n7. End-to-end test with a small subset of real pages\n8. Compare results between original Greko scraper and enhanced version",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Analyze existing Greko scraper capabilities",
+            "description": "Review the current Greko scraper codebase to identify strengths, limitations, and areas for enhancement",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Extend Greko scraper modules for UFC data",
+            "description": "Enhance existing Greko modules or create new ones to handle fighter profiles, event listings, fight results, and round statistics",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Improve rate limiting and request handling",
+            "description": "Enhance Greko's request handling with better rate limiting, backoff strategies, and user agent rotation",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Extend data normalization capabilities",
+            "description": "Add or improve data transformation functions in Greko for UFC-specific data normalization",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement data validation with Great Expectations",
+            "description": "Integrate Great Expectations with Greko's output to ensure data quality and consistency",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Add incremental scraping functionality",
+            "description": "Enhance Greko to support tracking of last scraped date and selective updates",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Create Airflow DAG for scheduling",
+            "description": "Develop an Airflow DAG to schedule regular runs of the enhanced Greko scraper",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Implement raw data storage",
+            "description": "Set up storage for raw JSON data from Greko before processing",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "ETL Pipeline for Historical Data",
+        "description": "Develop an ETL pipeline to process scraped UFC data, transform it according to the database schema, and load it into PostgreSQL with proper validation and error handling.",
+        "details": "Create a comprehensive ETL pipeline using pandas and SQLAlchemy:\n\n1. Extract phase:\n   - Load raw JSON data from scraper output\n   - Implement parallel processing for large datasets\n   - Handle file locking for concurrent access\n\n2. Transform phase:\n   - Clean and normalize fighter names\n   - Calculate derived statistics (win percentages, etc.)\n   - Handle missing data with appropriate strategies\n   - Generate UUIDs for new entities\n   - Resolve entity relationships\n\n3. Load phase:\n   - Implement bulk inserts for performance\n   - Use upsert patterns for incremental updates\n   - Maintain referential integrity\n   - Transaction management for atomicity\n\n4. Validation:\n   - Implement Great Expectations data quality checks\n   - Log validation failures\n   - Create reports of data quality issues\n\n5. Orchestration:\n   - Set up Apache Airflow DAGs for scheduled runs\n   - Implement dependency management between tasks\n   - Create monitoring and alerting\n\nDesign the pipeline to be idempotent, allowing for safe reruns without data duplication.",
+        "testStrategy": "1. Unit test each transform function\n2. Integration test the full pipeline with sample data\n3. Test error handling with malformed input data\n4. Verify idempotency with repeated runs\n5. Test recovery from partial failures\n6. Benchmark performance with large datasets\n7. Validate data integrity after loading",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "FastAPI Backend Setup",
+        "description": "Initialize the FastAPI project structure with middleware, error handling, logging, and basic health check endpoints following the technical architecture specified in the PRD.",
+        "details": "Set up a FastAPI 0.104.1 application with the following components:\n\n1. Project structure:\n   ```\n   app/\n     ├── api/\n     │   ├── v1/\n     │   │   ├── endpoints/\n     │   │   │   ├── predictions.py\n     │   │   │   ├── analytics.py\n     │   │   │   ├── fighters.py\n     │   │   │   └── fights.py\n     │   │   └── router.py\n     │   └── dependencies.py\n     ├── core/\n     │   ├── config.py\n     │   ├── security.py\n     │   └── logging.py\n     ├── db/\n     │   ├── session.py\n     │   └── models/\n     ├── ml/\n     │   ├── models/\n     │   └── prediction.py\n     ├── schemas/\n     └── main.py\n   ```\n\n2. Middleware configuration:\n   - CORS with appropriate origins\n   - Request ID generation\n   - Timing middleware\n   - Error handling middleware\n\n3. Database connection:\n   - SQLAlchemy async session setup\n   - Connection pooling\n   - Health check queries\n\n4. Redis integration:\n   - Connection pool setup\n   - Caching decorators\n   - Health check pings\n\n5. API documentation:\n   - OpenAPI schema customization\n   - Endpoint descriptions and examples\n   - Authentication documentation\n\n6. Health check endpoints:\n   - `/health` for basic API health\n   - `/health/db` for database connectivity\n   - `/health/redis` for cache connectivity\n\n7. Logging configuration:\n   - Structured JSON logging\n   - Log rotation\n   - Different log levels for environments\n\nImplement using Uvicorn for development and Gunicorn for production with appropriate worker configurations.",
+        "testStrategy": "1. Unit test middleware functions\n2. Test health check endpoints\n3. Verify CORS configuration\n4. Test error handling with forced exceptions\n5. Benchmark request processing time\n6. Validate OpenAPI schema generation\n7. Test logging output format and content",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Feature Engineering Pipeline",
+        "description": "Develop a feature engineering pipeline to process raw UFC data into ML-ready features, including fighter differentials, rolling performance metrics, and style classifications.",
+        "details": "Create a comprehensive feature engineering pipeline using pandas and numpy:\n\n1. Fighter differential features:\n   - Height differential (cm)\n   - Weight differential (lbs)\n   - Reach differential (inches)\n   - Age differential (years)\n   - Experience differential (fights)\n   - Win streak differential\n\n2. Rolling performance metrics:\n   - 3-fight rolling average for strikes landed/minute\n   - 3-fight rolling average for takedown accuracy\n   - 3-fight rolling average for submission attempts\n   - Exponentially weighted averages for recent performance\n\n3. Style classification features:\n   - Striking vs. grappling ratio\n   - Aggression score (forward pressure)\n   - Defensive metrics (strikes absorbed, takedown defense)\n   - Finishing ability (KO/submission percentage)\n\n4. Time-based features:\n   - Days since last fight\n   - Career length in days\n   - Age at fight time\n   - Time in specific weight class\n\n5. Opponent quality metrics:\n   - Opponent win percentage\n   - Strength of schedule\n   - Common opponents analysis\n\nImplement feature selection using mutual information and correlation analysis. Create a pipeline that can be used both for batch processing historical data and real-time feature generation for predictions.",
+        "testStrategy": "1. Unit test each feature calculation function\n2. Verify feature distributions and ranges\n3. Test with edge cases (debut fighters, long layoffs)\n4. Validate feature importance with preliminary models\n5. Benchmark processing time for large datasets\n6. Test reproducibility with fixed random seeds\n7. Verify handling of missing data",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "ML Model Training and Serving",
+        "description": "Implement the machine learning pipeline to train fight prediction models (win/loss and method prediction) and create a model serving infrastructure with versioning and caching.",
+        "details": "Build a complete ML pipeline using scikit-learn 1.3+ and XGBoost 2.0:\n\n1. Data preparation:\n   - Train/validation/test splitting (temporal split)\n   - Feature scaling and normalization\n   - Class imbalance handling (SMOTE or class weights)\n\n2. Model training:\n   - Binary classification model for win/loss prediction\n     - XGBoost with hyperparameter tuning\n     - Cross-validation with time-based splits\n   - Multi-class model for fight outcome method\n     - Random Forest for KO/TKO vs Submission vs Decision\n     - Calibrated probabilities\n\n3. Model evaluation:\n   - Accuracy, precision, recall metrics\n   - ROC-AUC and PR-AUC curves\n   - Confusion matrices\n   - Feature importance analysis\n   - Backtesting on historical fights\n\n4. Model versioning with MLflow:\n   - Track experiments and parameters\n   - Log metrics and artifacts\n   - Register production models\n   - Model metadata storage\n\n5. Model serving:\n   - FastAPI endpoints for predictions\n   - Input validation with Pydantic\n   - Prediction caching with Redis\n   - Batch prediction capability\n\n6. Monitoring:\n   - Prediction drift detection\n   - Performance logging\n   - Retraining triggers\n\nImplement a model factory pattern to allow easy swapping of model implementations and versions.",
+        "testStrategy": "1. Test model accuracy on holdout data\n2. Verify calibration of probability outputs\n3. Benchmark prediction latency\n4. Test model loading and versioning\n5. Validate caching behavior\n6. Test concurrent prediction requests\n7. Verify model reproducibility\n8. Test model retraining pipeline",
+        "priority": "high",
+        "dependencies": [
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "React Frontend Foundation",
+        "description": "Set up the React frontend application with TypeScript, Vite, Tailwind CSS, routing, and state management according to the technical architecture specified in the PRD.",
+        "details": "Initialize and configure a React 18 frontend application:\n\n1. Project setup:\n   - Initialize with Vite and TypeScript 4.9+\n   - Configure ESLint and Prettier\n   - Set up directory structure\n   ```\n   src/\n     ├── assets/\n     ├── components/\n     │   ├── common/\n     │   ├── layout/\n     │   └── features/\n     ├── hooks/\n     ├── pages/\n     ├── services/\n     ├── store/\n     ├── types/\n     ├── utils/\n     ├── App.tsx\n     └── main.tsx\n   ```\n\n2. Styling setup:\n   - Configure Tailwind CSS 3.0\n   - Create design tokens (colors, spacing, etc.)\n   - Set up dark mode support\n   - Create responsive breakpoints (320px, 768px, 1024px, 1440px)\n\n3. Routing configuration:\n   - Set up React Router v6\n   - Create route definitions\n   - Implement lazy loading for routes\n   - Add route guards/protection\n\n4. State management:\n   - Configure React Context API\n   - Set up useReducer for global state\n   - Create typed actions and reducers\n   - Implement persistence with localStorage\n\n5. API integration:\n   - Set up Axios with interceptors\n   - Create API service classes\n   - Implement request/response types\n   - Add error handling\n\n6. Common components:\n   - Button, Input, Card components\n   - Loading indicators\n   - Error boundaries\n   - Toast notifications\n\n7. Testing setup:\n   - Configure Jest and React Testing Library\n   - Set up test utilities\n   - Create mock providers\n\nImplement responsive layouts with mobile-first approach and ensure accessibility compliance.",
+        "testStrategy": "1. Test component rendering\n2. Verify responsive breakpoints\n3. Test routing functionality\n4. Validate state management\n5. Test API service mocks\n6. Verify dark mode toggle\n7. Test accessibility with axe-core\n8. Validate build output and bundle size",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Interactive Fight Predictor UI",
+        "description": "Develop the interactive fight predictor interface with fighter selection, parameter sliders, real-time prediction updates, and visualization of results.",
+        "details": "Build the core fight predictor UI components:\n\n1. Fighter selection interface:\n   - Searchable fighter dropdown\n   - Fighter cards with photos and basic stats\n   - Weight class filtering\n   - Recent/popular fighter quick select\n\n2. Interactive parameter sliders:\n   - Adjustable physical attributes (height, weight, reach)\n   - Performance metrics sliders\n   - Style attribute adjustments\n   - Real-time visual feedback on changes\n\n3. Prediction visualization:\n   - Win probability gauge/meter\n   - Method probability distribution chart\n   - Round prediction distribution\n   - Confidence indicators\n\n4. Similar fights comparison:\n   - Table of historical similar matchups\n   - Outcome summaries\n   - Key stat comparisons\n   - Video link integration (where available)\n\n5. Real-time updates:\n   - Debounced API calls on slider changes\n   - Loading states for predictions\n   - Error handling with retry options\n   - Optimistic UI updates\n\n6. Mobile optimization:\n   - Touch-friendly slider controls\n   - Collapsible sections\n   - Responsive visualizations\n\nImplement using React components with Tailwind CSS for styling. Use Recharts for standard visualizations and consider D3.js for custom interactive elements.",
+        "testStrategy": "1. Test slider interactions and updates\n2. Verify API integration with mock data\n3. Test responsive layouts on different devices\n4. Validate accessibility of interactive elements\n5. Test error states and recovery\n6. Verify performance with React profiler\n7. User testing for intuitiveness of controls\n8. Test touch interactions on mobile devices",
+        "priority": "high",
+        "dependencies": [
+          6,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Style Evolution Timeline Analyzer",
+        "description": "Implement the style evolution timeline analyzer that visualizes how fighting styles and finish rates have evolved throughout UFC history with filtering and trend analysis.",
+        "details": "Create the style evolution timeline feature:\n\n1. Data processing:\n   - Aggregate fight data by era and weight class\n   - Calculate style metrics over time\n   - Identify significant trend changes\n   - Compute finish rate statistics\n\n2. Timeline visualization:\n   - D3.js interactive timeline\n   - Selectable metrics (KO rate, submission rate, etc.)\n   - Weight class filtering\n   - Era demarcation (Pre-Zuffa, Early UFC, Modern era, etc.)\n\n3. Trend analysis:\n   - Moving averages of key metrics\n   - Trend line overlays\n   - Statistical significance indicators\n   - Notable events marking (rule changes, etc.)\n\n4. Interactive elements:\n   - Zoom and pan controls\n   - Tooltips with detailed information\n   - Highlight specific fighters or events\n   - Comparison mode for multiple metrics\n\n5. Filtering capabilities:\n   - Weight class selector\n   - Date range picker\n   - Fighter type filters (champions, contenders, etc.)\n   - Style category filters\n\n6. Export and sharing:\n   - Image export of visualizations\n   - Shareable links with filter state\n   - Embed codes for analysts\n\nImplement responsive design to ensure visualizations work on different screen sizes, with simplified views for mobile devices.",
+        "testStrategy": "1. Test data aggregation accuracy\n2. Verify visualization rendering\n3. Test interactive elements (zoom, pan, tooltips)\n4. Validate filtering functionality\n5. Test responsive behavior on different devices\n6. Verify export and sharing features\n7. Performance testing with large datasets\n8. User testing for intuitiveness and insights",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Fighter Endurance & Pacing Dashboard",
+        "description": "Develop the fighter endurance and pacing dashboard that analyzes round-by-round performance degradation and predicts cardio performance in hypothetical matchups.",
+        "details": "Build the fighter endurance analysis dashboard:\n\n1. Round-by-round data analysis:\n   - Process historical round statistics\n   - Calculate performance degradation rates\n   - Identify pacing patterns\n   - Compare early vs. late round performance\n\n2. Endurance profile visualization:\n   - Line charts of key metrics by round\n   - Comparative analysis with division average\n   - Stamina indicators\n   - Historical trend analysis\n\n3. Performance prediction models:\n   - Implement time series models for round prediction\n   - Create hypothetical 5-round projections\n   - Model cardio impact on performance\n   - Predict late-round effectiveness\n\n4. Comparative analysis:\n   - Fighter vs. fighter endurance comparison\n   - Historical matchup analysis\n   - Style matchup impact on cardio\n   - Training camp/preparation effects\n\n5. Interactive elements:\n   - Round selector\n   - Metric toggles (strikes, accuracy, movement)\n   - Scenario adjustments (pace, fighting style)\n   - Fight length selector\n\n6. Mobile optimization:\n   - Simplified visualizations for small screens\n   - Touch-friendly controls\n   - Progressive disclosure of complex data\n\nImplement using a combination of Recharts for standard visualizations and D3.js for custom interactive elements. Ensure all data visualizations have appropriate legends and context.",
+        "testStrategy": "1. Validate round-by-round calculations\n2. Test visualization accuracy with known data\n3. Verify prediction model outputs\n4. Test comparative analysis features\n5. Validate interactive elements\n6. Test responsive design on different devices\n7. Performance testing with multiple fighters\n8. User testing for insights and usability",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-30T15:55:11.132Z",
+      "updated": "2025-08-30T19:26:52.104Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

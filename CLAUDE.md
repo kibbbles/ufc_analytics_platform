@@ -129,6 +129,9 @@ fight_stats (
 ## Documentation Guidelines
 - All .md files should be placed in the `docs/` directory
 - Keep documentation organized and up-to-date with code changes
+- **Auto-update README.md**: Update README.md whenever significant project changes occur
+- **Auto-update requirements.txt**: Add new dependencies immediately when introduced
+- **Track progress**: Update task status in task-master when completing work
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.

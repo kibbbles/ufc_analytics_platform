@@ -1,0 +1,93 @@
+{
+	"meta": {
+		"generatedAt": "2025-08-30T16:35:15.070Z",
+		"tasksAnalyzed": 10,
+		"totalTasks": 10,
+		"analysisCount": 10,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Database Schema Setup",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the Database Schema Setup task into 5 subtasks covering schema design, SQLAlchemy model implementation, relationship configuration, index creation, and Alembic migration setup. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "This task involves designing and implementing a relational database schema with multiple tables and relationships. While the schema is well-defined in the requirements, proper implementation requires careful consideration of SQLAlchemy ORM models, relationships, indexes, and migration setup. The complexity comes from ensuring proper foreign key constraints, implementing UUID handling, and setting up version control with Alembic."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Data Scraping Pipeline",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the Data Scraping Pipeline task into 6 subtasks covering scraper implementation for different data types (fighters, events, fights, statistics), rate limiting and retry logic, data transformation, validation, incremental scraping, and scheduling. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "Web scraping is inherently complex due to the need to handle unpredictable HTML structures, rate limiting, and error recovery. This task requires building multiple scrapers for different data types, implementing sophisticated rate limiting and retry logic, data transformation, validation, and scheduling. The need to avoid IP bans while ensuring complete data collection adds significant complexity."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "ETL Pipeline for Historical Data",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the ETL Pipeline for Historical Data task into 5 subtasks covering data extraction from scraped sources, data transformation and cleaning, data loading with proper error handling, validation framework implementation, and pipeline orchestration with Airflow. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "ETL pipelines require handling large volumes of data with complex transformations while maintaining data integrity. This task involves parallel processing, entity resolution, transaction management, and orchestration with Airflow. The need to make the pipeline idempotent and handle error recovery adds significant complexity."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "FastAPI Backend Setup",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the FastAPI Backend Setup task into 6 subtasks covering project structure setup, middleware configuration, database connection management, Redis integration, API documentation, and health check endpoints. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "Setting up a production-ready FastAPI backend involves multiple components including middleware, database connections, caching, logging, and documentation. The complexity comes from configuring these components to work together efficiently while ensuring proper error handling, logging, and health monitoring."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Feature Engineering Pipeline",
+			"complexityScore": 9,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the Feature Engineering Pipeline task into 5 subtasks covering differential feature calculation, rolling performance metrics implementation, style classification features, time-based features, and feature selection/validation. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "Feature engineering for fight prediction requires domain expertise and complex calculations. This task involves creating numerous derived features including differentials, rolling averages, style classifications, and time-based metrics. The need to handle missing data, ensure feature quality, and make the pipeline work for both batch and real-time scenarios adds significant complexity."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "ML Model Training and Serving",
+			"complexityScore": 9,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the ML Model Training and Serving task into 6 subtasks covering data preparation, model training for win/loss prediction, model training for fight outcome method, model evaluation framework, model versioning with MLflow, and model serving infrastructure. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "Machine learning model development and deployment is inherently complex. This task involves multiple models (binary and multi-class), proper validation with time-based splits, model versioning, and serving infrastructure. The need for proper probability calibration, feature importance analysis, and monitoring adds significant complexity."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "React Frontend Foundation",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the React Frontend Foundation task into 6 subtasks covering project setup with Vite and TypeScript, styling configuration with Tailwind CSS, routing setup with React Router, state management implementation, API service integration, and common component development. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "Setting up a modern React frontend involves multiple technologies and architectural decisions. This task requires configuring TypeScript, Vite, Tailwind CSS, routing, state management, and API integration. The need to ensure responsive design, accessibility compliance, and proper testing adds complexity."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Interactive Fight Predictor UI",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the Interactive Fight Predictor UI task into 5 subtasks covering fighter selection interface, interactive parameter sliders, prediction visualization components, similar fights comparison feature, and real-time update implementation. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "Building an interactive UI with real-time updates and complex visualizations is challenging. This task involves searchable dropdowns, interactive sliders, data visualization, and real-time API integration. The need to optimize for mobile and ensure responsive performance adds significant complexity."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Style Evolution Timeline Analyzer",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the Style Evolution Timeline Analyzer task into 5 subtasks covering data aggregation and processing, timeline visualization with D3.js, trend analysis implementation, interactive filtering capabilities, and export/sharing functionality. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "This task involves complex data visualization and analysis. Implementing an interactive timeline with D3.js, trend analysis, and filtering capabilities requires advanced frontend skills. The need to handle large datasets while maintaining performance and ensuring responsive design adds significant complexity."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Fighter Endurance & Pacing Dashboard",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the Fighter Endurance & Pacing Dashboard task into 5 subtasks covering round-by-round data analysis, endurance profile visualization, performance prediction model implementation, comparative analysis features, and mobile optimization. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+			"reasoning": "This dashboard requires sophisticated data analysis and visualization. Implementing round-by-round analysis, performance degradation calculations, and predictive models for cardio performance is complex. The need for interactive comparisons and mobile optimization adds significant complexity."
+		}
+	]
+}
