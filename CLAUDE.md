@@ -73,44 +73,58 @@ UFC fans and analysts lack sophisticated tools to:
 - **Storage:** PostgreSQL with SQLAlchemy ORM
 - **Updates:** Automated weekly scraping optimized for UFC event schedule
 
-## ✅ COMPLETED: Enhanced UFC Scraper (Task #2)
+## ✅ COMPLETED: Comprehensive UFC Data Pipeline
 
-### Enhanced Scraper Implementation
-- **Location**: `backend/scraper/` (3 consolidated files)
-- **Schedule**: Weekly on Sunday 6 AM (perfect for UFC's ~2 events/month)
-- **Data Coverage**: All available UFC Stats data (1994-2025, 744+ events)
-- **Database Integration**: Direct PostgreSQL storage via Supabase
+### Data Foundation
+- **Complete Historical Data**: 744 events (1994-2025), 4,429 fighters, 38,958+ fight statistics
+- **Source**: Greko's comprehensive UFC CSV files loaded into Supabase PostgreSQL
+- **Coverage**: Complete UFC history with detailed fight statistics, fighter profiles, and outcomes
 
-### Key Features Delivered
-1. **✅ Rate Limiting & Retry Logic** - 0.5-2 second delays, 3 retry attempts
-2. **✅ Comprehensive Error Handling** - Structured logging, progress tracking
-3. **✅ Data Validation** - Statistical analysis, format validation, quality reports
-4. **✅ Incremental Updates** - Smart state tracking, 14-day lookback window
-5. **✅ Database Integration** - Direct PostgreSQL storage with existing models
-6. **✅ Weekly Automation** - Sunday 6 AM scheduling optimized for UFC event frequency
+### Live Update System
+- **Location**: `backend/scraper/` (clean, minimal implementation)
+- **Smart Incremental Updates**: Only scrapes NEW events not in database
+- **Weekly Automation**: Sunday 6 AM scheduling with flexible website parsing
+- **Rate Limiting**: Respectful 1-3 second delays between requests
 
-### Files Created
-- `backend/scraper/enhanced_scraper.py` - Main scraper with all enhancements
-- `backend/scraper/database_integration.py` - PostgreSQL integration
-- `backend/scraper/scheduler.py` - Weekly automation system
+### Database Schema (Final)
+```sql
+-- Core tables with comprehensive data
+event_details (744 events)     -- UFC events 1994-2025
+fighter_details (4,429)        -- Fighter profiles and info
+fight_details (8,287)          -- Fight matchups and basic info
+fight_results (8,274)          -- Fight outcomes (stored as JSON)
+fighter_tott (4,435)           -- Tale of the Tape data (stored as JSON)
+fight_stats (38,958)           -- Detailed round-by-round performance metrics
+```
+
+### Files Delivered
+- `backend/scraper/live_scraper.py` - Smart incremental scraper for new events
+- `backend/scraper/scheduler.py` - Weekly automation system updated for live scraping
+- `backend/scraper/database_integration.py` - Optimized database operations
+- `backend/scraper/scheduler_config.json` - Configuration settings
 
 ### Usage
 ```bash
-# Start automated weekly scraping
+# Manual update check
 cd backend/scraper
-python scheduler.py --daemon
+python live_scraper.py
 
-# Manual execution
+# Start weekly automation
+python scheduler.py --action start --daemon
+
+# Test weekly job
 python scheduler.py --action run-weekly
 ```
 
-### Database Schema
-- **Main Tables**: `fighters`, `events`, `fights`, `fight_stats` (normalized, connected)
-- **Raw Tables**: `raw_fighter_details`, `raw_fight_stats` (staging, independent)
-- **Integration**: Uses existing SQLAlchemy models, direct Supabase connection
+### Data Quality
+- **✅ Complete Dataset**: All available UFC data through 2025
+- **✅ No Duplicates**: Smart detection prevents re-scraping existing events
+- **✅ Comprehensive Coverage**: Events, fighters, fights, detailed statistics
+- **✅ Production Ready**: Automated updates for new events
 
-### Next Task: ML Model Development
-Ready to proceed with ML model implementation using the comprehensive UFC dataset.
+### Ready for ML Development
+The platform now has a solid data foundation with 30+ years of UFC fight data, automatically updating as new events are announced.
+
 
 ## Database Schema
 

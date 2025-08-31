@@ -1,0 +1,12 @@
+{
+  "weekly_scrape_day": "sunday",
+  "weekly_scrape_time": "06:00",
+  "max_events_per_run": 20,
+  "days_back_to_check": 14,
+  "enable_database_storage": true,
+  "enable_data_validation": true,
+  "log_level": "INFO",
+  "log_file": null,
+  "retry_failed_jobs": true,
+  "max_retries": 3
+}

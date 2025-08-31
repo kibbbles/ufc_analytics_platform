@@ -11,7 +11,7 @@ from .database import Base
 class Fighter(Base):
     """UFC Fighter model matching Greco's CSV format."""
     
-    __tablename__ = "fighters"
+    __tablename__ = "fighter_details"
     
     id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(100))
@@ -55,7 +55,7 @@ class Fighter(Base):
 class Event(Base):
     """UFC Event model."""
     
-    __tablename__ = "events"
+    __tablename__ = "event_details"
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
@@ -77,20 +77,20 @@ class Event(Base):
 class Fight(Base):
     """UFC Fight model."""
     
-    __tablename__ = "fights"
+    __tablename__ = "fight_details"
     
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"))
+    event_id = Column(Integer, ForeignKey("event_details.id", ondelete="CASCADE"))
     
     # Fighter references (both names and IDs for flexibility)
     fighter_a_name = Column(String(255))
     fighter_b_name = Column(String(255))
-    fighter_a_id = Column(Integer, ForeignKey("fighters.id", ondelete="SET NULL"))
-    fighter_b_id = Column(Integer, ForeignKey("fighters.id", ondelete="SET NULL"))
+    fighter_a_id = Column(Integer, ForeignKey("fighter_details.id", ondelete="SET NULL"))
+    fighter_b_id = Column(Integer, ForeignKey("fighter_details.id", ondelete="SET NULL"))
     
     # Fight outcome
     winner_name = Column(String(255))
-    winner_id = Column(Integer, ForeignKey("fighters.id", ondelete="SET NULL"))
+    winner_id = Column(Integer, ForeignKey("fighter_details.id", ondelete="SET NULL"))
     method = Column(String(100))
     round = Column(Integer)
     time = Column(String(20))  # Store as string initially (e.g., "2:34")
@@ -123,8 +123,8 @@ class FightStat(Base):
     bout = Column(String(500))
     round = Column(Integer)
     fighter_name = Column(String(255))
-    fighter_id = Column(Integer, ForeignKey("fighters.id", ondelete="SET NULL"))
-    fight_id = Column(Integer, ForeignKey("fights.id", ondelete="CASCADE"))
+    fighter_id = Column(Integer, ForeignKey("fighter_details.id", ondelete="SET NULL"))
+    fight_id = Column(Integer, ForeignKey("fight_details.id", ondelete="CASCADE"))
     
     # Strike statistics (stored as strings from CSV)
     kd = Column(Integer)  # Knockdowns
@@ -166,20 +166,20 @@ class FightStat(Base):
         return f"<FightStat(id={self.id}, fighter='{self.fighter_name}', round={self.round})>"
 
 
-class RawFighterDetail(Base):
-    """Raw fighter data from CSV imports."""
+class FighterTott(Base):
+    """Fighter Tale of the Tape data."""
     
-    __tablename__ = "raw_fighter_details"
+    __tablename__ = "fighter_tott"
     
     id = Column(Integer, primary_key=True, index=True)
     data = Column(JSON)  # Store raw CSV row as JSON
     imported_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
-class RawFightStat(Base):
-    """Raw fight statistics data from CSV imports."""
+class FightResults(Base):
+    """Fight results and outcome data."""
     
-    __tablename__ = "raw_fight_stats"
+    __tablename__ = "fight_results"
     
     id = Column(Integer, primary_key=True, index=True)
     data = Column(JSON)  # Store raw CSV row as JSON

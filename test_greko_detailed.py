@@ -81,7 +81,7 @@ print(f"Found {len(event_links)} event links containing '/event-details/'")
 # Check if there's a "View More" or similar
 all_text = soup.get_text()
 if "Load More" in all_text or "Show More" in all_text:
-    print("⚠️  Page has 'Load More' functionality - may need JavaScript!")
+    print("  Page has 'Load More' functionality - may need JavaScript!")
     
 print("\n" + "=" * 60)
 print("ANALYSIS COMPLETE")

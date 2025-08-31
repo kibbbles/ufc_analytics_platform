@@ -16,11 +16,15 @@ backend_dir = os.path.join(os.path.dirname(__file__), '..')
 sys.path.append(backend_dir)
 
 try:
-    from db.models import Fighter, Event, Fight, FightStat, RawFighterDetails, RawFightStats
+    from db.models import Fighter, Event, Fight, FightStat, FighterTott, FightResults
     from db.database import get_db_engine, SessionLocal
+    print("Successfully imported database models")
 except ImportError as e:
     logging.error(f"Could not import database models: {e}")
     logging.info("Make sure backend database is properly set up")
+    # Set to None so we can handle gracefully
+    Fighter = Event = Fight = FightStat = None
+    get_db_engine = SessionLocal = None
 
 class DatabaseIntegration:
     """
@@ -86,7 +90,7 @@ class DatabaseIntegration:
             for _, row in events_df.iterrows():
                 try:
                     # Check if event already exists
-                    existing_event = session.query(Event).filter_by(ufc_stats_url=row['URL']).first()
+                    existing_event = session.query(Event).filter_by(url=row['URL']).first()
                     
                     if existing_event:
                         # Update existing event
@@ -114,7 +118,7 @@ class DatabaseIntegration:
                             name=row['EVENT'],
                             date=event_date,
                             location=row['LOCATION'],
-                            ufc_stats_url=row['URL']
+                            url=row['URL']
                         )
                         session.add(new_event)
                         events_saved += 1
@@ -151,9 +155,9 @@ class DatabaseIntegration:
             return False
         
         try:
-            # Save to raw_fight_stats table using pandas to_sql
+            # Save to fight_results table using pandas to_sql
             fight_stats_df.to_sql(
-                'raw_fight_stats',
+                'fight_results',
                 self.engine,
                 if_exists='append',
                 index=False,

@@ -22,10 +22,11 @@ ML-powered UFC fight analytics platform with interactive predictions and visuali
 - **Styling**: Tailwind CSS
 
 ### Data Pipeline
-- **Source**: UFCStats.com via enhanced Greko scraper
-  - Current dataset: 744 events, 8287 fights, 4429 fighters, 38958 fight stats
-- **Processing**: pandas, numpy
-- **Validation**: Great Expectations (being implemented)
+- **Source**: Comprehensive UFC historical data + live updates
+  - **Complete Dataset**: 744 events (1994-2025), 4,429 fighters, 38,958+ fight statistics
+  - **Live Updates**: Smart scraper adds only NEW events from UFCStats.com
+- **Processing**: pandas, numpy with automated data loading
+- **Storage**: Clean PostgreSQL schema with 6 optimized tables
 
 ## 🚀 Getting Started
 
@@ -75,20 +76,18 @@ API docs at `http://localhost:8000/docs`
 
 ## 📊 Project Status
 
-### Current Phase: Data Scraper Enhancement
-- ✅ Project structure created
-- ✅ Supabase database provisioned
-- ✅ Database schema implemented (matching Greco's CSV format)
-- ✅ SQLAlchemy models setup and tested
-- 🔄 Data scraper enhancement (working on Greko improvements)
-- ⏳ ML model development
-- ⏳ Frontend development
+### ✅ Completed: Comprehensive Data Foundation
+- ✅ Complete UFC database: 744 events, 4,429 fighters, 38,958+ statistics (1994-2025)
+- ✅ Clean PostgreSQL schema with 6 optimized tables
+- ✅ Smart live scraper: Only adds NEW events, prevents duplicates
+- ✅ Weekly automation: Sunday 6 AM scheduling with flexible parsing
+- ✅ Production-ready: Rate limiting, error handling, comprehensive logging
 
-### Active Work: Enhanced UFC Scraper Complete ✅
-- ✅ Production-ready scraper with comprehensive enhancements
-- ✅ Weekly automation (Sunday 6 AM) optimized for UFC schedule  
-- ✅ Direct PostgreSQL integration via Supabase
-- ✅ All 6 enhancement features implemented and tested
+### 🚀 Ready for Next Phase
+- ✅ **Data Pipeline**: Complete and automated
+- ⏳ **ML Model Development**: Ready to begin with solid data foundation
+- ⏳ **Frontend Development**: Awaiting ML models
+- ⏳ **Analytics Dashboard**: Planned after frontend
 
 ### Progress Tracking
 See [Task Master tasks](/.taskmaster/tasks/tasks.json) for detailed progress.
@@ -99,11 +98,13 @@ See [Task Master tasks](/.taskmaster/tasks/tasks.json) for detailed progress.
 ufc_analytics_platform/
 ├── backend/
 │   ├── app/           # FastAPI application
-│   ├── db/            # Database models and config
-│   ├── models/        # ML models
+│   ├── db/            # Database models and config  
+│   ├── scraper/       # Live UFC data scraper (6 files)
+│   ├── models/        # ML models (coming soon)
 │   ├── schemas/       # Pydantic schemas
 │   ├── services/      # Business logic
 │   └── utils/         # Helper functions
+├── scrape_ufc_stats/  # Greko's comprehensive CSV data
 ├── frontend/          # React application (coming soon)
 ├── .taskmaster/       # Task management
 └── docs/             # Documentation
@@ -138,9 +139,10 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ---
 
-**Last Updated**: August 30, 2024
-- Initial project setup
-- Supabase database provisioned
-- Database schema created (6 tables: fighters, events, fights, fight_stats, raw_fighter_details, raw_fight_stats)
-- Schema designed to match Greco's UFC scraper CSV format
-- Backend folder structure established
+**Last Updated**: August 31, 2025  
+- ✅ Complete UFC data pipeline implemented and tested
+- ✅ Comprehensive dataset loaded: 744 events, 4,429 fighters, 38,958+ statistics
+- ✅ Live scraper system for automatic updates  
+- ✅ Clean database schema with 6 optimized tables
+- ✅ Production-ready with automated weekly scheduling
+- 🚀 Ready for ML model development phase
