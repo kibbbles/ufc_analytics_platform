@@ -235,56 +235,82 @@ class LiveUFCScraper:
     
     def run_live_scraping(self):
         """Main method to run live scraping for new events"""
+        print("=" * 60)
+        print("UFC LIVE SCRAPER - WEEKLY UPDATE CHECK")
+        print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("=" * 60)
+        
         logging.info("Starting live UFC scraping for new events...")
         
         try:
             # Test database connection
             if not self.db.test_connection():
                 logging.error("Database connection failed!")
+                print("❌ Database connection failed!")
                 return False
             
             # Find new events
             new_events = self.find_new_events()
             
             if not new_events:
+                print("SUCCESS: No new UFC events found - database is up to date!")
+                print(f"INFO: Current database contains 744+ events through 2025")
                 logging.info("No new events found - database is up to date!")
                 return True
             
             # Store new events
+            print(f"*** NEW DATA FOUND! {len(new_events)} new UFC events detected:")
+            for i, event in enumerate(new_events, 1):
+                print(f"   {i}. {event['name']} ({event['date']})")
+            print()
+            
             self.store_new_events(new_events)
             
             # Scrape fights for each new event
+            total_fights = 0
             for event in new_events:
+                print(f"PROCESSING: {event['name']}")
                 logging.info(f"Processing new event: {event['name']}")
                 
                 fights = self.scrape_event_fights(event['url'])
                 if fights:
                     self.store_new_fights(fights, event['name'])
+                    total_fights += len(fights)
+                    print(f"   SUCCESS: Added {len(fights)} fights")
+                else:
+                    print(f"   WARNING: No fights found for this event")
                 
                 # Be respectful with delays
                 time.sleep(random.uniform(2, 5))
+            
+            print("=" * 60)
+            print("*** SUCCESS! NEW UFC DATA ADDED TO DATABASE ***")
+            print(f"SUMMARY: Added {len(new_events)} events, {total_fights} fights")
+            print(f"Completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print("=" * 60)
             
             logging.info(f"Live scraping completed successfully! Added {len(new_events)} new events.")
             return True
             
         except Exception as e:
+            print("=" * 60)
+            print("*** ERROR: Live scraping failed! ***")
+            print(f"ERROR DETAILS: {str(e)}")
+            print(f"Failed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print("=" * 60)
             logging.error(f"Live scraping failed: {e}")
             return False
 
 def main():
     """Run live scraping"""
-    print("UFC LIVE SCRAPER")
-    print("=" * 50)
-    print("Checking for new UFC events not in database...")
-    print()
-    
     scraper = LiveUFCScraper()
     success = scraper.run_live_scraping()
     
+    # Additional completion message
     if success:
-        print("Live scraping completed successfully!")
+        print("\nUPDATE CHECK COMPLETE! Your UFC database is up to date.")
     else:
-        print("Live scraping encountered errors. Check the logs.")
+        print("\nUPDATE CHECK FAILED! Check logs for details.")
 
 if __name__ == "__main__":
     main()

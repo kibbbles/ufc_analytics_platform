@@ -74,6 +74,36 @@ uvicorn app.main:app --reload
 API will be available at `http://localhost:8000`
 API docs at `http://localhost:8000/docs`
 
+## 🔄 Keeping UFC Data Updated
+
+Your database already contains comprehensive UFC data through 2025. To keep it current:
+
+### Option 1: Manual Updates (Recommended)
+Check for new UFC events whenever you want:
+```bash
+cd backend/scraper
+python live_scraper.py
+```
+
+### Option 2: Automated Weekly Updates
+Set up automatic checking every Sunday at 6 AM:
+```bash
+cd backend/scraper
+python scheduler.py --action start --daemon
+```
+
+**Monitoring Automated Updates:**
+- Check status: `python check_scheduler_status.py`  
+- View logs: `tail -f backend/scraper/logs/ufc_scraper_*.log`
+- View history: `cat backend/scraper/scheduler_history.jsonl`
+- Manual test: `python scheduler.py --action run-weekly`
+
+The scraper will:
+- ✅ Only add NEW events (prevents duplicates)
+- ✅ Log all activity with timestamps
+- ✅ Email you when new data is found (if configured)
+- ✅ Run respectfully with rate limiting
+
 ## 📊 Project Status
 
 ### ✅ Completed: Comprehensive Data Foundation
