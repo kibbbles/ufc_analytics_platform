@@ -68,10 +68,49 @@ UFC fans and analysts lack sophisticated tools to:
 - **HTTP Client:** Axios for API communication
 
 ### Data Pipeline
-- **Source:** UFCStats.com via enhanced Greco scraper
+- **Source:** UFCStats.com via enhanced Greco scraper (744 events, 8287 fights, 4429 fighters available)
 - **Processing:** Python pandas for cleaning and feature engineering
 - **Storage:** PostgreSQL with SQLAlchemy ORM
-- **Updates:** Automated daily scraping for new fight data
+- **Updates:** Automated weekly scraping optimized for UFC event schedule
+
+## ✅ COMPLETED: Enhanced UFC Scraper (Task #2)
+
+### Enhanced Scraper Implementation
+- **Location**: `backend/scraper/` (3 consolidated files)
+- **Schedule**: Weekly on Sunday 6 AM (perfect for UFC's ~2 events/month)
+- **Data Coverage**: All available UFC Stats data (1994-2025, 744+ events)
+- **Database Integration**: Direct PostgreSQL storage via Supabase
+
+### Key Features Delivered
+1. **✅ Rate Limiting & Retry Logic** - 0.5-2 second delays, 3 retry attempts
+2. **✅ Comprehensive Error Handling** - Structured logging, progress tracking
+3. **✅ Data Validation** - Statistical analysis, format validation, quality reports
+4. **✅ Incremental Updates** - Smart state tracking, 14-day lookback window
+5. **✅ Database Integration** - Direct PostgreSQL storage with existing models
+6. **✅ Weekly Automation** - Sunday 6 AM scheduling optimized for UFC event frequency
+
+### Files Created
+- `backend/scraper/enhanced_scraper.py` - Main scraper with all enhancements
+- `backend/scraper/database_integration.py` - PostgreSQL integration
+- `backend/scraper/scheduler.py` - Weekly automation system
+
+### Usage
+```bash
+# Start automated weekly scraping
+cd backend/scraper
+python scheduler.py --daemon
+
+# Manual execution
+python scheduler.py --action run-weekly
+```
+
+### Database Schema
+- **Main Tables**: `fighters`, `events`, `fights`, `fight_stats` (normalized, connected)
+- **Raw Tables**: `raw_fighter_details`, `raw_fight_stats` (staging, independent)
+- **Integration**: Uses existing SQLAlchemy models, direct Supabase connection
+
+### Next Task: ML Model Development
+Ready to proceed with ML model implementation using the comprehensive UFC dataset.
 
 ## Database Schema
 

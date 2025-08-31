@@ -16,13 +16,13 @@
         "id": 2,
         "title": "Data Scraping Pipeline",
         "description": "Enhance the existing Greko scraper to extract UFC fight data from UFCStats.com, including fighter profiles, event information, fight results, and round-by-round statistics.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           1
         ],
         "priority": "high",
-        "details": "Extend and improve the existing Greko scraper API to efficiently collect UFC data:\n\n1. Enhance Greko scraper modules for:\n   - Fighter profiles (physical attributes, record)\n   - Event listings (date, location, card details)\n   - Fight results (winners, methods, times)\n   - Round-by-round statistics\n\n2. Improve rate limiting and retry logic in Greko to avoid IP bans:\n   - Random delays between requests (1-3 seconds)\n   - Exponential backoff for failed requests\n   - Rotate user agents\n\n3. Extend Greko's data transformation functions to normalize scraped data:\n   - Convert height from ft/in to cm\n   - Standardize weight class names\n   - Parse time strings to proper time objects\n\n4. Integrate data validation using Great Expectations:\n   - Validate data types and ranges\n   - Check for missing required fields\n   - Verify referential integrity\n\n5. Add incremental scraping logic to Greko:\n   - Track last scraped date\n   - Only fetch new or updated content\n\n6. Create a scheduler using Airflow to run daily updates with the enhanced Greko scraper\n\nStore raw scraped data in JSON format before processing to allow for reprocessing if needed.",
-        "testStrategy": "1. Create mock responses from UFCStats.com for testing Greko enhancements\n2. Verify enhanced Greko parser accuracy with known sample pages\n3. Test improved rate limiting and retry logic\n4. Validate extended data transformation functions\n5. Test incremental scraping with modified content\n6. Verify error handling with malformed HTML\n7. End-to-end test with a small subset of real pages\n8. Compare results between original Greko scraper and enhanced version",
+        "details": "Extend and improve the existing Greko scraper API to efficiently collect UFC data. The current Greko implementation already contains significant data (744 events, 8287 fights, 4429 fighters, and 38958 fight statistics records) but has several limitations to address:\n\n1. Enhance Greko scraper modules for:\n   - Fighter profiles (physical attributes, record)\n   - Event listings (date, location, card details)\n   - Fight results (winners, methods, times)\n   - Round-by-round statistics\n\n2. Implement rate limiting and retry logic in Greko to avoid IP bans (currently missing):\n   - Random delays between requests (1-3 seconds)\n   - Exponential backoff for failed requests\n   - Rotate user agents\n\n3. Add robust error handling (currently crashes on failed requests):\n   - Graceful handling of HTTP errors\n   - Logging of failed requests\n   - Recovery mechanisms for partial scraping sessions\n\n4. Extend Greko's data transformation functions to normalize scraped data:\n   - Convert height from ft/in to cm\n   - Standardize weight class names\n   - Parse time strings to proper time objects\n\n5. Integrate data validation using Great Expectations (currently no quality checks):\n   - Validate data types and ranges\n   - Check for missing required fields\n   - Verify referential integrity\n\n6. Add incremental scraping logic to Greko (currently always scrapes everything):\n   - Track last scraped date\n   - Only fetch new or updated content\n\n7. Implement database integration (currently only outputs CSV):\n   - Connect to PostgreSQL database\n   - Create appropriate insert/update operations\n   - Maintain data consistency\n\n8. Create a scheduler using Airflow to run daily updates (currently manual execution only)\n\nStore raw scraped data in JSON format before processing to allow for reprocessing if needed.",
+        "testStrategy": "1. Create mock responses from UFCStats.com for testing Greko enhancements\n2. Verify enhanced Greko parser accuracy with known sample pages\n3. Test improved rate limiting and retry logic\n4. Verify error handling with various failure scenarios\n5. Validate extended data transformation functions\n6. Test incremental scraping with modified content\n7. Verify database integration with test database\n8. Test scheduling functionality with compressed timeframes\n9. Verify error handling with malformed HTML\n10. End-to-end test with a small subset of real pages\n11. Compare results between original Greko scraper and enhanced version\n12. Validate data consistency between existing CSV data and newly scraped data",
         "subtasks": [
           {
             "id": 1,
@@ -30,8 +30,8 @@
             "description": "Review the current Greko scraper codebase to identify strengths, limitations, and areas for enhancement",
             "status": "pending",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Analyze the existing Greko scraper that has already collected 744 events, 8287 fights, 4429 fighters, and 38958 fight statistics records. Document the current architecture, data flow, and specific limitations: 1) No rate limiting, 2) No error handling, 3) No data validation, 4) No incremental updates, 5) CSV-only output, and 6) Manual execution requirement.",
+            "testStrategy": "Create a comprehensive report documenting findings and recommendations for improvements."
           },
           {
             "id": 2,
@@ -39,62 +39,80 @@
             "description": "Enhance existing Greko modules or create new ones to handle fighter profiles, event listings, fight results, and round statistics",
             "status": "pending",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Build upon the existing Greko scraper modules to ensure comprehensive data collection while maintaining compatibility with the existing dataset of 744 events, 8287 fights, 4429 fighters, and 38958 fight statistics records.",
+            "testStrategy": "Compare output with existing CSV data to ensure consistency and identify any gaps or improvements."
           },
           {
             "id": 3,
-            "title": "Improve rate limiting and request handling",
+            "title": "Implement rate limiting and request handling",
             "description": "Enhance Greko's request handling with better rate limiting, backoff strategies, and user agent rotation",
             "status": "pending",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Add rate limiting functionality (currently missing) to prevent IP bans: implement random delays between requests (1-3 seconds), exponential backoff for failed requests, and user agent rotation.",
+            "testStrategy": "Test with mock responses to verify delays are working correctly and measure request patterns to ensure they don't trigger anti-scraping measures."
           },
           {
             "id": 4,
+            "title": "Add robust error handling",
+            "description": "Implement comprehensive error handling to prevent crashes on failed requests",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Add error handling capabilities to prevent crashes on failed requests. Implement logging of errors, retry mechanisms, and graceful degradation when certain data can't be retrieved.",
+            "testStrategy": "Simulate various error conditions (timeouts, 404s, 500s, malformed HTML) and verify the scraper continues functioning."
+          },
+          {
+            "id": 5,
             "title": "Extend data normalization capabilities",
             "description": "Add or improve data transformation functions in Greko for UFC-specific data normalization",
             "status": "pending",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Enhance data transformation functions to standardize all scraped data into consistent formats, ensuring compatibility with the database schema.",
+            "testStrategy": "Test with various input formats to verify correct normalization of heights, weights, dates, and other UFC-specific data points."
           },
           {
-            "id": 5,
+            "id": 6,
             "title": "Implement data validation with Great Expectations",
             "description": "Integrate Great Expectations with Greko's output to ensure data quality and consistency",
             "status": "pending",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Add data validation capabilities (currently missing) using Great Expectations to ensure data quality and consistency before storage.",
+            "testStrategy": "Create test cases with both valid and invalid data to verify validation rules are working correctly."
           },
           {
-            "id": 6,
+            "id": 7,
             "title": "Add incremental scraping functionality",
             "description": "Enhance Greko to support tracking of last scraped date and selective updates",
             "status": "pending",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Implement incremental scraping functionality (currently missing) to avoid re-scraping all content on each run. Track last scraped dates and only fetch new or updated content.",
+            "testStrategy": "Test with historical data to verify only new content is scraped, and validate that updates to existing content are properly detected."
           },
           {
-            "id": 7,
+            "id": 8,
+            "title": "Implement database integration",
+            "description": "Add PostgreSQL database integration to replace CSV-only output",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Implement database integration (currently missing) to store scraped data directly in PostgreSQL instead of only outputting to CSV files.",
+            "testStrategy": "Test database connections, insertions, and updates with sample data to verify proper integration."
+          },
+          {
+            "id": 9,
             "title": "Create Airflow DAG for scheduling",
             "description": "Develop an Airflow DAG to schedule regular runs of the enhanced Greko scraper",
             "status": "pending",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Create scheduling capability (currently missing) using Airflow DAGs to automate regular scraping runs instead of requiring manual execution.",
+            "testStrategy": "Test scheduling with compressed timeframes to verify automated execution and proper handling of dependencies between tasks."
           },
           {
-            "id": 8,
+            "id": 10,
             "title": "Implement raw data storage",
             "description": "Set up storage for raw JSON data from Greko before processing",
             "status": "pending",
             "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "details": "Implement storage for raw JSON data before processing to allow for reprocessing if needed, especially during the transition from CSV-only output to database integration.",
+            "testStrategy": "Verify raw data storage and retrieval, and test reprocessing capabilities with sample data."
           }
         ]
       },
@@ -208,7 +226,7 @@
     ],
     "metadata": {
       "created": "2025-08-30T15:55:11.132Z",
-      "updated": "2025-08-30T19:26:52.104Z",
+      "updated": "2025-08-30T22:45:50.722Z",
       "description": "Tasks for master context"
     }
   }

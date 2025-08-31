@@ -23,8 +23,9 @@ ML-powered UFC fight analytics platform with interactive predictions and visuali
 
 ### Data Pipeline
 - **Source**: UFCStats.com via enhanced Greko scraper
+  - Current dataset: 744 events, 8287 fights, 4429 fighters, 38958 fight stats
 - **Processing**: pandas, numpy
-- **Validation**: Great Expectations
+- **Validation**: Great Expectations (being implemented)
 
 ## 🚀 Getting Started
 
@@ -74,14 +75,20 @@ API docs at `http://localhost:8000/docs`
 
 ## 📊 Project Status
 
-### Current Phase: Database Setup
+### Current Phase: Data Scraper Enhancement
 - ✅ Project structure created
 - ✅ Supabase database provisioned
 - ✅ Database schema implemented (matching Greco's CSV format)
-- ⏳ SQLAlchemy models setup
-- ⏳ Data scraper enhancement
+- ✅ SQLAlchemy models setup and tested
+- 🔄 Data scraper enhancement (working on Greko improvements)
 - ⏳ ML model development
 - ⏳ Frontend development
+
+### Active Work: Enhanced UFC Scraper Complete ✅
+- ✅ Production-ready scraper with comprehensive enhancements
+- ✅ Weekly automation (Sunday 6 AM) optimized for UFC schedule  
+- ✅ Direct PostgreSQL integration via Supabase
+- ✅ All 6 enhancement features implemented and tested
 
 ### Progress Tracking
 See [Task Master tasks](/.taskmaster/tasks/tasks.json) for detailed progress.
