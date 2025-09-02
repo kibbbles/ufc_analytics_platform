@@ -12,6 +12,7 @@ import time
 import random
 import logging
 import json
+import string
 from datetime import datetime
 from sqlalchemy import text
 
@@ -38,6 +39,37 @@ class LiveUFCScraper:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
         self.db = DatabaseIntegration()
+        self.existing_ids = set()  # Track existing IDs to ensure uniqueness
+    
+    def generate_alphanumeric_id(self):
+        """Generate a random 6-character alphanumeric ID."""
+        chars = string.ascii_uppercase + string.digits
+        return ''.join(random.choices(chars, k=6))
+    
+    def get_unique_id(self):
+        """Generate a unique alphanumeric ID that doesn't exist in database or current batch."""
+        while True:
+            new_id = self.generate_alphanumeric_id()
+            if new_id not in self.existing_ids:
+                self.existing_ids.add(new_id)
+                return new_id
+    
+    def load_existing_ids(self):
+        """Load all existing IDs from database to prevent duplicates."""
+        try:
+            tables = ['event_details', 'fighter_details', 'fighter_tott', 'fight_details', 'fight_results', 'fight_stats']
+            with engine.connect() as conn:
+                for table in tables:
+                    try:
+                        result = conn.execute(text(f"SELECT id FROM {table}"))
+                        for row in result:
+                            self.existing_ids.add(row[0])
+                    except Exception:
+                        # Table might not exist yet, skip
+                        continue
+            logging.info(f"Loaded {len(self.existing_ids)} existing IDs from database")
+        except Exception as e:
+            logging.warning(f"Could not load existing IDs: {e}")
         
     def get_existing_events(self):
         """Get list of event URLs already in database"""
@@ -204,32 +236,81 @@ class LiveUFCScraper:
             return []
     
     def store_new_events(self, events):
-        """Store new events in database"""
+        """Store new events in database with alphanumeric IDs"""
         if not events:
             return
         
         try:
-            events_df = pd.DataFrame(events)
-            events_df.to_sql('event_details', engine, if_exists='append', index=False, method='multi')
-            logging.info(f"Stored {len(events)} new events in database")
-            
+            with engine.connect() as conn:
+                inserted_count = 0
+                for event in events:
+                    # Generate unique ID for this event
+                    event_id = self.get_unique_id()
+                    
+                    # Prepare event data
+                    event_data = {
+                        'id': event_id,
+                        'EVENT': event.get('name'),
+                        'URL': event.get('url'),
+                        'DATE': str(event.get('date')) if event.get('date') else None,
+                        'LOCATION': event.get('location')
+                    }
+                    
+                    # Insert event
+                    insert_sql = '''
+                        INSERT INTO event_details (id, "EVENT", "URL", "DATE", "LOCATION")
+                        VALUES (:id, :EVENT, :URL, :DATE, :LOCATION)
+                    '''
+                    conn.execute(text(insert_sql), event_data)
+                    inserted_count += 1
+                    
+                    # Store mapping for fight foreign keys
+                    if not hasattr(self, 'event_id_mapping'):
+                        self.event_id_mapping = {}
+                    self.event_id_mapping[event.get('name')] = event_id
+                
+                conn.commit()
+                logging.info(f"Stored {inserted_count} new events with alphanumeric IDs")
+                
         except Exception as e:
             logging.error(f"Error storing events: {e}")
     
     def store_new_fights(self, fights, event_name):
-        """Store new fights in database"""
+        """Store new fights in database with alphanumeric IDs"""
         if not fights:
             return
         
         try:
-            # Add event name to each fight
-            for fight in fights:
-                fight['event_name'] = event_name
-            
-            fights_df = pd.DataFrame(fights)
-            fights_df.to_sql('fight_details', engine, if_exists='append', index=False, method='multi')
-            logging.info(f"Stored {len(fights)} new fights for {event_name}")
-            
+            with engine.connect() as conn:
+                inserted_count = 0
+                
+                # Get event ID for foreign key
+                event_id = getattr(self, 'event_id_mapping', {}).get(event_name)
+                
+                for fight in fights:
+                    # Generate unique ID for this fight
+                    fight_id = self.get_unique_id()
+                    
+                    # Prepare fight data
+                    fight_data = {
+                        'id': fight_id,
+                        'EVENT': event_name,
+                        'BOUT': f"{fight.get('fighter_a_name', '')} vs. {fight.get('fighter_b_name', '')}",
+                        'URL': fight.get('url'),
+                        'event_id': event_id
+                    }
+                    
+                    # Insert fight
+                    insert_sql = '''
+                        INSERT INTO fight_details (id, "EVENT", "BOUT", "URL", event_id)
+                        VALUES (:id, :EVENT, :BOUT, :URL, :event_id)
+                    '''
+                    conn.execute(text(insert_sql), fight_data)
+                    inserted_count += 1
+                
+                conn.commit()
+                logging.info(f"Stored {inserted_count} new fights for {event_name} with alphanumeric IDs")
+                
         except Exception as e:
             logging.error(f"Error storing fights: {e}")
     
@@ -248,6 +329,9 @@ class LiveUFCScraper:
                 logging.error("Database connection failed!")
                 print("❌ Database connection failed!")
                 return False
+            
+            # Load existing IDs to ensure uniqueness
+            self.load_existing_ids()
             
             # Find new events
             new_events = self.find_new_events()

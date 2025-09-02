@@ -167,20 +167,36 @@ class FightStat(Base):
 
 
 class FighterTott(Base):
-    """Fighter Tale of the Tape data."""
+    """Fighter Tale of the Tape data with individual columns."""
     
     __tablename__ = "fighter_tott"
     
     id = Column(Integer, primary_key=True, index=True)
-    data = Column(JSON)  # Store raw CSV row as JSON
+    fighter = Column(String(255))  # Fighter name
+    height = Column(String(20))    # Height (e.g., "5' 11"")
+    weight = Column(String(20))    # Weight (e.g., "155 lbs.")
+    reach = Column(String(20))     # Reach measurement  
+    stance = Column(String(50))    # Fighting stance
+    dob = Column(String(50))       # Date of birth
+    url = Column(String(500))      # UFC Stats URL
     imported_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class FightResults(Base):
-    """Fight results and outcome data."""
+    """Fight results and outcome data with individual columns."""
     
     __tablename__ = "fight_results"
     
     id = Column(Integer, primary_key=True, index=True)
-    data = Column(JSON)  # Store raw CSV row as JSON
+    event = Column(String(255))         # Event name
+    bout = Column(String(500))          # Fighter matchup
+    outcome = Column(String(20))        # W/L indicator
+    weightclass = Column(String(100))   # Weight class
+    method = Column(String(100))        # Finish method
+    round = Column(Integer)             # Round number
+    time = Column(String(20))           # Fight time
+    time_format = Column(String(50))    # Time format
+    referee = Column(String(100))       # Referee name
+    details = Column(Text)              # Fight details/notes
+    url = Column(String(500))           # UFC Stats fight URL
     imported_at = Column(DateTime(timezone=True), server_default=func.now())

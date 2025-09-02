@@ -126,58 +126,103 @@ python scheduler.py --action run-weekly
 The platform now has a solid data foundation with 30+ years of UFC fight data, automatically updating as new events are announced.
 
 
-## Database Schema
+## Database Schema & Relationships
 
-### Core Tables
+### Actual Production Tables (Supabase)
 ```sql
--- Fighters table
-fighters (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255),
-    height_cm FLOAT,
-    weight_lbs FLOAT,
-    reach_inches FLOAT,
-    stance VARCHAR(50),
-    date_of_birth DATE
+-- Core tables with actual column names
+event_details (
+    id VARCHAR(6) PRIMARY KEY,  -- Alphanumeric ID
+    "EVENT" TEXT,
+    "URL" TEXT, 
+    date_proper DATE,
+    "LOCATION" TEXT
 );
 
--- Events table  
-events (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255),
-    date DATE,
-    location VARCHAR(255),
-    venue VARCHAR(255)
+fighter_details (
+    id VARCHAR(6) PRIMARY KEY,  -- Alphanumeric ID
+    "FIRST" TEXT,
+    "LAST" TEXT,
+    "NICKNAME" TEXT,
+    "URL" TEXT
 );
 
--- Fights table
-fights (
-    id SERIAL PRIMARY KEY,
-    event_id INTEGER REFERENCES events(id),
-    fighter_a_id INTEGER REFERENCES fighters(id),
-    fighter_b_id INTEGER REFERENCES fighters(id),
-    weight_class VARCHAR(100),
-    winner_id INTEGER REFERENCES fighters(id),
-    method VARCHAR(100),
-    round INTEGER,
-    time_minutes FLOAT,
-    title_fight BOOLEAN DEFAULT FALSE
+fight_details (
+    id VARCHAR(6) PRIMARY KEY,  -- Alphanumeric ID
+    "EVENT" TEXT,
+    "BOUT" TEXT,  -- Format: "Fighter A vs. Fighter B"
+    "URL" TEXT,
+    event_id VARCHAR(6) REFERENCES event_details(id),
+    fighter_a_id VARCHAR(6),  -- Parsed from BOUT
+    fighter_b_id VARCHAR(6)   -- Parsed from BOUT
 );
 
--- Fight statistics table (detailed performance metrics)
-fight_stats (
-    id SERIAL PRIMARY KEY,
-    fight_id INTEGER REFERENCES fights(id),
-    fighter_id INTEGER REFERENCES fighters(id),
-    round INTEGER,
-    significant_strikes_landed INTEGER,
-    significant_strikes_attempted INTEGER,
-    takedowns_landed INTEGER,
-    takedowns_attempted INTEGER,
-    submission_attempts INTEGER,
-    control_time_seconds INTEGER
+fight_results (
+    id VARCHAR(6) PRIMARY KEY,
+    "EVENT" TEXT,
+    "BOUT" TEXT,
+    "OUTCOME" TEXT,  -- Format: "W/L" or "L/W" (winner/loser)
+    "WEIGHTCLASS" TEXT,
+    "METHOD" TEXT,
+    "ROUND" TEXT,
+    "TIME" TEXT,
+    event_id VARCHAR(6) REFERENCES event_details(id),
+    fight_id VARCHAR(6) REFERENCES fight_details(id),
+    result_data JSONB  -- Stores additional result data
+);
+
+fighter_tott (  -- Tale of the Tape
+    id VARCHAR(6) PRIMARY KEY,
+    "FIGHTER" TEXT,
+    "HEIGHT" TEXT,
+    "WEIGHT" TEXT,
+    "REACH" TEXT,
+    "STANCE" TEXT,
+    "DOB" TEXT,
+    "URL" TEXT,
+    fighter_id VARCHAR(6) REFERENCES fighter_details(id),  -- ✅ Connected
+    tott_data JSONB
+);
+
+fight_stats (  -- Per fighter, per round statistics
+    id VARCHAR(6) PRIMARY KEY,
+    "EVENT" TEXT,
+    "BOUT" TEXT,
+    "ROUND" TEXT,
+    "FIGHTER" TEXT,  -- Fighter name (text only, no FK)
+    "KD" TEXT,
+    "SIG.STR." TEXT,  -- Format: "17 of 37" (landed of attempted)
+    "SIG.STR.%" TEXT,
+    "TOTAL STR." TEXT,
+    "TD" TEXT,  -- Takedowns: "0 of 2" format
+    "TD%" TEXT,
+    "SUB.ATT" TEXT,
+    "REV." TEXT,
+    "CTRL" TEXT,
+    "HEAD" TEXT,
+    "BODY" TEXT,
+    "LEG" TEXT,
+    "DISTANCE" TEXT,
+    "CLINCH" TEXT,
+    "GROUND" TEXT,
+    event_id VARCHAR(6) REFERENCES event_details(id),
+    fight_id VARCHAR(6) REFERENCES fight_details(id)  -- 64% connected
 );
 ```
+
+### Relationship Status
+- ✅ **Working**: event_details ↔ all tables via event_id
+- ✅ **Working**: fight_details ↔ fight_results via fight_id  
+- ✅ **Working**: fighter_details ↔ fighter_tott via fighter_id
+- ⚠️ **Partial**: fight_details ↔ fight_stats (64% have fight_id)
+- ❌ **Missing**: fight_stats → fighter_details (only text names)
+- ❌ **Missing**: fight_details → fighter_details (needs parsing BOUT)
+
+### Data Format Notes
+- **Stats Format**: "X of Y" means X landed, Y attempted
+- **Winner Logic**: In OUTCOME "W/L", first fighter in BOUT won
+- **Coverage**: Detailed stats (fight_stats) mainly available 2015+
+- **2014 and earlier**: Limited to basic fight results only
 
 ## Documentation Guidelines
 - All .md files should be placed in the `docs/` directory
