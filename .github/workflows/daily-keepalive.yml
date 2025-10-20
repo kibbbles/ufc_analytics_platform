@@ -1,0 +1,44 @@
+name: Daily Supabase Keepalive
+
+# Prevents Supabase free tier from auto-pausing
+# Runs every day at 3 AM UTC (10 PM ET / 7 PM PT)
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install sqlalchemy psycopg2-binary python-dotenv
+
+      - name: Run keepalive ping
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd backend/scraper
+          python keepalive_ping.py
+
+      - name: Check result
+        if: success()
+        run: echo "✓ Keepalive ping successful - Supabase remains active"
+
+      - name: Alert on failure
+        if: failure()
+        run: |
+          echo "⚠️ WARNING: Keepalive ping failed!"
+          echo "Database may pause if issue persists for 7 days"
+          exit 1

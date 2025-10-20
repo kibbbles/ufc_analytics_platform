@@ -1,0 +1,48 @@
+name: Weekly UFC Scraper
+
+# Scrapes new UFC events every Sunday
+# Runs at 6 PM UTC (1 PM ET / 10 AM PT)
+on:
+  schedule:
+    - cron: '0 18 * * 0'  # Every Sunday at 6 PM UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run UFC scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd backend/scraper
+          python live_scraper.py
+
+      - name: Check scraper output
+        if: success()
+        run: |
+          echo "✓ Weekly UFC scraper completed successfully"
+          cd backend/scraper
+          tail -20 live_scraper.log || echo "No log file found"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-logs
+          path: backend/scraper/*.log
+          retention-days: 7
