@@ -56,7 +56,7 @@ class UFCScrapingScheduler:
             level=log_level,
             format='%(asctime)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
             handlers=[
-                logging.FileHandler(log_file),
+                logging.FileHandler(log_file, encoding='utf-8'),
                 logging.StreamHandler(sys.stdout)
             ]
         )
@@ -274,8 +274,8 @@ class UFCScrapingScheduler:
         
         log_file = 'scheduler_history.jsonl'
         try:
-            with open(log_file, 'a') as f:
-                f.write(json.dumps(log_entry) + '\n')
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(log_entry, ensure_ascii=False) + '\n')
         except Exception as e:
             self.logger.error(f"Error writing to job history: {e}")
     

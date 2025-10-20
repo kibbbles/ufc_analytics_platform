@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('live_scraper.log'),
+        logging.FileHandler('live_scraper.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -75,7 +75,7 @@ class LiveUFCScraper:
         """Get list of event URLs already in database"""
         try:
             with engine.connect() as conn:
-                result = conn.execute(text("SELECT url FROM event_details WHERE url IS NOT NULL"))
+                result = conn.execute(text('SELECT "URL" FROM event_details WHERE "URL" IS NOT NULL'))
                 return {row[0] for row in result}
         except Exception as e:
             logging.error(f"Error getting existing events: {e}")
@@ -327,7 +327,7 @@ class LiveUFCScraper:
             # Test database connection
             if not self.db.test_connection():
                 logging.error("Database connection failed!")
-                print("❌ Database connection failed!")
+                print("ERROR: Database connection failed!")
                 return False
             
             # Load existing IDs to ensure uniqueness
