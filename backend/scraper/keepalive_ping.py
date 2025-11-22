@@ -8,8 +8,9 @@ import sys
 import os
 from datetime import datetime
 
-# Add parent directory to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# Add parent directory to path to access backend modules
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, backend_dir)
 
 try:
     from sqlalchemy import text

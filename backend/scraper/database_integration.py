@@ -12,8 +12,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 # Add backend directory to path for imports
-backend_dir = os.path.join(os.path.dirname(__file__), '..')
-sys.path.append(backend_dir)
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, backend_dir)
 
 try:
     from db.models import Fighter, Event, Fight, FightStat, FighterTott, FightResults

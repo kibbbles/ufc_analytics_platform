@@ -16,8 +16,9 @@ import string
 from datetime import datetime
 from sqlalchemy import text
 
-# Add paths
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# Add parent directory to path to access backend modules
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, backend_dir)
 
 from database_integration import DatabaseIntegration
 from db.database import engine
