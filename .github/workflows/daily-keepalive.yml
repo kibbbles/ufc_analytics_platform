@@ -30,6 +30,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           cd backend/scraper
+          # Force IPv4 resolution for GitHub Actions (no IPv6 support)
           python keepalive_ping.py
 
       - name: Check result
