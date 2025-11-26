@@ -248,19 +248,39 @@ class LiveUFCScraper:
                     # Generate unique ID for this event
                     event_id = self.get_unique_id()
                     
-                    # Prepare event data
+                    # Prepare event data with proper date parsing
+                    date_str = str(event.get('date')) if event.get('date') else None
+                    date_proper = None
+
+                    # Try to parse date_proper from DATE field
+                    if date_str:
+                        try:
+                            # Handle formats like "2025-11-22" or "November 22, 2025"
+                            if '-' in date_str and len(date_str) == 10:
+                                # Already in YYYY-MM-DD format
+                                date_proper = date_str
+                            else:
+                                # Try parsing other formats
+                                from dateutil import parser
+                                parsed_date = parser.parse(date_str)
+                                date_proper = parsed_date.strftime('%Y-%m-%d')
+                        except:
+                            # If parsing fails, leave date_proper as None
+                            pass
+
                     event_data = {
                         'id': event_id,
                         'EVENT': event.get('name'),
                         'URL': event.get('url'),
-                        'DATE': str(event.get('date')) if event.get('date') else None,
+                        'DATE': date_str,
+                        'date_proper': date_proper,
                         'LOCATION': event.get('location')
                     }
-                    
-                    # Insert event
+
+                    # Insert event with date_proper
                     insert_sql = '''
-                        INSERT INTO event_details (id, "EVENT", "URL", "DATE", "LOCATION")
-                        VALUES (:id, :EVENT, :URL, :DATE, :LOCATION)
+                        INSERT INTO event_details (id, "EVENT", "URL", "DATE", date_proper, "LOCATION")
+                        VALUES (:id, :EVENT, :URL, :DATE, :date_proper, :LOCATION)
                     '''
                     conn.execute(text(insert_sql), event_data)
                     inserted_count += 1
