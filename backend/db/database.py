@@ -30,11 +30,8 @@ if not DATABASE_URL:
     except Exception as e:
         print(f"Could not read .env file: {e}")
 
-# For GitHub Actions: Use connection pooler (port 6543) which supports IPv4
-# Direct connection (port 5432) uses IPv6 which GitHub Actions doesn't support
-if DATABASE_URL and ":5432/" in DATABASE_URL and os.getenv("GITHUB_ACTIONS"):
-    print("GitHub Actions detected - switching to connection pooler (IPv4)")
-    DATABASE_URL = DATABASE_URL.replace(":5432/", ":6543/")
+# Note: If using Supabase Session Pooler (aws-*.pooler.supabase.com),
+# it already supports IPv4 on port 5432, so no changes needed
 
 if not DATABASE_URL:
     print("DATABASE_URL not found!")
