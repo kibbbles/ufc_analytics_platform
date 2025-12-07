@@ -73,57 +73,54 @@ UFC fans and analysts lack sophisticated tools to:
 - **Storage:** PostgreSQL with SQLAlchemy ORM
 - **Updates:** Automated weekly scraping optimized for UFC event schedule
 
-## ✅ COMPLETED: Comprehensive UFC Data Pipeline
+## Database & Data Status
 
-### Data Foundation
-- **Complete Historical Data**: 744 events (1994-2025), 4,429 fighters, 38,958+ fight statistics
-- **Source**: Greko's comprehensive UFC CSV files loaded into Supabase PostgreSQL
-- **Coverage**: Complete UFC history with detailed fight statistics, fighter profiles, and outcomes
+### Supabase Database Connection
+**Project**: mklpmbqpegbsistkoskm.supabase.co
+**Access Methods**:
+1. **SQL Editor**: https://supabase.com/dashboard/project/mklpmbqpegbsistkoskm/sql
+2. **Python (SQLAlchemy)**: Via `DATABASE_URL` in `.env`
+3. **Direct Connection**: `postgresql://postgres:p2GrvZEea/XEY%d@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres`
 
-### Live Update System
-- **Location**: `backend/scraper/` (clean, minimal implementation)
-- **Smart Incremental Updates**: Only scrapes NEW events not in database
-- **Weekly Automation**: Sunday 6 AM scheduling with flexible website parsing
-- **Rate Limiting**: Respectful 1-3 second delays between requests
+### Quick Database Query Examples
+```python
+# From backend directory
+from db.database import SessionLocal
+from sqlalchemy import text
 
-### Database Schema (Final)
+session = SessionLocal()
+result = session.execute(text("SELECT COUNT(*) FROM fighter_details"))
+print(f"Total fighters: {result.scalar()}")
+session.close()
+```
+
+### Current Data Status
+**⚠️ INCOMPLETE DATA - Needs Historical Backfill**
+- **Current State**: 756 events, 4,429 fighters, 5,644 fight results
+- **Issue**: Greko CSV had partial fighter histories (e.g., Petr Yan shows 8 fights instead of 25)
+- **Date Range**: 1994-03-11 to 2025-12-06 (sparse coverage for many fighters)
+- **Root Cause**: Initial CSV import was incomplete/sampled data
+
+### Available Scrapers
+- `backend/scraper/live_scraper.py` - For NEW events only (future updates)
+- `backend/scraper/bulk_scrape_career_stats.py` - Career stats scraper
+- `backend/scraper/bulk_scrape_physical_stats.py` - Physical stats scraper
+- **NEEDED**: Historical backfill scraper to get complete fighter records
+
+### Database Schema (Current)
 ```sql
--- Core tables with comprehensive data
-event_details (744 events)     -- UFC events 1994-2025
-fighter_details (4,429)        -- Fighter profiles and info
-fight_details (8,287)          -- Fight matchups and basic info
-fight_results (8,274)          -- Fight outcomes (stored as JSON)
-fighter_tott (4,435)           -- Tale of the Tape data (stored as JSON)
-fight_stats (38,958)           -- Detailed round-by-round performance metrics
+-- Core tables
+event_details (756 rows)       -- UFC events
+fighter_details (4,429 rows)   -- Fighter profiles
+fight_details (varies)         -- Fight matchups
+fight_results (5,644 rows)     -- Fight outcomes (INCOMPLETE)
+fighter_tott (4,435 rows)      -- Tale of the Tape
+fight_stats (varies)           -- Round-by-round stats
 ```
 
-### Files Delivered
-- `backend/scraper/live_scraper.py` - Smart incremental scraper for new events
-- `backend/scraper/scheduler.py` - Weekly automation system updated for live scraping
-- `backend/scraper/database_integration.py` - Optimized database operations
-- `backend/scraper/scheduler_config.json` - Configuration settings
-
-### Usage
-```bash
-# Manual update check
-cd backend/scraper
-python live_scraper.py
-
-# Start weekly automation
-python scheduler.py --action start --daemon
-
-# Test weekly job
-python scheduler.py --action run-weekly
-```
-
-### Data Quality
-- **✅ Complete Dataset**: All available UFC data through 2025
-- **✅ No Duplicates**: Smart detection prevents re-scraping existing events
-- **✅ Comprehensive Coverage**: Events, fighters, fights, detailed statistics
-- **✅ Production Ready**: Automated updates for new events
-
-### Ready for ML Development
-The platform now has a solid data foundation with 30+ years of UFC fight data, automatically updating as new events are announced.
+### Automation
+- `backend/scraper/scheduler.py` - Weekly automation for live_scraper
+- Currently only monitors NEW events, not historical gaps
 
 
 ## Database Schema & Relationships
