@@ -318,11 +318,13 @@ class FullHistoricalScraper:
                     # Column 2: Method
                     method = cells[2].text.strip()
 
-                    # Column 3: Round
-                    round_num = cells[3].text.strip()
+                    # Column 3: Round (clean to get just the number)
+                    round_text = cells[3].text.strip()
+                    # Extract just the number (handles cases like "3\n\n5" -> "3")
+                    round_num = round_text.split()[0] if round_text else ''
 
-                    # Column 4: Time
-                    time_str = cells[4].text.strip()
+                    # Column 4: Time (clean whitespace)
+                    time_str = cells[4].text.strip().split()[0] if cells[4].text.strip() else ''
 
                     fights.append({
                         'fighter_a_name': fighter_a,
@@ -726,11 +728,11 @@ class FullHistoricalScraper:
             stats_id = self.get_unique_id()
 
             with engine.connect() as conn:
-                # Insert into fight_stats table
+                # Insert into fight_stats table (note: column names have spaces, not %)
                 conn.execute(text("""
                     INSERT INTO fight_stats
-                    (id, "EVENT", "BOUT", "ROUND", "FIGHTER", "KD", "SIG.STR.", "SIG.STR.%",
-                     "TOTAL STR.", "TD", "TD%", "SUB.ATT", "REV.", "CTRL",
+                    (id, "EVENT", "BOUT", "ROUND", "FIGHTER", "KD", "SIG.STR.", "SIG.STR. %",
+                     "TOTAL STR.", "TD", "TD %", "SUB.ATT", "REV.", "CTRL",
                      "HEAD", "BODY", "LEG", "DISTANCE", "CLINCH", "GROUND",
                      event_id, fight_id)
                     VALUES (:id, :event, :bout, :round, :fighter, :kd, :sig_str, :sig_str_pct,
@@ -801,6 +803,14 @@ class FullHistoricalScraper:
                     'event_id': event_id
                 })
 
+                # Convert round to integer, default to None if invalid
+                round_value = None
+                if fight_data['round']:
+                    try:
+                        round_value = int(fight_data['round'])
+                    except (ValueError, TypeError):
+                        logging.warning(f"Invalid round value: {fight_data['round']}")
+
                 # Insert into fight_results table
                 conn.execute(text("""
                     INSERT INTO fight_results
@@ -813,7 +823,7 @@ class FullHistoricalScraper:
                     'outcome': fight_data['result'],
                     'weightclass': fight_data['weight_class'],
                     'method': fight_data['method'],
-                    'round': fight_data['round'],
+                    'round': round_value,
                     'time': fight_data['time'],
                     'event_id': event_id,
                     'fight_id': fight_id
@@ -949,10 +959,13 @@ class FullHistoricalScraper:
         logging.info("  - fight_stats: Round-by-round statistics")
         logging.info("=" * 60)
 
-def clear_database():
+def clear_database(force=False):
     """
     Clear all data from UFC tables
     WARNING: This deletes all existing data!
+
+    Args:
+        force: If True, skip confirmation prompt
     """
     print("\nWARNING: This will delete ALL existing UFC data from your database.")
     print("Tables to be cleared:")
@@ -963,11 +976,14 @@ def clear_database():
     print("  - fighter_tott")
     print("  - fight_stats")
 
-    response = input("\nType 'DELETE ALL DATA' to confirm: ")
+    if not force:
+        response = input("\nType 'DELETE ALL DATA' to confirm: ")
 
-    if response != "DELETE ALL DATA":
-        print("Cancelled - no data was deleted")
-        return False
+        if response != "DELETE ALL DATA":
+            print("Cancelled - no data was deleted")
+            return False
+    else:
+        print("\nForce flag enabled - proceeding with database clear...")
 
     try:
         with engine.connect() as conn:
@@ -1008,12 +1024,14 @@ Examples:
                        help='Preview what would be scraped without saving to database')
     parser.add_argument('--clear-db', action='store_true',
                        help='Clear all existing data before scraping')
+    parser.add_argument('--force', action='store_true',
+                       help='Skip confirmation prompts (use with --clear-db)')
 
     args = parser.parse_args()
 
     # Clear database if requested
     if args.clear_db:
-        if not clear_database():
+        if not clear_database(force=args.force):
             print("Database clear failed or was cancelled")
             return
 
