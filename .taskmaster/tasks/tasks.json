@@ -16,7 +16,7 @@
         "id": 2,
         "title": "Data Scraping Pipeline",
         "description": "Enhance the existing Greko scraper to extract UFC fight data from UFCStats.com, including fighter profiles, event information, fight results, and round-by-round statistics.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           1
         ],
@@ -28,7 +28,7 @@
             "id": 1,
             "title": "Analyze existing Greko scraper capabilities",
             "description": "Review the current Greko scraper codebase to identify strengths, limitations, and areas for enhancement",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "Analyze the existing Greko scraper that has already collected 744 events, 8287 fights, 4429 fighters, and 38958 fight statistics records. Document the current architecture, data flow, and specific limitations: 1) No rate limiting, 2) No error handling, 3) No data validation, 4) No incremental updates, 5) CSV-only output, and 6) Manual execution requirement.",
             "testStrategy": "Create a comprehensive report documenting findings and recommendations for improvements."
@@ -37,7 +37,7 @@
             "id": 2,
             "title": "Extend Greko scraper modules for UFC data",
             "description": "Enhance existing Greko modules or create new ones to handle fighter profiles, event listings, fight results, and round statistics",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "Build upon the existing Greko scraper modules to ensure comprehensive data collection while maintaining compatibility with the existing dataset of 744 events, 8287 fights, 4429 fighters, and 38958 fight statistics records.",
             "testStrategy": "Compare output with existing CSV data to ensure consistency and identify any gaps or improvements."
@@ -46,73 +46,55 @@
             "id": 3,
             "title": "Implement rate limiting and request handling",
             "description": "Enhance Greko's request handling with better rate limiting, backoff strategies, and user agent rotation",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "Add rate limiting functionality (currently missing) to prevent IP bans: implement random delays between requests (1-3 seconds), exponential backoff for failed requests, and user agent rotation.",
+            "details": "Rate limiting implemented in live_scraper.py with random 1-3 second delays between requests and proper user agent headers.",
             "testStrategy": "Test with mock responses to verify delays are working correctly and measure request patterns to ensure they don't trigger anti-scraping measures."
           },
           {
             "id": 4,
             "title": "Add robust error handling",
             "description": "Implement comprehensive error handling to prevent crashes on failed requests",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "Add error handling capabilities to prevent crashes on failed requests. Implement logging of errors, retry mechanisms, and graceful degradation when certain data can't be retrieved.",
+            "details": "Basic error handling implemented with try/catch blocks and logging throughout live_scraper.py and database_integration.py.",
             "testStrategy": "Simulate various error conditions (timeouts, 404s, 500s, malformed HTML) and verify the scraper continues functioning."
           },
           {
             "id": 5,
-            "title": "Extend data normalization capabilities",
-            "description": "Add or improve data transformation functions in Greko for UFC-specific data normalization",
-            "status": "pending",
-            "dependencies": [],
-            "details": "Enhance data transformation functions to standardize all scraped data into consistent formats, ensuring compatibility with the database schema.",
-            "testStrategy": "Test with various input formats to verify correct normalization of heights, weights, dates, and other UFC-specific data points."
-          },
-          {
-            "id": 6,
             "title": "Implement data validation with Great Expectations",
-            "description": "Integrate Great Expectations with Greko's output to ensure data quality and consistency",
+            "description": "Integrate Great Expectations with scraper output to ensure data quality and consistency",
             "status": "pending",
             "dependencies": [],
-            "details": "Add data validation capabilities (currently missing) using Great Expectations to ensure data quality and consistency before storage.",
+            "details": "Add data validation capabilities using Great Expectations to ensure data quality and consistency before storage. This is optional but recommended for production quality.",
             "testStrategy": "Create test cases with both valid and invalid data to verify validation rules are working correctly."
           },
           {
-            "id": 7,
+            "id": 6,
             "title": "Add incremental scraping functionality",
-            "description": "Enhance Greko to support tracking of last scraped date and selective updates",
-            "status": "pending",
+            "description": "Enhance scraper to support tracking of last scraped date and selective updates",
+            "status": "done",
             "dependencies": [],
-            "details": "Implement incremental scraping functionality (currently missing) to avoid re-scraping all content on each run. Track last scraped dates and only fetch new or updated content.",
+            "details": "Incremental scraping implemented via get_existing_events() method that checks database for existing event URLs before scraping.",
             "testStrategy": "Test with historical data to verify only new content is scraped, and validate that updates to existing content are properly detected."
           },
           {
-            "id": 8,
+            "id": 7,
             "title": "Implement database integration",
             "description": "Add PostgreSQL database integration to replace CSV-only output",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "Implement database integration (currently missing) to store scraped data directly in PostgreSQL instead of only outputting to CSV files.",
+            "details": "Database integration implemented in database_integration.py with direct PostgreSQL storage using SQLAlchemy.",
             "testStrategy": "Test database connections, insertions, and updates with sample data to verify proper integration."
           },
           {
-            "id": 9,
-            "title": "Create Airflow DAG for scheduling",
-            "description": "Develop an Airflow DAG to schedule regular runs of the enhanced Greko scraper",
-            "status": "pending",
+            "id": 8,
+            "title": "Create scheduling for automated scraping",
+            "description": "Develop scheduling system for regular runs of the scraper",
+            "status": "done",
             "dependencies": [],
-            "details": "Create scheduling capability (currently missing) using Airflow DAGs to automate regular scraping runs instead of requiring manual execution.",
+            "details": "Scheduler implemented in scheduler.py using schedule library for weekly automated runs (Sundays at 6 AM).",
             "testStrategy": "Test scheduling with compressed timeframes to verify automated execution and proper handling of dependencies between tasks."
-          },
-          {
-            "id": 10,
-            "title": "Implement raw data storage",
-            "description": "Set up storage for raw JSON data from Greko before processing",
-            "status": "pending",
-            "dependencies": [],
-            "details": "Implement storage for raw JSON data before processing to allow for reprocessing if needed, especially during the transition from CSV-only output to database integration.",
-            "testStrategy": "Verify raw data storage and retrieval, and test reprocessing capabilities with sample data."
           }
         ]
       },
@@ -128,7 +110,98 @@
           2
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design ETL pipeline architecture",
+            "description": "Design the overall ETL pipeline architecture including data flow, error handling strategy, and idempotency patterns",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Document the ETL pipeline architecture with data flow diagrams, component responsibilities, error handling strategies, and design for idempotent operations. Define interfaces between Extract, Transform, and Load phases.",
+            "testStrategy": "Review design document for completeness and technical feasibility."
+          },
+          {
+            "id": 2,
+            "title": "Implement data extraction layer",
+            "description": "Build extraction functionality to load existing CSV/database data efficiently with parallel processing support",
+            "status": "pending",
+            "dependencies": [1],
+            "details": "Create extraction module that can load data from multiple sources (CSV files from Greko, existing database tables). Implement parallel processing using multiprocessing or Dask for large datasets. Handle file locking and concurrent access.",
+            "testStrategy": "Test loading performance with full dataset, verify parallel processing works correctly, test concurrent access scenarios."
+          },
+          {
+            "id": 3,
+            "title": "Add normalized columns to database schema",
+            "description": "Add properly-typed columns to existing tables for parsed data (heights, weights, dates, statistics)",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Execute database migration to add normalized columns:\n\n1. Add columns to fighter_tott:\n   - height_inches FLOAT\n   - weight_lbs FLOAT\n   - reach_inches FLOAT\n   - dob_date DATE\n\n2. Add columns to event_details:\n   - Ensure date_proper DATE column exists\n\n3. Add columns to fight_stats:\n   - sig_str_landed INTEGER\n   - sig_str_attempted INTEGER\n   - td_landed INTEGER\n   - td_attempted INTEGER\n   - control_time_seconds INTEGER\n   - head_landed, head_attempted INTEGER\n   - body_landed, body_attempted INTEGER\n   - leg_landed, leg_attempted INTEGER\n   - distance_landed, distance_attempted INTEGER\n   - clinch_landed, clinch_attempted INTEGER\n   - ground_landed, ground_attempted INTEGER\n\n4. Create database triggers (optional) to auto-populate on INSERT/UPDATE\n\nKeep original TEXT columns for backward compatibility and debugging.",
+            "testStrategy": "Verify columns are added successfully, test that existing data is not affected, validate column types are correct."
+          },
+          {
+            "id": 4,
+            "title": "Create data parsing and normalization utilities",
+            "description": "Build utility functions to parse TEXT fields into proper data types and populate normalized columns",
+            "status": "pending",
+            "dependencies": [3],
+            "details": "Create Python parsing functions with comprehensive error handling:\n\n1. Date parsing:\n   - Parse various formats (YYYY-MM-DD, Month DD YYYY, etc.)\n   - Handle edge cases and invalid dates\n   - Return None for unparseable dates\n\n2. Physical attributes:\n   - parse_height(): Convert \"5' 11\\\"\" or \"180 cm\" to inches\n   - parse_weight(): Convert \"155 lbs\" or \"70 kg\" to lbs\n   - parse_reach(): Convert \"74\\\"\" or \"188 cm\" to inches\n   - Strip units and handle various formats\n\n3. Fight statistics:\n   - parse_strikes(): Split \"17 of 37\" into (17, 37) tuple\n   - parse_percentage(): Convert \"45%\" to 0.45 float\n   - parse_control_time(): Convert \"2:34\" to 154 seconds\n\n4. Error handling:\n   - Log parsing failures with original value\n   - Return None for unparseable values\n   - Track parsing success rate\n\nCreate comprehensive unit tests for each function with edge cases.",
+            "testStrategy": "Unit test each parsing function with various input formats, edge cases, null values, and invalid data. Verify error handling for unparseable values. Test with real sample data from database."
+          },
+          {
+            "id": 5,
+            "title": "Create database migration script for normalization",
+            "description": "Build migration script to populate normalized columns from existing TEXT data",
+            "status": "pending",
+            "dependencies": [4],
+            "details": "Create Python migration script that:\n\n1. Backup existing data:\n   - Export current tables to CSV before migration\n   - Create rollback script\n\n2. Populate normalized columns:\n   - Use parsing functions on TEXT columns\n   - Batch update operations for performance (1000 rows at a time)\n   - Track parsing success/failure statistics\n   - Log all parsing failures for review\n\n3. Validation:\n   - Compare row counts before/after\n   - Verify no data loss\n   - Check parsing success rates\n   - Validate sample records manually\n\n4. Create database triggers (recommended):\n   - Auto-populate normalized columns on INSERT\n   - Auto-update normalized columns on UPDATE\n   - Ensure new weekly scraper data is auto-normalized\n\n5. Transaction management:\n   - Use transactions for atomicity\n   - Rollback on errors\n   - Commit only after validation passes\n\nScript should be idempotent - safe to run multiple times.",
+            "testStrategy": "Test migration on sample subset first, verify all dates parse correctly across different formats, test numeric conversions maintain accuracy, validate compound field parsing preserves all data, check for data loss, test rollback procedure, verify triggers work on INSERT/UPDATE."
+          },
+          {
+            "id": 6,
+            "title": "Implement data transformation layer",
+            "description": "Build transformation logic for cleaning, normalizing, and enriching UFC data",
+            "status": "pending",
+            "dependencies": [5],
+            "details": "Implement transformations: 1) Clean and normalize fighter names, 2) Calculate derived statistics (win percentages, finish rates), 3) Handle missing data with appropriate strategies (mean imputation, forward fill, null), 4) Resolve entity relationships (match fighters to fights, events to fights), 5) Generate unique IDs where needed.",
+            "testStrategy": "Unit test each transformation function, verify derived statistics are calculated correctly, test missing data handling strategies."
+          },
+          {
+            "id": 7,
+            "title": "Build bulk load operations with upsert support",
+            "description": "Create efficient bulk loading functionality with upsert patterns for incremental updates",
+            "status": "pending",
+            "dependencies": [6],
+            "details": "Implement bulk insert operations using SQLAlchemy with PostgreSQL COPY or bulk_insert_mappings. Create upsert logic (INSERT ... ON CONFLICT UPDATE) for incremental updates. Ensure referential integrity is maintained and use transactions for atomicity.",
+            "testStrategy": "Benchmark bulk insert performance, test upsert logic with existing and new records, verify referential integrity constraints, test transaction rollback on errors."
+          },
+          {
+            "id": 8,
+            "title": "Integrate Great Expectations for data validation",
+            "description": "Set up Great Expectations to validate data quality before and after transformation",
+            "status": "pending",
+            "dependencies": [6],
+            "details": "Configure Great Expectations with validation suites for: 1) Data type validation, 2) Range checks on numeric fields, 3) Referential integrity checks, 4) Missing value detection, 5) Statistical distributions. Log validation failures and create data quality reports.",
+            "testStrategy": "Test validation with known good and bad data, verify validation failures are logged correctly, check data quality reports are generated."
+          },
+          {
+            "id": 9,
+            "title": "Create idempotent pipeline orchestration",
+            "description": "Build orchestration layer that allows safe pipeline reruns without data duplication",
+            "status": "pending",
+            "dependencies": [7, 8],
+            "details": "Create main ETL orchestration script that: 1) Runs Extract-Transform-Load phases in sequence, 2) Implements checkpointing for resumable execution, 3) Uses upsert patterns to prevent duplicates, 4) Logs pipeline execution metadata, 5) Provides rollback capability on failures.",
+            "testStrategy": "Test pipeline can be safely rerun multiple times, verify no data duplication occurs, test partial failure recovery, validate checkpointing works."
+          },
+          {
+            "id": 10,
+            "title": "Add monitoring and logging infrastructure",
+            "description": "Implement comprehensive logging, monitoring, and alerting for the ETL pipeline",
+            "status": "pending",
+            "dependencies": [9],
+            "details": "Set up: 1) Structured logging with log levels, 2) Performance metrics (records processed, duration, errors), 3) Data quality metrics tracking, 4) Alerting on failures or quality issues, 5) Pipeline execution history and metadata storage.",
+            "testStrategy": "Verify logs are created correctly, test monitoring metrics are accurate, validate alerts trigger on failures."
+          }
+        ]
       },
       {
         "id": 4,
@@ -226,7 +299,7 @@
     ],
     "metadata": {
       "created": "2025-08-30T15:55:11.132Z",
-      "updated": "2025-08-30T22:45:50.722Z",
+      "updated": "2025-09-15T04:33:00.000Z",
       "description": "Tasks for master context"
     }
   }

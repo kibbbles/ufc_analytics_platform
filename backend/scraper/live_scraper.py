@@ -71,6 +71,58 @@ class LiveUFCScraper:
             logging.info(f"Loaded {len(self.existing_ids)} existing IDs from database")
         except Exception as e:
             logging.warning(f"Could not load existing IDs: {e}")
+
+    def scrape_fighter_career_stats(self, fighter_url):
+        """
+        Scrape career statistics from fighter profile page
+
+        Returns dict with keys:
+            - slpm: Significant Strikes Landed per Minute
+            - str_acc: Striking Accuracy %
+            - sapm: Significant Strikes Absorbed per Minute
+            - str_def: Striking Defense %
+            - td_avg: Takedowns Average per 15 min
+            - td_acc: Takedown Accuracy %
+            - td_def: Takedown Defense %
+            - sub_avg: Submission Average per 15 min
+        """
+        try:
+            # Rate limiting
+            time.sleep(random.uniform(2, 4))
+
+            response = self.session.get(fighter_url, timeout=30)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            items = soup.find_all('li', class_='b-list__box-list-item')
+
+            stats = {}
+            for item in items:
+                # Label is in <i> tag
+                label_elem = item.find('i', class_='b-list__box-item-title')
+                if label_elem:
+                    label = label_elem.text.strip().rstrip(':')
+                    # Value is the text after the <i> tag
+                    full_text = item.get_text()
+                    value = full_text.replace(label_elem.text, '').strip()
+                    if value:
+                        stats[label] = value
+
+            # Map UFC labels to database columns
+            return {
+                'slpm': stats.get('SLpM'),
+                'str_acc': stats.get('Str. Acc.'),
+                'sapm': stats.get('SApM'),
+                'str_def': stats.get('Str. Def'),
+                'td_avg': stats.get('TD Avg.'),
+                'td_acc': stats.get('TD Acc.'),
+                'td_def': stats.get('TD Def.'),
+                'sub_avg': stats.get('Sub. Avg.')
+            }
+
+        except Exception as e:
+            logging.error(f"Error scraping fighter stats from {fighter_url}: {e}")
+            return None
         
     def get_existing_events(self):
         """Get list of event URLs already in database"""

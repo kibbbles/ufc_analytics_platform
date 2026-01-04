@@ -1,0 +1,41 @@
+# UFC Analytics Platform - Python Dependencies
+# Generated: 2025-12-06
+
+# Core Data Science Libraries
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Machine Learning
+scikit-learn>=1.3.0
+tensorflow>=2.15.0
+xgboost>=2.0.0
+
+# Database
+SQLAlchemy>=2.0.0
+psycopg2-binary>=2.9.0
+python-dotenv>=1.0.0
+
+# Web Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Utilities
+python-dateutil>=2.8.0
+tqdm>=4.65.0
+
+# Jupyter Notebook
+jupyter>=1.0.0
+ipykernel>=6.25.0
+notebook>=7.0.0
+
+# API Framework (for future backend)
+fastapi>=0.104.1
+uvicorn>=0.24.0
+pydantic>=2.4.0
+
+# Testing (optional)
+pytest>=7.4.0
+pytest-cov>=4.1.0

@@ -95,17 +95,17 @@ session.close()
 ```
 
 ### Current Data Status
-**⚠️ INCOMPLETE DATA - Needs Historical Backfill**
-- **Current State**: 756 events, 4,429 fighters, 5,644 fight results
-- **Issue**: Greko CSV had partial fighter histories (e.g., Petr Yan shows 8 fights instead of 25)
-- **Date Range**: 1994-03-11 to 2025-12-06 (sparse coverage for many fighters)
-- **Root Cause**: Initial CSV import was incomplete/sampled data
+**✅ CLEAN DATA - Greko CSVs Loaded Successfully**
+- **Current State**: 756 events, 4,449 fighters, 8,482 fight results, 39,912 fight stats
+- **Validation**: Petr Yan verified with correct 16 UFC fights (12W-4L)
+- **Date Range**: 1994-03-11 to 2025-12-07 (UFC Fight Night: Covington vs. Buckley)
+- **Foreign Keys**: ✅ All relationships populated (99.75%+ coverage)
 
 ### Available Scrapers
-- `backend/scraper/live_scraper.py` - For NEW events only (future updates)
-- `backend/scraper/bulk_scrape_career_stats.py` - Career stats scraper
-- `backend/scraper/bulk_scrape_physical_stats.py` - Physical stats scraper
-- **NEEDED**: Historical backfill scraper to get complete fighter records
+- `backend/scraper/live_scraper.py` - Active scraper for new UFC events (runs via GitHub Actions)
+- `backend/scraper/populate_new_foreign_keys.py` - Populates foreign keys for newly scraped data
+- `backend/scraper/bulk_scrape_career_stats.py` - Career stats scraper (manual use)
+- `backend/scraper/bulk_scrape_physical_stats.py` - Physical stats scraper (manual use)
 
 ### Database Schema (Current)
 ```sql
@@ -116,6 +116,16 @@ fight_details (varies)         -- Fight matchups
 fight_results (5,644 rows)     -- Fight outcomes (INCOMPLETE)
 fighter_tott (4,435 rows)      -- Tale of the Tape
 fight_stats (varies)           -- Round-by-round stats
+```
+
+### Data Loading Procedure
+**To reload database from Greko CSVs:**
+```bash
+cd backend/scraper
+python load_greko_csvs.py          # Clear & load CSVs
+python fix_foreign_key_columns.py  # Fix column types to VARCHAR(8)
+python populate_foreign_keys.py    # Populate relationships
+python validate_greko_data.py      # Verify data integrity
 ```
 
 ### Automation
@@ -207,13 +217,14 @@ fight_stats (  -- Per fighter, per round statistics
 );
 ```
 
-### Relationship Status
-- ✅ **Working**: event_details ↔ all tables via event_id
-- ✅ **Working**: fight_details ↔ fight_results via fight_id  
-- ✅ **Working**: fighter_details ↔ fighter_tott via fighter_id
-- ⚠️ **Partial**: fight_details ↔ fight_stats (64% have fight_id)
-- ❌ **Missing**: fight_stats → fighter_details (only text names)
-- ❌ **Missing**: fight_details → fighter_details (needs parsing BOUT)
+### Relationship Status (Updated 2025-12-17)
+- ✅ **Complete**: event_details ↔ fight_details via event_id (100%)
+- ✅ **Complete**: event_details ↔ fight_results via event_id (100%)
+- ✅ **Complete**: event_details ↔ fight_stats via event_id (100%)
+- ✅ **Complete**: fight_details ↔ fight_results via fight_id (100%)
+- ✅ **Complete**: fight_details ↔ fight_stats via fight_id (100%)
+- ✅ **Complete**: fighter_details ↔ fighter_tott via fighter_id (99.75%)
+- ⚠️ **Text-only**: fight_stats → fighter_details (FIGHTER name column, no FK yet)
 
 ### Data Format Notes
 - **Stats Format**: "X of Y" means X landed, Y attempted
