@@ -16,15 +16,13 @@ backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, backend_dir)
 
 try:
-    from db.models import Fighter, Event, Fight, FightStat, FighterTott, FightResults
     from db.database import get_db_engine, SessionLocal
-    print("Successfully imported database models")
 except ImportError as e:
-    logging.error(f"Could not import database models: {e}")
-    logging.info("Make sure backend database is properly set up")
-    # Set to None so we can handle gracefully
-    Fighter = Event = Fight = FightStat = None
+    logging.error(f"Could not import database engine: {e}")
     get_db_engine = SessionLocal = None
+
+# ORM models are no longer used — DB writes go through raw SQL / pandas to_sql
+Fighter = Event = Fight = FightStat = None
 
 class DatabaseIntegration:
     """
