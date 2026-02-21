@@ -18,6 +18,7 @@ requests==2.32.3
 beautifulsoup4==4.12.3
 lxml==5.3.0
 schedule==1.2.2
+rapidfuzz==3.14.3
 
 # ML Libraries (for later)
 scikit-learn==1.5.2

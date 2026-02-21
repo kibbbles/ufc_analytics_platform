@@ -101,120 +101,176 @@
       {
         "id": 3,
         "title": "ETL Pipeline for Historical Data",
-        "description": "Develop an ETL pipeline to process scraped UFC data, transform it according to the database schema, and load it into PostgreSQL with proper validation and error handling.",
-        "details": "Create a comprehensive ETL pipeline using pandas and SQLAlchemy:\n\n1. Extract phase:\n   - Load raw JSON data from scraper output\n   - Implement parallel processing for large datasets\n   - Handle file locking for concurrent access\n\n2. Transform phase:\n   - Clean and normalize fighter names\n   - Calculate derived statistics (win percentages, etc.)\n   - Handle missing data with appropriate strategies\n   - Generate UUIDs for new entities\n   - Resolve entity relationships\n\n3. Load phase:\n   - Implement bulk inserts for performance\n   - Use upsert patterns for incremental updates\n   - Maintain referential integrity\n   - Transaction management for atomicity\n\n4. Validation:\n   - Implement Great Expectations data quality checks\n   - Log validation failures\n   - Create reports of data quality issues\n\n5. Orchestration:\n   - Set up Apache Airflow DAGs for scheduled runs\n   - Implement dependency management between tasks\n   - Create monitoring and alerting\n\nDesign the pipeline to be idempotent, allowing for safe reruns without data duplication.",
-        "testStrategy": "1. Unit test each transform function\n2. Integration test the full pipeline with sample data\n3. Test error handling with malformed input data\n4. Verify idempotency with repeated runs\n5. Test recovery from partial failures\n6. Benchmark performance with large datasets\n7. Validate data integrity after loading",
-        "priority": "high",
+        "description": "Transform and clean existing UFC data already in Supabase through 5 phases: FK resolution, quality cleanup, type parsing, new derived columns, and GitHub Actions automation. All work done in backend/scraper/ using raw sqlalchemy.text().",
+        "status": "pending",
         "dependencies": [
           1,
           2
         ],
-        "status": "pending",
+        "priority": "high",
+        "details": "Work directly against existing Supabase tables. No JSON files, no Airflow, no Great Expectations. Five phases:\n\n1. FK Resolution:\n   - Parse BOUT strings in fight_details using rapidfuzz to match fighter names and populate fighter_a_id and fighter_b_id (currently 100% NULL)\n   - Populate winner_id and loser_id FKs in fight_results using rapidfuzz name matching\n   - Populate fighter_id FK in fight_stats (currently 100% NULL)\n   - Scrape 8 career stat columns in fighter_tott that are missing\n\n2. Quality Cleanup:\n   - Replace '--' and '---' placeholder values with NULL across all relevant columns\n   - Strip trailing spaces from METHOD column\n   - Normalize WEIGHTCLASS values to a canonical set (e.g. 'Lightweight', 'Welterweight', etc.)\n\n3. Type Parsing:\n   - Parse 'X of Y' strike strings into integer pairs (landed, attempted)\n   - Parse CTRL time strings (e.g. '2:34') into total seconds as integer\n   - Parse physical attributes (height, weight, reach) from text to float values\n   - Calculate total_fight_time_seconds from round and time columns\n\n4. New Derived Columns:\n   - Add is_title_fight BOOLEAN column derived from WEIGHTCLASS or bout context\n   - Add fight_bonus STRING column for performance bonuses (POTN, FOTN, etc.)\n\n5. GitHub Actions Automation:\n   - Create backend/scraper/post_scrape_clean.py script that runs all cleanup phases\n   - Wire into GitHub Actions workflow to run automatically after each scrape\n   - Script must be idempotent (safe to rerun)\n\nAll database operations use raw sqlalchemy.text() queries. No ORM, no pandas required.",
+        "testStrategy": "1. Unit test each parsing function (strike parsing, time parsing, physical attribute parsing) with edge cases and invalid inputs\n2. Test rapidfuzz FK resolution with known fighter name variations and verify match accuracy\n3. Verify quality cleanup replaces all '--'/'---' values and normalizes weightclass correctly\n4. Test idempotency by running post_scrape_clean.py multiple times and verifying no data corruption\n5. Validate FK resolution coverage (target: >95% of NULL FKs resolved)\n6. Spot-check derived columns (is_title_fight, fight_bonus) against known fight records\n7. Integration test the full post_scrape_clean.py script against a staging Supabase instance\n8. Verify GitHub Actions workflow triggers correctly after scrape runs",
         "subtasks": [
           {
             "id": 1,
-            "title": "Design ETL pipeline architecture",
-            "description": "Design the overall ETL pipeline architecture including data flow, error handling strategy, and idempotency patterns",
-            "status": "pending",
+            "title": "FK Resolution: Populate fighter_a_id and fighter_b_id in fight_details",
+            "description": "Use rapidfuzz to parse BOUT strings in the fight_details table and match fighter names against the fighters table to populate the currently NULL fighter_a_id and fighter_b_id foreign key columns.",
             "dependencies": [],
-            "details": "Document the ETL pipeline architecture with data flow diagrams, component responsibilities, error handling strategies, and design for idempotent operations. Define interfaces between Extract, Transform, and Load phases.",
-            "testStrategy": "Review design document for completeness and technical feasibility."
+            "details": "1. Query all rows from fight_details where fighter_a_id IS NULL or fighter_b_id IS NULL.\n2. For each row, parse the BOUT string (e.g. 'Fighter A vs. Fighter B') to extract two fighter name tokens.\n3. Load all fighter names and IDs from the fighters table into memory.\n4. Use rapidfuzz.process.extractOne with a score threshold (e.g. 85) to match each extracted name to a canonical fighter record.\n5. Log any unmatched or low-confidence matches for manual review.\n6. Execute UPDATE statements using sqlalchemy.text() to set fighter_a_id and fighter_b_id.\n7. Wrap updates in transactions; rollback on error.\n8. Acceptance criteria: fighter_a_id and fighter_b_id NULL rate reduced to <1% for parseable BOUT strings; all updates logged with match scores.\n<info added on 2026-02-21T15:32:42.451Z>\nCOMPLETED. Script: backend/scraper/populate_fighter_fks.py. Results: 8,482/8,533 fight_details rows now have both fighter_a_id and fighter_b_id (99.4%). 16,961 exact matches, 3 fuzzy matches (score_cutoff=88, WRatio). 51 unresolved rows are all scraper placeholder rows ('win vs. ' / 'draw vs. ') — not real fights. Real fight coverage is 100%. rapidfuzz 3.14.3 installed. Unresolved names logged to backend/scraper/unresolved_fighter_names.log.\n</info added on 2026-02-21T15:32:42.451Z>",
+            "status": "done",
+            "testStrategy": ""
           },
           {
             "id": 2,
-            "title": "Implement data extraction layer",
-            "description": "Build extraction functionality to load existing CSV/database data efficiently with parallel processing support",
+            "title": "FK Resolution: Populate winner_id and loser_id in fight_results",
+            "description": "Use rapidfuzz name matching to resolve winner and loser names in fight_results to fighter IDs and populate the winner_id and loser_id foreign key columns.",
+            "dependencies": [],
+            "details": "1. Query all fight_results rows where winner_id IS NULL or loser_id IS NULL.\n2. Extract winner and loser name strings from existing text columns.\n3. Load fighters table into memory (id, name).\n4. Apply rapidfuzz.process.extractOne with threshold 85 to match each name.\n5. For ambiguous matches (score between 75-85), log for manual review rather than auto-updating.\n6. Execute batch UPDATE statements via sqlalchemy.text() to set winner_id and loser_id.\n7. Verify referential integrity after updates.\n8. Acceptance criteria: winner_id and loser_id populated for all rows with parseable name data; match confidence scores stored in a log file.",
             "status": "pending",
-            "dependencies": [1],
-            "details": "Create extraction module that can load data from multiple sources (CSV files from Greko, existing database tables). Implement parallel processing using multiprocessing or Dask for large datasets. Handle file locking and concurrent access.",
-            "testStrategy": "Test loading performance with full dataset, verify parallel processing works correctly, test concurrent access scenarios."
+            "testStrategy": ""
           },
           {
             "id": 3,
-            "title": "Add normalized columns to database schema",
-            "description": "Add properly-typed columns to existing tables for parsed data (heights, weights, dates, statistics)",
-            "status": "pending",
+            "title": "FK Resolution: Populate fighter_id in fight_stats and scrape missing fighter_tott columns",
+            "description": "Resolve the fighter_id FK in fight_stats (currently 100% NULL) using rapidfuzz matching, and scrape the 8 missing career stat columns in fighter_tott from UFCStats.com.",
             "dependencies": [],
-            "details": "Execute database migration to add normalized columns:\n\n1. Add columns to fighter_tott:\n   - height_inches FLOAT\n   - weight_lbs FLOAT\n   - reach_inches FLOAT\n   - dob_date DATE\n\n2. Add columns to event_details:\n   - Ensure date_proper DATE column exists\n\n3. Add columns to fight_stats:\n   - sig_str_landed INTEGER\n   - sig_str_attempted INTEGER\n   - td_landed INTEGER\n   - td_attempted INTEGER\n   - control_time_seconds INTEGER\n   - head_landed, head_attempted INTEGER\n   - body_landed, body_attempted INTEGER\n   - leg_landed, leg_attempted INTEGER\n   - distance_landed, distance_attempted INTEGER\n   - clinch_landed, clinch_attempted INTEGER\n   - ground_landed, ground_attempted INTEGER\n\n4. Create database triggers (optional) to auto-populate on INSERT/UPDATE\n\nKeep original TEXT columns for backward compatibility and debugging.",
-            "testStrategy": "Verify columns are added successfully, test that existing data is not affected, validate column types are correct."
+            "details": "1. For fight_stats FK resolution: query rows where fighter_id IS NULL, extract fighter name text, match against fighters table using rapidfuzz, and UPDATE via sqlalchemy.text().\n2. For fighter_tott: identify the 8 missing career stat columns (e.g. sig_str_landed_per_min, sig_str_absorbed_per_min, takedown_avg, submission_avg, sig_str_defense, takedown_defense, knockdown_avg, avg_fight_time).\n3. Scrape each fighter's stats page on UFCStats.com using requests/BeautifulSoup.\n4. Parse the 8 stat values and INSERT/UPDATE into fighter_tott using sqlalchemy.text().\n5. Implement rate limiting (1 req/sec) and retry logic.\n6. Acceptance criteria: fight_stats.fighter_id NULL rate <1%; all 8 fighter_tott columns populated for fighters with UFCStats profiles.",
+            "status": "pending",
+            "testStrategy": ""
           },
           {
             "id": 4,
-            "title": "Create data parsing and normalization utilities",
-            "description": "Build utility functions to parse TEXT fields into proper data types and populate normalized columns",
+            "title": "Quality Cleanup: Replace placeholder values, strip whitespace, and normalize WEIGHTCLASS",
+            "description": "Perform data quality cleanup across all relevant tables: replace '--' and '---' with NULL, strip trailing spaces from METHOD, and normalize WEIGHTCLASS to a canonical set of values.",
+            "dependencies": [],
+            "details": "1. Identify all columns across fight_details, fight_results, fight_stats, and fighter_tott that contain '--' or '---' placeholder strings.\n2. Generate and execute UPDATE statements using sqlalchemy.text() to SET col = NULL WHERE col IN ('--', '---') for each identified column.\n3. Strip trailing (and leading) spaces from the METHOD column in fight_results: UPDATE fight_results SET method = TRIM(method).\n4. Define canonical WEIGHTCLASS values: ['Heavyweight', 'Light Heavyweight', 'Middleweight', 'Welterweight', 'Lightweight', 'Featherweight', 'Bantamweight', 'Flyweight', \"Women's Strawweight\", \"Women's Flyweight\", \"Women's Bantamweight\", \"Women's Featherweight\", 'Catch Weight', 'Open Weight'].\n5. Build a mapping of known variants to canonical values and apply via UPDATE.\n6. Log any unmapped WEIGHTCLASS values for manual review.\n7. Acceptance criteria: zero '--'/'---' values remain; METHOD has no trailing spaces; WEIGHTCLASS values match canonical set or are NULL.",
             "status": "pending",
-            "dependencies": [3],
-            "details": "Create Python parsing functions with comprehensive error handling:\n\n1. Date parsing:\n   - Parse various formats (YYYY-MM-DD, Month DD YYYY, etc.)\n   - Handle edge cases and invalid dates\n   - Return None for unparseable dates\n\n2. Physical attributes:\n   - parse_height(): Convert \"5' 11\\\"\" or \"180 cm\" to inches\n   - parse_weight(): Convert \"155 lbs\" or \"70 kg\" to lbs\n   - parse_reach(): Convert \"74\\\"\" or \"188 cm\" to inches\n   - Strip units and handle various formats\n\n3. Fight statistics:\n   - parse_strikes(): Split \"17 of 37\" into (17, 37) tuple\n   - parse_percentage(): Convert \"45%\" to 0.45 float\n   - parse_control_time(): Convert \"2:34\" to 154 seconds\n\n4. Error handling:\n   - Log parsing failures with original value\n   - Return None for unparseable values\n   - Track parsing success rate\n\nCreate comprehensive unit tests for each function with edge cases.",
-            "testStrategy": "Unit test each parsing function with various input formats, edge cases, null values, and invalid data. Verify error handling for unparseable values. Test with real sample data from database."
+            "testStrategy": ""
           },
           {
             "id": 5,
-            "title": "Create database migration script for normalization",
-            "description": "Build migration script to populate normalized columns from existing TEXT data",
+            "title": "Type Parsing: Parse strike strings, CTRL time, physical attributes, and fight time",
+            "description": "Implement parsing functions to convert text-encoded numeric data into proper integer/float types: 'X of Y' strike strings, CTRL time strings, physical attributes, and total fight time seconds.",
+            "dependencies": [],
+            "details": "1. Strike parsing: write parse_strikes(val) -> (int, int) that splits 'X of Y' into (landed, attempted); handle NULL/invalid input gracefully.\n2. Apply to all strike columns in fight_stats, adding paired _landed and _attempted integer columns via ALTER TABLE and UPDATE using sqlalchemy.text().\n3. CTRL time parsing: write parse_ctrl_time(val) -> int that converts 'M:SS' to total seconds; UPDATE ctrl_time_seconds column.\n4. Physical attributes: write parse_height(val) -> float (cm), parse_weight(val) -> float (lbs), parse_reach(val) -> float (inches) for fighters table; UPDATE height_cm, weight_lbs, reach_inches.\n5. Fight time: calculate total_fight_time_seconds from round number and time-in-round columns using formula: (round-1)*300 + parse_ctrl_time(time); UPDATE fight_results.\n6. All operations use sqlalchemy.text(); functions are unit-testable in isolation.\n7. Acceptance criteria: all parsed columns contain correct integer/float values; original text columns preserved; edge cases (NULL, '--', malformed) return NULL without crashing.",
             "status": "pending",
-            "dependencies": [4],
-            "details": "Create Python migration script that:\n\n1. Backup existing data:\n   - Export current tables to CSV before migration\n   - Create rollback script\n\n2. Populate normalized columns:\n   - Use parsing functions on TEXT columns\n   - Batch update operations for performance (1000 rows at a time)\n   - Track parsing success/failure statistics\n   - Log all parsing failures for review\n\n3. Validation:\n   - Compare row counts before/after\n   - Verify no data loss\n   - Check parsing success rates\n   - Validate sample records manually\n\n4. Create database triggers (recommended):\n   - Auto-populate normalized columns on INSERT\n   - Auto-update normalized columns on UPDATE\n   - Ensure new weekly scraper data is auto-normalized\n\n5. Transaction management:\n   - Use transactions for atomicity\n   - Rollback on errors\n   - Commit only after validation passes\n\nScript should be idempotent - safe to run multiple times.",
-            "testStrategy": "Test migration on sample subset first, verify all dates parse correctly across different formats, test numeric conversions maintain accuracy, validate compound field parsing preserves all data, check for data loss, test rollback procedure, verify triggers work on INSERT/UPDATE."
+            "testStrategy": ""
           },
           {
             "id": 6,
-            "title": "Implement data transformation layer",
-            "description": "Build transformation logic for cleaning, normalizing, and enriching UFC data",
+            "title": "New Derived Columns: Add is_title_fight BOOLEAN and fight_bonus STRING",
+            "description": "Add and populate two new derived columns: is_title_fight (BOOLEAN) derived from WEIGHTCLASS or bout context, and fight_bonus (STRING) for performance bonuses like POTN and FOTN.",
+            "dependencies": [],
+            "details": "1. Add is_title_fight column: ALTER TABLE fight_results ADD COLUMN IF NOT EXISTS is_title_fight BOOLEAN DEFAULT FALSE using sqlalchemy.text().\n2. Derive is_title_fight by checking if WEIGHTCLASS contains 'Title' or if BOUT string contains 'Championship'/'Title'; UPDATE accordingly.\n3. Add fight_bonus column: ALTER TABLE fight_results ADD COLUMN IF NOT EXISTS fight_bonus VARCHAR(50).\n4. Parse bonus indicators from available text fields; map to canonical values: 'POTN' (Performance of the Night), 'FOTN' (Fight of the Night), 'KOTN' (KO of the Night), 'SOTN' (Submission of the Night).\n5. A fight may have multiple bonuses; store as comma-separated string or use the primary bonus.\n6. All DDL and DML via sqlalchemy.text().\n7. Acceptance criteria: is_title_fight correctly set for known title fights (spot-check 20 records); fight_bonus populated for events known to award bonuses; columns are idempotent on re-run (IF NOT EXISTS guards).",
             "status": "pending",
-            "dependencies": [5],
-            "details": "Implement transformations: 1) Clean and normalize fighter names, 2) Calculate derived statistics (win percentages, finish rates), 3) Handle missing data with appropriate strategies (mean imputation, forward fill, null), 4) Resolve entity relationships (match fighters to fights, events to fights), 5) Generate unique IDs where needed.",
-            "testStrategy": "Unit test each transformation function, verify derived statistics are calculated correctly, test missing data handling strategies."
+            "testStrategy": ""
           },
           {
             "id": 7,
-            "title": "Build bulk load operations with upsert support",
-            "description": "Create efficient bulk loading functionality with upsert patterns for incremental updates",
+            "title": "Unit Tests for All Parsing and Matching Functions",
+            "description": "Write comprehensive unit tests for all parsing functions (strike, time, physical attributes, fight time) and rapidfuzz FK resolution logic with edge cases and invalid inputs.",
+            "dependencies": [],
+            "details": "1. Create backend/scraper/tests/test_parsers.py covering:\n   - parse_strikes: valid 'X of Y', '0 of 0', NULL, '--', malformed strings\n   - parse_ctrl_time: '0:00', '5:00', '2:34', NULL, '--', invalid format\n   - parse_height/weight/reach: various text formats, NULL, '--'\n   - total_fight_time_seconds: all 5 rounds, partial rounds, NULL inputs\n2. Create backend/scraper/tests/test_fk_resolution.py covering:\n   - Exact name matches\n   - Name variations (nicknames, abbreviations)\n   - Low-confidence matches that should be skipped\n   - Empty/NULL name inputs\n3. Use pytest; mock database calls with unittest.mock.\n4. Achieve >90% line coverage on all parsing modules.\n5. Acceptance criteria: all tests pass; edge cases documented; CI runs tests on push.",
             "status": "pending",
-            "dependencies": [6],
-            "details": "Implement bulk insert operations using SQLAlchemy with PostgreSQL COPY or bulk_insert_mappings. Create upsert logic (INSERT ... ON CONFLICT UPDATE) for incremental updates. Ensure referential integrity is maintained and use transactions for atomicity.",
-            "testStrategy": "Benchmark bulk insert performance, test upsert logic with existing and new records, verify referential integrity constraints, test transaction rollback on errors."
+            "testStrategy": ""
           },
           {
             "id": 8,
-            "title": "Integrate Great Expectations for data validation",
-            "description": "Set up Great Expectations to validate data quality before and after transformation",
+            "title": "Build post_scrape_clean.py Orchestration Script",
+            "description": "Create the backend/scraper/post_scrape_clean.py script that orchestrates all five ETL phases in sequence, is fully idempotent, and provides structured logging and error reporting.",
+            "dependencies": [],
+            "details": "1. Create backend/scraper/post_scrape_clean.py as the single entry point for all cleanup phases.\n2. Structure as sequential phase runner: Phase 1 (FK Resolution) -> Phase 2 (Quality Cleanup) -> Phase 3 (Type Parsing) -> Phase 4 (Derived Columns).\n3. Each phase wrapped in try/except with transaction rollback on failure; failed phase logs error and continues or halts based on severity flag.\n4. Idempotency: all UPDATE/ALTER statements use IF NOT EXISTS, WHERE col IS NULL guards, or UPSERT patterns so re-running produces no duplicate work.\n5. Accept --phase argument to run individual phases for debugging.\n6. Use Python logging module; output structured logs with phase name, rows affected, duration, and error details.\n7. Load DB connection string from environment variable SUPABASE_DB_URL.\n8. Acceptance criteria: script runs end-to-end without error on clean and already-processed data; --phase flag works; all phases complete in <30 minutes on full dataset.",
             "status": "pending",
-            "dependencies": [6],
-            "details": "Configure Great Expectations with validation suites for: 1) Data type validation, 2) Range checks on numeric fields, 3) Referential integrity checks, 4) Missing value detection, 5) Statistical distributions. Log validation failures and create data quality reports.",
-            "testStrategy": "Test validation with known good and bad data, verify validation failures are logged correctly, check data quality reports are generated."
+            "testStrategy": ""
           },
           {
             "id": 9,
-            "title": "Create idempotent pipeline orchestration",
-            "description": "Build orchestration layer that allows safe pipeline reruns without data duplication",
+            "title": "GitHub Actions Workflow for Automated Post-Scrape Cleanup",
+            "description": "Wire post_scrape_clean.py into a GitHub Actions workflow that triggers automatically after each scrape run, with proper secret management and failure notifications.",
+            "dependencies": [],
+            "details": "1. Create .github/workflows/post_scrape_clean.yml.\n2. Trigger: workflow_run with workflows: ['Scrape UFC Data'] and types: [completed]; also support manual workflow_dispatch trigger.\n3. Job steps:\n   a. Checkout repo\n   b. Set up Python 3.11\n   c. Install dependencies from backend/scraper/requirements.txt\n   d. Run python backend/scraper/post_scrape_clean.py with SUPABASE_DB_URL from GitHub Secrets\n4. Add conditional: only run if triggering workflow succeeded (github.event.workflow_run.conclusion == 'success').\n5. On failure: send notification via GitHub Actions built-in failure reporting; optionally post to Slack via webhook secret.\n6. Cache pip dependencies for faster runs.\n7. Acceptance criteria: workflow triggers correctly after scrape; SUPABASE_DB_URL secret used (never logged); workflow passes on successful scrape; skips on failed scrape; manual trigger works.",
             "status": "pending",
-            "dependencies": [7, 8],
-            "details": "Create main ETL orchestration script that: 1) Runs Extract-Transform-Load phases in sequence, 2) Implements checkpointing for resumable execution, 3) Uses upsert patterns to prevent duplicates, 4) Logs pipeline execution metadata, 5) Provides rollback capability on failures.",
-            "testStrategy": "Test pipeline can be safely rerun multiple times, verify no data duplication occurs, test partial failure recovery, validate checkpointing works."
+            "testStrategy": ""
           },
           {
             "id": 10,
-            "title": "Add monitoring and logging infrastructure",
-            "description": "Implement comprehensive logging, monitoring, and alerting for the ETL pipeline",
+            "title": "End-to-End Validation and Data Quality Report",
+            "description": "Implement a validation script that runs post-cleanup to verify data quality metrics, FK integrity, and column completeness, producing a summary report for each pipeline run.",
+            "dependencies": [],
+            "details": "1. Create backend/scraper/validate_etl.py that runs after post_scrape_clean.py.\n2. Validation checks using sqlalchemy.text() queries:\n   - FK completeness: % of fight_details rows with non-NULL fighter_a_id/fighter_b_id\n   - FK completeness: % of fight_results rows with non-NULL winner_id/loser_id\n   - FK completeness: % of fight_stats rows with non-NULL fighter_id\n   - Zero '--'/'---' values across all cleaned columns\n   - WEIGHTCLASS values all in canonical set\n   - Strike columns: % non-NULL for _landed/_attempted pairs\n   - is_title_fight: non-NULL rate\n   - fight_bonus: distribution of bonus types\n3. Output a JSON summary report to backend/scraper/reports/etl_validation_{timestamp}.json.\n4. Define pass/fail thresholds (e.g. FK completeness >95% = pass).\n5. Exit with non-zero code if any threshold fails (causes GitHub Actions job to fail).\n6. Integrate validate_etl.py call at end of post_scrape_clean.py and in GitHub Actions workflow.\n7. Acceptance criteria: validation report generated on every run; pipeline fails loudly if quality thresholds not met; report archived as GitHub Actions artifact.",
             "status": "pending",
-            "dependencies": [9],
-            "details": "Set up: 1) Structured logging with log levels, 2) Performance metrics (records processed, duration, errors), 3) Data quality metrics tracking, 4) Alerting on failures or quality issues, 5) Pipeline execution history and metadata storage.",
-            "testStrategy": "Verify logs are created correctly, test monitoring metrics are accurate, validate alerts trigger on failures."
+            "testStrategy": ""
           }
         ]
       },
       {
         "id": 4,
         "title": "FastAPI Backend Setup",
-        "description": "Initialize the FastAPI project structure with middleware, error handling, logging, and basic health check endpoints following the technical architecture specified in the PRD.",
-        "details": "Set up a FastAPI 0.104.1 application with the following components:\n\n1. Project structure:\n   ```\n   app/\n     ├── api/\n     │   ├── v1/\n     │   │   ├── endpoints/\n     │   │   │   ├── predictions.py\n     │   │   │   ├── analytics.py\n     │   │   │   ├── fighters.py\n     │   │   │   └── fights.py\n     │   │   └── router.py\n     │   └── dependencies.py\n     ├── core/\n     │   ├── config.py\n     │   ├── security.py\n     │   └── logging.py\n     ├── db/\n     │   ├── session.py\n     │   └── models/\n     ├── ml/\n     │   ├── models/\n     │   └── prediction.py\n     ├── schemas/\n     └── main.py\n   ```\n\n2. Middleware configuration:\n   - CORS with appropriate origins\n   - Request ID generation\n   - Timing middleware\n   - Error handling middleware\n\n3. Database connection:\n   - SQLAlchemy async session setup\n   - Connection pooling\n   - Health check queries\n\n4. Redis integration:\n   - Connection pool setup\n   - Caching decorators\n   - Health check pings\n\n5. API documentation:\n   - OpenAPI schema customization\n   - Endpoint descriptions and examples\n   - Authentication documentation\n\n6. Health check endpoints:\n   - `/health` for basic API health\n   - `/health/db` for database connectivity\n   - `/health/redis` for cache connectivity\n\n7. Logging configuration:\n   - Structured JSON logging\n   - Log rotation\n   - Different log levels for environments\n\nImplement using Uvicorn for development and Gunicorn for production with appropriate worker configurations.",
-        "testStrategy": "1. Unit test middleware functions\n2. Test health check endpoints\n3. Verify CORS configuration\n4. Test error handling with forced exceptions\n5. Benchmark request processing time\n6. Validate OpenAPI schema generation\n7. Test logging output format and content",
-        "priority": "high",
-        "dependencies": [
-          1
-        ],
+        "description": "Initialize the FastAPI project structure with middleware, error handling, logging, and basic health check endpoints. Uses raw SQL with sqlalchemy.text() and Pydantic schemas for serialization (no ORM models). Public platform with no authentication required.",
         "status": "pending",
-        "subtasks": []
+        "dependencies": [
+          1,
+          3
+        ],
+        "priority": "high",
+        "details": "Set up a FastAPI application with the following components:\n\n1. Project structure:\n   ```\n   backend/\n     ├── api/\n     │   ├── v1/\n     │   │   ├── endpoints/\n     │   │   │   ├── predictions.py\n     │   │   │   ├── analytics.py\n     │   │   │   ├── fighters.py\n     │   │   │   ├── fights.py\n     │   │   │   └── events.py\n     │   │   └── router.py\n     │   └── dependencies.py\n     ├── core/\n     │   ├── config.py\n     │   └── logging.py\n     ├── db/\n     │   └── database.py  (SessionLocal, engine already configured - use as-is)\n     ├── schemas/\n     │   ├── fighter.py\n     │   ├── fight.py\n     │   ├── event.py\n     │   ├── prediction.py\n     │   └── analytics.py\n     └── main.py\n   ```\n\n2. Key API endpoints to implement:\n   - `GET /fighters` - list all fighters\n   - `GET /fighters/{id}` - single fighter detail\n   - `GET /fights` - list all fights\n   - `GET /fights/{id}` - single fight detail\n   - `GET /events` - list all events\n   - `GET /events/{id}` - single event detail\n   - `POST /predictions/fight-outcome` - predict fight outcome\n   - `GET /analytics/style-evolution` - style evolution analytics\n   - `GET /analytics/fighter-endurance/{id}` - fighter endurance analytics\n\n3. Database access pattern:\n   - Import SessionLocal and engine from `backend/db/database.py`\n   - Use `sqlalchemy.text()` for all queries (no ORM models)\n   - Use Pydantic schemas for request/response serialization\n   - Example pattern:\n     ```python\n     from backend.db.database import SessionLocal\n     from sqlalchemy import text\n     \n     def get_fighters(db: Session):\n         result = db.execute(text(\"SELECT * FROM fighters\"))\n         return result.mappings().all()\n     ```\n\n4. Middleware configuration:\n   - CORS with appropriate origins (allow frontend dev server)\n   - Request ID generation\n   - Timing middleware\n   - Error handling middleware\n   - No authentication middleware needed (public platform)\n\n5. Pydantic schemas (no ORM, pure serialization):\n   - FighterBase, FighterResponse\n   - FightBase, FightResponse\n   - EventBase, EventResponse\n   - PredictionRequest, PredictionResponse\n   - AnalyticsResponse\n\n6. Health check endpoints:\n   - `/health` for basic API health\n   - `/health/db` for database connectivity (run a simple `SELECT 1` via sqlalchemy.text())\n\n7. Logging configuration:\n   - Structured JSON logging\n   - Log rotation\n   - Different log levels for environments\n\nImplement using Uvicorn for development and Gunicorn for production with appropriate worker configurations. No Redis, no security/auth module.",
+        "testStrategy": "1. Unit test middleware functions\n2. Test health check endpoints (`/health`, `/health/db`)\n3. Verify CORS configuration\n4. Test error handling with forced exceptions\n5. Benchmark request processing time\n6. Validate OpenAPI schema generation\n7. Test logging output format and content\n8. Test each endpoint with sample data: GET /fighters, GET /fighters/{id}, GET /fights, GET /fights/{id}, GET /events, GET /events/{id}\n9. Test POST /predictions/fight-outcome with valid and invalid payloads\n10. Test analytics endpoints return correctly structured responses\n11. Verify raw SQL queries via sqlalchemy.text() return correct Pydantic-serializable data",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Project Structure and Core Configuration",
+            "description": "Initialize the FastAPI project directory structure, core configuration module, and logging setup as the foundation for all other components.",
+            "dependencies": [],
+            "details": "Create the full directory tree under backend/ as specified: api/v1/endpoints/, core/, db/, schemas/, and main.py. Implement backend/core/config.py using Pydantic BaseSettings to load environment variables (DATABASE_URL, ENVIRONMENT, LOG_LEVEL, ALLOWED_ORIGINS, etc.). Implement backend/core/logging.py with structured JSON logging using python-json-logger, log rotation via logging.handlers.RotatingFileHandler, and environment-aware log levels (DEBUG for dev, INFO/WARNING for prod). Create empty __init__.py files in all packages. Acceptance criteria: All directories and files exist, config loads from .env without errors, logging outputs valid JSON to console and file, log rotation is configured.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Database Session Management and Dependencies",
+            "description": "Set up the database session dependency for FastAPI endpoints, importing the existing SessionLocal and engine from backend/db/database.py and providing a reusable get_db dependency.",
+            "dependencies": [],
+            "details": "In backend/api/dependencies.py, implement a get_db() generator function that yields a SessionLocal instance and ensures the session is closed in a finally block. Verify the import from backend/db/database.py works correctly (SessionLocal, engine already configured). Add a utility function to test DB connectivity by executing sqlalchemy.text('SELECT 1'). Do NOT redefine engine or SessionLocal. Acceptance criteria: get_db() yields a valid session, session is always closed after request, connectivity test function returns True on success and raises a clear exception on failure.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Pydantic Schemas Definition",
+            "description": "Define all Pydantic schemas for request/response serialization across fighters, fights, events, predictions, and analytics — with no ORM models.",
+            "dependencies": [],
+            "details": "Create the following schema files under backend/schemas/: fighter.py (FighterBase, FighterResponse with id, name, height_cm, weight_lbs, reach_inches, stance, birth_date, wins, losses, draws, no_contests), fight.py (FightBase, FightResponse with relevant fight fields), event.py (EventBase, EventResponse with id, name, date, city, country), prediction.py (PredictionRequest with fighter_a_id, fighter_b_id and optional parameters; PredictionResponse with win_probability, predicted_winner, confidence, method_probabilities), analytics.py (StyleEvolutionResponse, FighterEnduranceResponse). All schemas use Pydantic v2 with model_config = ConfigDict(from_attributes=False) since there are no ORM models. Acceptance criteria: All schemas import without errors, PredictionRequest validates required fields, all Response schemas serialize dict/mapping inputs correctly.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Middleware and Error Handling Configuration",
+            "description": "Configure CORS, request ID generation, timing middleware, and global error handling in main.py to make the API production-ready.",
+            "dependencies": [],
+            "details": "In backend/main.py, create the FastAPI app instance and add the following middleware in order: (1) CORSMiddleware with origins from config (e.g., http://localhost:3000, http://localhost:5173), allow_methods=['*'], allow_headers=['*']; (2) Custom RequestIDMiddleware that generates a UUID per request and attaches it to request.state and response headers as X-Request-ID; (3) Custom TimingMiddleware that measures request duration and logs it with the request ID and path; (4) Global exception handler using @app.exception_handler(Exception) that returns a structured JSON error response with request_id, message, and status_code, and logs the full traceback. No authentication middleware. Acceptance criteria: CORS headers present on responses, X-Request-ID header in every response, timing logged per request, unhandled exceptions return JSON (not HTML), 404s return structured JSON.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "API Endpoints Implementation and Router Setup",
+            "description": "Implement all v1 API endpoint modules for fighters, fights, events, predictions, and analytics using raw SQL via sqlalchemy.text(), and wire them into the versioned router.",
+            "dependencies": [],
+            "details": "Implement each endpoint file under backend/api/v1/endpoints/: fighters.py (GET /fighters with optional pagination query params, GET /fighters/{id}), fights.py (GET /fights with optional filters, GET /fights/{id}), events.py (GET /events, GET /events/{id}), predictions.py (POST /predictions/fight-outcome — accepts PredictionRequest, queries fighter stats via raw SQL, returns PredictionResponse with placeholder logic until ML model is ready in Task 6), analytics.py (GET /analytics/style-evolution with fighter_id query param, GET /analytics/fighter-endurance/{id}). All DB queries use db.execute(text('...')).mappings().all() or .first(). Return 404 HTTPException when single resources are not found. In backend/api/v1/router.py, create an APIRouter and include all endpoint routers with appropriate prefixes and tags. In main.py, include the v1 router under prefix /api/v1. Acceptance criteria: All endpoints return correct HTTP status codes, 404 on missing resources, responses validate against Pydantic schemas, raw SQL used exclusively (no ORM), OpenAPI docs auto-generated at /docs.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Health Check Endpoints and Server Configuration",
+            "description": "Implement /health and /health/db endpoints, finalize main.py app wiring, and configure Uvicorn/Gunicorn server settings for development and production.",
+            "dependencies": [],
+            "details": "Add health check routes directly in main.py or a dedicated health router: GET /health returns {status: 'ok', environment: str, version: str, timestamp: ISO datetime}; GET /health/db executes db.execute(text('SELECT 1')) via a direct SessionLocal() call (not the request-scoped dependency) and returns {status: 'ok', db: 'connected'} or {status: 'error', db: str(exception)} with HTTP 503 on failure. Create a backend/run_dev.py or document uvicorn command: uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000. Create a Procfile or gunicorn.conf.py for production: gunicorn backend.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile - --error-logfile -. Ensure app startup event logs the environment and config summary. Acceptance criteria: /health returns 200 with valid JSON, /health/db returns 200 when DB is reachable and 503 when not, Uvicorn starts successfully in dev mode, Gunicorn config file is valid, startup log message appears on launch.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 5,
@@ -232,16 +288,89 @@
       {
         "id": 6,
         "title": "ML Model Training and Serving",
-        "description": "Implement the machine learning pipeline to train fight prediction models (win/loss and method prediction) and create a model serving infrastructure with versioning and caching.",
-        "details": "Build a complete ML pipeline using scikit-learn 1.3+ and XGBoost 2.0:\n\n1. Data preparation:\n   - Train/validation/test splitting (temporal split)\n   - Feature scaling and normalization\n   - Class imbalance handling (SMOTE or class weights)\n\n2. Model training:\n   - Binary classification model for win/loss prediction\n     - XGBoost with hyperparameter tuning\n     - Cross-validation with time-based splits\n   - Multi-class model for fight outcome method\n     - Random Forest for KO/TKO vs Submission vs Decision\n     - Calibrated probabilities\n\n3. Model evaluation:\n   - Accuracy, precision, recall metrics\n   - ROC-AUC and PR-AUC curves\n   - Confusion matrices\n   - Feature importance analysis\n   - Backtesting on historical fights\n\n4. Model versioning with MLflow:\n   - Track experiments and parameters\n   - Log metrics and artifacts\n   - Register production models\n   - Model metadata storage\n\n5. Model serving:\n   - FastAPI endpoints for predictions\n   - Input validation with Pydantic\n   - Prediction caching with Redis\n   - Batch prediction capability\n\n6. Monitoring:\n   - Prediction drift detection\n   - Performance logging\n   - Retraining triggers\n\nImplement a model factory pattern to allow easy swapping of model implementations and versions.",
-        "testStrategy": "1. Test model accuracy on holdout data\n2. Verify calibration of probability outputs\n3. Benchmark prediction latency\n4. Test model loading and versioning\n5. Validate caching behavior\n6. Test concurrent prediction requests\n7. Verify model reproducibility\n8. Test model retraining pipeline",
-        "priority": "high",
+        "description": "Implement the machine learning pipeline to train fight prediction models (win/loss and method prediction) and create a model serving infrastructure using joblib serialization, loaded at API startup.",
+        "status": "pending",
         "dependencies": [
           4,
           5
         ],
-        "status": "pending",
-        "subtasks": []
+        "priority": "high",
+        "details": "Build a complete ML pipeline using scikit-learn 1.3+ and XGBoost 2.0:\n\n1. Data preparation:\n   - Train/validation/test splitting (temporal split)\n   - Feature scaling and normalization\n   - Class imbalance handling (SMOTE or class weights)\n\n2. Model training:\n   - Binary classification model for win/loss prediction\n     - XGBoost with hyperparameter tuning\n     - Cross-validation with time-based splits\n   - Multi-class model for fight outcome method\n     - Random Forest for KO/TKO vs Submission vs Decision\n     - Calibrated probabilities\n\n3. Model evaluation:\n   - Accuracy, precision, recall metrics\n   - ROC-AUC and PR-AUC curves\n   - Confusion matrices\n   - Feature importance analysis (critical for UI sliders feature)\n   - Backtesting on historical fights\n\n4. Model serialization:\n   - Use joblib to serialize trained models to backend/models/ directory\n   - Save feature scaler alongside models\n   - Store feature importance data as JSON for frontend consumption\n   - Version models with simple filename conventions (e.g., win_loss_v1.joblib, method_v1.joblib)\n\n5. Model serving:\n   - Models loaded at FastAPI application startup (Task 4 lifespan event)\n   - FastAPI endpoints for predictions in backend/api/v1/endpoints/predictions.py\n   - Input validation with Pydantic\n   - Batch prediction capability\n\n6. Interpretability (priority for UI):\n   - Export feature importance rankings from XGBoost and Random Forest\n   - Generate feature importance charts/data consumable by the frontend sliders feature\n   - SHAP values for individual prediction explanations (optional but valuable)\n\nImplement a simple model loader utility that reads joblib files from backend/models/ at startup and exposes them via FastAPI app state.",
+        "testStrategy": "1. Test model accuracy on holdout data\n2. Verify calibration of probability outputs\n3. Benchmark prediction latency\n4. Test model loading from backend/models/ directory at startup\n5. Verify joblib serialization/deserialization round-trip\n6. Test concurrent prediction requests\n7. Verify model reproducibility with fixed random seeds\n8. Test feature importance output format matches frontend expectations\n9. Validate batch prediction endpoint",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Data preparation and train/test splitting",
+            "description": "Load engineered features from Task 5, perform temporal train/validation/test split, apply feature scaling, and handle class imbalance using SMOTE or class weights.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Train XGBoost win/loss binary classifier",
+            "description": "Train an XGBoost binary classification model for win/loss prediction with hyperparameter tuning and time-based cross-validation. Evaluate with accuracy, ROC-AUC, and PR-AUC metrics.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Train Random Forest method multi-class classifier",
+            "description": "Train a Random Forest multi-class model to predict fight outcome method (KO/TKO vs Submission vs Decision) with calibrated probabilities. Evaluate with confusion matrix and per-class metrics.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Feature importance extraction and export",
+            "description": "Extract feature importance rankings from both XGBoost and Random Forest models. Export as JSON files to backend/models/ for frontend consumption. This data powers the UI sliders feature showing which attributes matter most.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Serialize models with joblib to backend/models/",
+            "description": "Serialize trained models and feature scalers using joblib to the backend/models/ directory. Use clear filename conventions (e.g., win_loss_v1.joblib, method_v1.joblib, scaler_v1.joblib). Include a model manifest JSON with metadata.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Model loader utility and FastAPI startup integration",
+            "description": "Create a model loader utility (backend/ml/model_loader.py) that reads joblib files from backend/models/ at application startup via FastAPI lifespan event. Expose loaded models through app state for use in prediction endpoints.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Prediction endpoints implementation",
+            "description": "Implement FastAPI prediction endpoints in backend/api/v1/endpoints/predictions.py. Include single fight prediction and batch prediction capability. Use Pydantic for input validation. Return probabilities and feature importance context.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Model evaluation and backtesting report",
+            "description": "Run full evaluation on holdout test set: accuracy, precision, recall, ROC-AUC, PR-AUC, confusion matrices, and backtesting on historical fights. Save evaluation report to backend/models/evaluation_report.json.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 7,
@@ -252,7 +381,53 @@
         "priority": "high",
         "dependencies": [],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Project Initialization with Vite, TypeScript, and Tooling",
+            "description": "Initialize the React 18 frontend project using Vite with TypeScript 4.9+, configure ESLint and Prettier, and establish the complete directory structure as specified in the PRD.",
+            "dependencies": [],
+            "details": "1. Run `npm create vite@latest` with React + TypeScript template\n2. Configure tsconfig.json with strict mode, path aliases (e.g., @/components, @/hooks, @/services)\n3. Install and configure ESLint with @typescript-eslint, eslint-plugin-react, eslint-plugin-react-hooks\n4. Install and configure Prettier with .prettierrc and .prettierignore\n5. Create the full directory structure: src/assets/, src/components/common/, src/components/layout/, src/components/features/, src/hooks/, src/pages/, src/services/, src/store/, src/types/, src/utils/\n6. Create placeholder index files in each directory\n7. Configure Vite with path aliases matching tsconfig\n8. Set up .env files (.env, .env.development, .env.production) with VITE_ prefixed variables\n9. Configure Jest and React Testing Library: install jest, @testing-library/react, @testing-library/jest-dom, jest-environment-jsdom\n10. Create jest.config.ts, setupTests.ts, and a test utilities file with mock providers\n11. Add npm scripts: dev, build, preview, lint, format, test\n\nAcceptance Criteria:\n- `npm run dev` starts the dev server without errors\n- `npm run build` produces a valid dist/ output\n- `npm run lint` and `npm run format` execute without errors\n- `npm run test` runs successfully with a sample test\n- All directories exist with placeholder files\n- TypeScript strict mode enabled with no type errors",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Tailwind CSS Styling Configuration with Design Tokens and Dark Mode",
+            "description": "Install and configure Tailwind CSS 3.0 with custom design tokens, dark mode support, and responsive breakpoints aligned with the PRD specifications.",
+            "dependencies": [],
+            "details": "1. Install tailwindcss, postcss, autoprefixer and run `npx tailwindcss init -p`\n2. Configure tailwind.config.ts with content paths covering all src files\n3. Define custom design tokens in the theme.extend section:\n   - Colors: primary, secondary, accent, neutral, success, warning, error palettes\n   - Typography: font families, sizes, weights\n   - Spacing: custom spacing scale\n   - Border radius, shadows, z-index values\n4. Configure responsive breakpoints: sm: 320px, md: 768px, lg: 1024px, xl: 1440px\n5. Enable dark mode with class strategy: `darkMode: 'class'`\n6. Create src/styles/globals.css with @tailwind directives and CSS custom properties for design tokens\n7. Create src/styles/tokens.ts exporting design token constants for use in TypeScript\n8. Import globals.css in main.tsx\n9. Create a ThemeProvider component in src/components/layout/ that manages dark/light mode toggle using localStorage persistence\n10. Add a useDarkMode custom hook in src/hooks/\n11. Verify Tailwind purging works correctly in production build\n\nAcceptance Criteria:\n- Tailwind utility classes apply correctly in components\n- Dark mode toggles via class on html element and persists across page reloads\n- All four responsive breakpoints work as expected\n- Design tokens are accessible both as Tailwind classes and TypeScript constants\n- Production build CSS is properly purged and optimized",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "React Router v6 Configuration with Lazy Loading and Route Guards",
+            "description": "Set up React Router v6 with all application route definitions, lazy loading for code splitting, and route guard components for protected routes.",
+            "dependencies": [],
+            "details": "1. Install react-router-dom v6\n2. Create src/router/index.tsx with centralized route definitions using createBrowserRouter\n3. Define routes for all planned pages:\n   - / (Home/Dashboard)\n   - /fighters (Fighter listing)\n   - /fighters/:id (Fighter detail)\n   - /events (Events listing)\n   - /events/:id (Event detail)\n   - /analytics (Analytics dashboard)\n   - /analytics/style-evolution (Style Evolution Timeline - Task 9)\n   - /analytics/endurance (Fighter Endurance Dashboard - Task 10)\n   - /predictions (Predictions page)\n   - /* (404 Not Found)\n4. Implement lazy loading for all page components using React.lazy() and Suspense with a loading fallback\n5. Create a RouteGuard component in src/components/common/ for future protected routes\n6. Create a Layout component in src/components/layout/ with Header, Sidebar/Nav, and Footer slots\n7. Create placeholder page components in src/pages/ for each route\n8. Add a NotFound (404) page component\n9. Create a LoadingSpinner component used as Suspense fallback\n10. Configure RouterProvider in App.tsx\n11. Write tests for routing behavior and lazy loading\n\nAcceptance Criteria:\n- All defined routes render their respective page components\n- Lazy loading splits code into separate chunks (verify in build output)\n- Suspense fallback displays during chunk loading\n- 404 page renders for unknown routes\n- Navigation between routes works without full page reload\n- RouteGuard component correctly handles access control logic",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "State Management with Context API, useReducer, and Persistence",
+            "description": "Implement global state management using React Context API with useReducer, typed actions and reducers, and localStorage persistence for relevant state slices.",
+            "dependencies": [],
+            "details": "1. Create src/store/index.ts as the main store entry point\n2. Define TypeScript interfaces for global state in src/types/store.ts:\n   - AppState (theme, notifications, ui state)\n   - FilterState (active filters for fighters/events/analytics)\n   - UserPreferencesState (dark mode, layout preferences)\n3. Create typed action types and action creators in src/store/actions.ts\n4. Implement reducers in src/store/reducers/:\n   - appReducer.ts\n   - filterReducer.ts\n   - userPreferencesReducer.ts\n5. Create a root reducer combining all reducers\n6. Create AppContext and AppProvider in src/store/AppContext.tsx using useReducer\n7. Implement localStorage persistence middleware pattern:\n   - Create src/utils/localStorage.ts with typed get/set/remove helpers\n   - Persist userPreferences and filterState to localStorage\n   - Rehydrate state from localStorage on app initialization\n8. Create custom hooks for consuming store slices: useAppState, useAppDispatch, useUserPreferences, useFilters in src/hooks/\n9. Wrap the app with AppProvider in main.tsx\n10. Write unit tests for reducers and custom hooks using mock providers\n\nAcceptance Criteria:\n- Global state is accessible from any component via custom hooks\n- State updates via dispatch trigger re-renders correctly\n- User preferences persist across browser sessions via localStorage\n- TypeScript provides full type safety for actions and state\n- Reducer tests cover all action types\n- No prop drilling required for global state access",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "API Service Layer, Common Components, and Error Handling",
+            "description": "Set up Axios with interceptors for API communication, create typed API service classes for all backend endpoints, implement common reusable UI components, and add error boundaries and toast notifications.",
+            "dependencies": [],
+            "details": "1. Install axios\n2. Create src/services/api.ts with Axios instance configured with:\n   - Base URL from environment variable (VITE_API_BASE_URL)\n   - Request interceptor for headers (Content-Type, correlation IDs)\n   - Response interceptor for error normalization\n   - Timeout configuration\n3. Create typed API service classes in src/services/:\n   - fightersService.ts (getFighters, getFighterById, getFighterStats)\n   - eventsService.ts (getEvents, getEventById)\n   - fightsService.ts (getFights, getFightById)\n   - analyticsService.ts (getStyleEvolution, getEnduranceData)\n   - predictionsService.ts (getPredictions)\n4. Create src/types/api.ts with request/response TypeScript interfaces matching backend Pydantic schemas\n5. Implement a custom useApi hook in src/hooks/useApi.ts for data fetching with loading/error/data states\n6. Create common components in src/components/common/:\n   - Button.tsx (variants: primary, secondary, ghost, danger; sizes: sm, md, lg)\n   - Input.tsx (with label, error state, helper text)\n   - Card.tsx (with header, body, footer slots)\n   - LoadingSpinner.tsx and LoadingSkeleton.tsx\n   - ErrorBoundary.tsx (class component with fallback UI)\n   - Toast.tsx and ToastContainer.tsx (integrated with app state)\n   - Badge.tsx, Modal.tsx, Tooltip.tsx\n7. Integrate ToastContainer in App.tsx layout\n8. Add toast dispatch actions to the store (subtask 4)\n9. Write component tests for all common components\n10. Ensure all components meet WCAG 2.1 AA accessibility standards (aria labels, keyboard navigation, focus management)\n\nAcceptance Criteria:\n- Axios instance correctly sends requests to the configured API base URL\n- All service methods return properly typed responses\n- Error interceptor normalizes API errors and triggers toast notifications\n- All common components render correctly across responsive breakpoints\n- ErrorBoundary catches and displays errors gracefully without crashing the app\n- Toast notifications appear and auto-dismiss correctly\n- Components pass accessibility checks with axe-core\n- Component unit tests achieve >80% coverage",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 8,
@@ -299,7 +474,7 @@
     ],
     "metadata": {
       "created": "2025-08-30T15:55:11.132Z",
-      "updated": "2025-09-15T04:33:00.000Z",
+      "updated": "2026-02-21T15:16:40.824Z",
       "description": "Tasks for master context"
     }
   }
