@@ -125,8 +125,8 @@
             "title": "FK Resolution: Populate winner_id and loser_id in fight_results",
             "description": "Use rapidfuzz name matching to resolve winner and loser names in fight_results to fighter IDs and populate the winner_id and loser_id foreign key columns.",
             "dependencies": [],
-            "details": "1. Query all fight_results rows where winner_id IS NULL or loser_id IS NULL.\n2. Extract winner and loser name strings from existing text columns.\n3. Load fighters table into memory (id, name).\n4. Apply rapidfuzz.process.extractOne with threshold 85 to match each name.\n5. For ambiguous matches (score between 75-85), log for manual review rather than auto-updating.\n6. Execute batch UPDATE statements via sqlalchemy.text() to set winner_id and loser_id.\n7. Verify referential integrity after updates.\n8. Acceptance criteria: winner_id and loser_id populated for all rows with parseable name data; match confidence scores stored in a log file.",
-            "status": "pending",
+            "details": "1. Query all fight_results rows where winner_id IS NULL or loser_id IS NULL.\n2. Extract winner and loser name strings from existing text columns.\n3. Load fighters table into memory (id, name).\n4. Apply rapidfuzz.process.extractOne with threshold 85 to match each name.\n5. For ambiguous matches (score between 75-85), log for manual review rather than auto-updating.\n6. Execute batch UPDATE statements via sqlalchemy.text() to set winner_id and loser_id.\n7. Verify referential integrity after updates.\n8. Acceptance criteria: winner_id and loser_id populated for all rows with parseable name data; match confidence scores stored in a log file.\n<info added on 2026-02-21T16:46:34.352Z>\nCOMPLETED. Script: backend/scraper/populate_result_fks.py. Results: 8,482/8,482 rows populated (100%). Breakdown: W/L: 5,369 rows, L/W: 2,963 rows, NC/Draw: 150 rows. is_winner=TRUE set for decisive results, FALSE for NC/Draw outcomes. Schema fix required prior to population: fight_results.fighter_id and opponent_id columns were VARCHAR(6) and widened to VARCHAR(8) to match Greko IDs; fight_stats.fighter_id also widened to VARCHAR(8).\n</info added on 2026-02-21T16:46:34.352Z>",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -474,7 +474,7 @@
     ],
     "metadata": {
       "created": "2025-08-30T15:55:11.132Z",
-      "updated": "2026-02-21T15:16:40.824Z",
+      "updated": "2026-02-21T16:46:24.132Z",
       "description": "Tasks for master context"
     }
   }
