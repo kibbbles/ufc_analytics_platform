@@ -65,7 +65,7 @@ class BulkCareerStatsScraper:
                     label = label_elem.text.strip().rstrip(':')
                     full_text = item.get_text()
                     value = full_text.replace(label_elem.text, '').strip()
-                    if value:
+                    if value and value != '--':  # filter placeholder values
                         stats[label] = value
 
             return {
@@ -119,28 +119,26 @@ class BulkCareerStatsScraper:
             return False
 
     def get_fighters_to_scrape(self, resume_from_id=None):
-        """Get fighters that need career stats scraped"""
+        """Get fighters that need career stats scraped (slpm IS NULL only)."""
         try:
             with engine.connect() as conn:
                 if resume_from_id:
-                    # Resume from specific fighter (in case of interruption)
                     query = text('''
                         SELECT id, "FIGHTER", "URL"
                         FROM fighter_tott
                         WHERE "URL" IS NOT NULL
-                        AND id >= :resume_id
+                          AND slpm IS NULL
+                          AND id >= :resume_id
                         ORDER BY id
                     ''')
                     result = conn.execute(query, {'resume_id': resume_from_id})
                 else:
-                    # Get all fighters (prioritize those without stats)
                     query = text('''
                         SELECT id, "FIGHTER", "URL"
                         FROM fighter_tott
                         WHERE "URL" IS NOT NULL
-                        ORDER BY
-                            CASE WHEN slpm IS NULL THEN 0 ELSE 1 END,
-                            id
+                          AND slpm IS NULL
+                        ORDER BY id
                     ''')
                     result = conn.execute(query)
 
@@ -179,20 +177,6 @@ class BulkCareerStatsScraper:
 
         for i, (fighter_id, fighter_name, fighter_url) in enumerate(fighters, 1):
             try:
-                # Check if already has stats
-                with engine.connect() as conn:
-                    check = conn.execute(text('''
-                        SELECT slpm, str_acc, sapm
-                        FROM fighter_tott
-                        WHERE id = :id
-                    '''), {'id': fighter_id}).fetchone()
-
-                    if check and all([check[0], check[1], check[2]]):
-                        self.stats['already_populated'] += 1
-                        if i % 50 == 0:
-                            print(f"[{i}/{len(fighters)}] {fighter_name:30s} - Already has stats (skipping)")
-                        continue
-
                 # Scrape career stats
                 print(f"[{i}/{len(fighters)}] {fighter_name:30s} ", end='')
 
@@ -208,8 +192,9 @@ class BulkCareerStatsScraper:
                         self.stats['failed'] += 1
                         print("[FAILED] Database update error")
                 else:
-                    self.stats['failed'] += 1
-                    print("[FAILED] No stats found")
+                    # Fighter has no career stats on the page (too few fights, or '--' data)
+                    self.stats['already_populated'] += 1
+                    print("[SKIP] No career stats on page")
 
                 # Progress report every 100 fighters
                 if i % 100 == 0:
@@ -251,8 +236,9 @@ class BulkCareerStatsScraper:
         print(f"  Total fighters:      {self.stats['total']}")
         print(f"  Successfully scraped: {self.stats['success']}")
         print(f"  Failed:              {self.stats['failed']}")
-        print(f"  Already populated:   {self.stats['already_populated']}")
-        print(f"  Success rate:        {self.stats['success']/(self.stats['success']+self.stats['failed'])*100:.1f}%")
+        print(f"  No page stats:       {self.stats['already_populated']}")
+        if self.stats['success'] + self.stats['failed'] > 0:
+            print(f"  Success rate:        {self.stats['success']/(self.stats['success']+self.stats['failed'])*100:.1f}%")
         print("="*80)
 
         # Verify database
