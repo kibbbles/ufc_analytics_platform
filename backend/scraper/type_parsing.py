@@ -61,6 +61,107 @@ log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Pure-Python parsing helpers (unit-testable without a DB connection)
+# These mirror the SQL expressions used in the UPDATE statements below.
+# ---------------------------------------------------------------------------
+
+def parse_x_of_y_str(val):
+    """Parse 'X of Y' string → (landed int, attempted int) or (None, None)."""
+    if not val or not isinstance(val, str):
+        return (None, None)
+    val = val.strip()
+    if not val or val in ('--', '---'):
+        return (None, None)
+    if ' of ' not in val:
+        return (None, None)
+    try:
+        left, right = val.split(' of ', 1)
+        return (int(left.strip()), int(right.strip()))
+    except (ValueError, AttributeError):
+        return (None, None)
+
+
+def parse_ctrl_time_str(val):
+    """Parse 'M:SS' string → total seconds as int, or None."""
+    if not val or not isinstance(val, str):
+        return None
+    val = val.strip()
+    if not val or val in ('--', '---'):
+        return None
+    if ':' not in val:
+        return None
+    try:
+        minutes, seconds = val.split(':', 1)
+        return int(minutes) * 60 + int(seconds)
+    except (ValueError, AttributeError):
+        return None
+
+
+def parse_height_inches_str(val):
+    """Parse "F' I\"" → total inches as float, or None."""
+    if not val or not isinstance(val, str):
+        return None
+    val = val.strip()
+    if not val or val in ('--', '---'):
+        return None
+    if "'" not in val:
+        return None
+    try:
+        feet_str, rest = val.split("'", 1)
+        inches_str = rest.strip().replace('"', '').strip()
+        feet = int(feet_str.strip())
+        inches = int(inches_str) if inches_str else 0
+        return float(feet * 12 + inches)
+    except (ValueError, AttributeError):
+        return None
+
+
+def parse_weight_lbs_str(val):
+    """Parse "NNN lbs." → float lbs, or None."""
+    if not val or not isinstance(val, str):
+        return None
+    val = val.strip()
+    if not val or val in ('--', '---'):
+        return None
+    try:
+        return float(val.split()[0])
+    except (ValueError, AttributeError, IndexError):
+        return None
+
+
+def parse_reach_inches_str(val):
+    """Parse '74"' → float inches, or None."""
+    if not val or not isinstance(val, str):
+        return None
+    val = val.strip()
+    if not val or val in ('--', '---'):
+        return None
+    try:
+        return float(val.replace('"', '').strip())
+    except ValueError:
+        return None
+
+
+def calc_total_fight_time(round_num, time_str):
+    """Calculate total fight time in seconds from round number and time string.
+
+    round_num: int or str (1-5), as stored in the ROUND column (TEXT in DB)
+    time_str:  'M:SS' string, as stored in the TIME column
+    Returns int seconds or None on any invalid input.
+    """
+    if round_num is None or time_str is None:
+        return None
+    try:
+        round_int = int(round_num)
+    except (ValueError, TypeError):
+        return None
+    time_secs = parse_ctrl_time_str(time_str)
+    if time_secs is None:
+        return None
+    return (round_int - 1) * 300 + time_secs
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
