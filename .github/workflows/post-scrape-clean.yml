@@ -1,0 +1,74 @@
+name: Post-Scrape ETL Cleanup
+
+# Runs automatically after "Weekly UFC Scraper" succeeds.
+# Can also be triggered manually from the Actions tab.
+on:
+  workflow_run:
+    workflows: ['Weekly UFC Scraper']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Run a single phase (1-4). Leave blank to run all phases.'
+        required: false
+        default: ''
+
+jobs:
+  etl-cleanup:
+    name: Run ETL cleanup pipeline
+    runs-on: ubuntu-latest
+
+    # Skip if the triggering scraper workflow failed.
+    # When triggered manually (workflow_dispatch) there is no workflow_run
+    # context, so we always allow it through.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run ETL cleanup (all phases)
+        if: ${{ github.event.inputs.phase == '' || github.event.inputs.phase == null }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python backend/scraper/post_scrape_clean.py
+
+      - name: Run ETL cleanup (single phase)
+        if: ${{ github.event.inputs.phase != '' && github.event.inputs.phase != null }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python backend/scraper/post_scrape_clean.py --phase ${{ github.event.inputs.phase }}
+
+      - name: Report success
+        if: success()
+        run: echo "ETL cleanup pipeline completed successfully."
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: etl-cleanup-logs
+          path: backend/scraper/*.log
+          retention-days: 7
