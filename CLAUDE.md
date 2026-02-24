@@ -95,27 +95,54 @@ session.close()
 ```
 
 ### Current Data Status
-**✅ CLEAN DATA - Greko CSVs Loaded Successfully**
+**✅ CLEAN DATA — ETL Pipeline Complete (Task 3 done 2026-02-23)**
 - **Current State**: 756 events, 4,449 fighters, 8,482 fight results, 39,912 fight stats
 - **Validation**: Petr Yan verified with correct 16 UFC fights (12W-4L)
 - **Date Range**: 1994-03-11 to 2025-12-07 (UFC Fight Night: Covington vs. Buckley)
 - **Foreign Keys**: ✅ All relationships populated (99.75%+ coverage)
+- **Typed columns**: fight_stats (sig_str_landed, ctrl_seconds, kd_int, etc.), fight_results (fight_time_seconds, total_fight_time_seconds), fighter_tott (height_inches, weight_lbs, reach_inches, dob_date)
+- **Derived columns**: fight_results.weight_class, is_title_fight, is_interim_title, is_championship_rounds
+
+### ETL Pipeline (Task 3 — COMPLETE)
+Post-scrape cleanup runs automatically via GitHub Actions after each weekly scrape.
+
+**Scripts**:
+- `backend/scraper/post_scrape_clean.py` — orchestrates all 4 ETL phases in sequence
+- `backend/scraper/validate_etl.py` — post-ETL data quality validation; exits 1 if thresholds not met
+- `backend/scraper/reports/` — JSON validation reports (archived as GitHub Actions artifacts)
+
+**Phases**:
+1. FK Resolution — fighter_a/b_id, winner/loser FKs, fight_stats.fighter_id
+2. Quality Cleanup — NULL out `--` placeholders, strip METHOD trailing spaces
+3. Type Parsing — parse "X of Y" strikes, CTRL time, height/weight/reach, fight time
+4. Derived Columns — weight_class, is_title_fight, is_interim_title, is_championship_rounds
+
+**Run manually**:
+```bash
+python backend/scraper/post_scrape_clean.py           # all phases + validation
+python backend/scraper/post_scrape_clean.py --phase 2 # single phase, no validation
+python backend/scraper/post_scrape_clean.py --dry-run  # preview without DB changes
+python backend/scraper/validate_etl.py                # standalone validation
+```
+
+**Workflows**:
+- `.github/workflows/scraper.yml` — weekly scrape (live_scraper.py)
+- `.github/workflows/post-scrape-clean.yml` — ETL + validation, triggered after scrape succeeds
 
 ### Available Scrapers
-- `backend/scraper/live_scraper.py` - Active scraper for new UFC events (runs via GitHub Actions)
-- `backend/scraper/populate_new_foreign_keys.py` - Populates foreign keys for newly scraped data
-- `backend/scraper/bulk_scrape_career_stats.py` - Career stats scraper (manual use)
-- `backend/scraper/bulk_scrape_physical_stats.py` - Physical stats scraper (manual use)
+- `backend/scraper/live_scraper.py` — Active scraper; writes to all 6 tables (events, fights, results, stats, fighter profiles, tott)
+- `backend/scraper/bulk_scrape_career_stats.py` — Career stats scraper (manual use)
+- `backend/scraper/bulk_scrape_physical_stats.py` — Physical stats scraper (manual use)
 
 ### Database Schema (Current)
 ```sql
 -- Core tables
 event_details (756 rows)       -- UFC events
-fighter_details (4,429 rows)   -- Fighter profiles
-fight_details (varies)         -- Fight matchups
-fight_results (5,644 rows)     -- Fight outcomes (INCOMPLETE)
-fighter_tott (4,435 rows)      -- Tale of the Tape
-fight_stats (varies)           -- Round-by-round stats
+fighter_details (4,449 rows)   -- Fighter profiles
+fight_details (~8,482 rows)    -- Fight matchups
+fight_results (8,482 rows)     -- Fight outcomes + typed/derived columns
+fighter_tott (4,435 rows)      -- Tale of the Tape + typed columns
+fight_stats (39,912 rows)      -- Round-by-round stats + typed columns
 ```
 
 ### Data Loading Procedure
@@ -126,11 +153,12 @@ python load_greko_csvs.py          # Clear & load CSVs
 python fix_foreign_key_columns.py  # Fix column types to VARCHAR(8)
 python populate_foreign_keys.py    # Populate relationships
 python validate_greko_data.py      # Verify data integrity
+python post_scrape_clean.py        # Run full ETL pipeline + validation
 ```
 
 ### Automation
-- `backend/scraper/scheduler.py` - Weekly automation for live_scraper
-- Currently only monitors NEW events, not historical gaps
+- `.github/workflows/scraper.yml` — Weekly scrape via live_scraper.py (GitHub Actions)
+- `.github/workflows/post-scrape-clean.yml` — ETL cleanup + validation, auto-triggered after scrape
 
 
 ## Database Schema & Relationships
@@ -217,14 +245,15 @@ fight_stats (  -- Per fighter, per round statistics
 );
 ```
 
-### Relationship Status (Updated 2025-12-17)
+### Relationship Status (Updated 2026-02-23)
 - ✅ **Complete**: event_details ↔ fight_details via event_id (100%)
 - ✅ **Complete**: event_details ↔ fight_results via event_id (100%)
 - ✅ **Complete**: event_details ↔ fight_stats via event_id (100%)
 - ✅ **Complete**: fight_details ↔ fight_results via fight_id (100%)
 - ✅ **Complete**: fight_details ↔ fight_stats via fight_id (100%)
 - ✅ **Complete**: fighter_details ↔ fighter_tott via fighter_id (99.75%)
-- ⚠️ **Text-only**: fight_stats → fighter_details (FIGHTER name column, no FK yet)
+- ✅ **Complete**: fight_stats.fighter_id → fighter_details (99.8%+ coverage)
+- ✅ **Complete**: fight_results.fighter_id / opponent_id → fighter_details (100%)
 
 ### Data Format Notes
 - **Stats Format**: "X of Y" means X landed, Y attempted
