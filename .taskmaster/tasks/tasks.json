@@ -240,7 +240,7 @@
             "description": "Define all Pydantic schemas for request/response serialization across fighters, fights, events, predictions, and analytics — with no ORM models.",
             "dependencies": [],
             "details": "Create the following schema files under backend/schemas/: fighter.py (FighterBase, FighterResponse with id, name, height_cm, weight_lbs, reach_inches, stance, birth_date, wins, losses, draws, no_contests), fight.py (FightBase, FightResponse with relevant fight fields), event.py (EventBase, EventResponse with id, name, date, city, country), prediction.py (PredictionRequest with fighter_a_id, fighter_b_id and optional parameters; PredictionResponse with win_probability, predicted_winner, confidence, method_probabilities), analytics.py (StyleEvolutionResponse, FighterEnduranceResponse). All schemas use Pydantic v2 with model_config = ConfigDict(from_attributes=False) since there are no ORM models. Acceptance criteria: All schemas import without errors, PredictionRequest validates required fields, all Response schemas serialize dict/mapping inputs correctly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -487,7 +487,7 @@
     ],
     "metadata": {
       "created": "2025-08-30T15:55:11.132Z",
-      "updated": "2026-02-24T16:02:21.567Z",
+      "updated": "2026-02-24T21:43:38.775Z",
       "description": "Tasks for master context"
     }
   }
