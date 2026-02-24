@@ -211,6 +211,27 @@ def main():
     args = parse_args()
     phases = [args.phase] if args.phase else list(PHASES.keys())
     exit_code = run(phases, dry_run=args.dry_run)
+
+    # Run data-quality validation after all ETL phases complete.
+    # Only validate when all phases ran (no --phase flag) and not dry-running.
+    if not args.dry_run and not args.phase:
+        log.info("")
+        log.info("=" * 70)
+        log.info("  POST-ETL VALIDATION")
+        log.info("=" * 70)
+        try:
+            from scraper.validate_etl import run_validation, write_report
+            import os
+            report_dir = os.path.join(_HERE, "reports")
+            all_results, overall = run_validation()
+            write_report(all_results, overall, report_dir)
+            if overall != "PASS":
+                log.error("  Validation FAILED — pipeline exiting with code 1")
+                exit_code = 1
+        except Exception as exc:
+            log.error(f"  Validation script error: {exc}", exc_info=True)
+            exit_code = 1
+
     sys.exit(exit_code)
 
 
