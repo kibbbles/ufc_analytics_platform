@@ -102,7 +102,7 @@
         "id": 3,
         "title": "ETL Pipeline for Historical Data",
         "description": "Transform and clean existing UFC data already in Supabase through 5 phases: FK resolution, quality cleanup, type parsing, new derived columns, and GitHub Actions automation. All work done in backend/scraper/ using raw sqlalchemy.text().",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           1,
           2
@@ -135,7 +135,7 @@
             "description": "Resolve the fighter_id FK in fight_stats (currently 100% NULL) using rapidfuzz matching, and scrape the 8 missing career stat columns in fighter_tott from UFCStats.com.",
             "dependencies": [],
             "details": "1. For fight_stats FK resolution: query rows where fighter_id IS NULL, extract fighter name text, match against fighters table using rapidfuzz, and UPDATE via sqlalchemy.text().\n2. For fighter_tott: identify the 8 missing career stat columns (e.g. sig_str_landed_per_min, sig_str_absorbed_per_min, takedown_avg, submission_avg, sig_str_defense, takedown_defense, knockdown_avg, avg_fight_time).\n3. Scrape each fighter's stats page on UFCStats.com using requests/BeautifulSoup.\n4. Parse the 8 stat values and INSERT/UPDATE into fighter_tott using sqlalchemy.text().\n5. Implement rate limiting (1 req/sec) and retry logic.\n6. Acceptance criteria: fight_stats.fighter_id NULL rate <1%; all 8 fighter_tott columns populated for fighters with UFCStats profiles.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -144,7 +144,7 @@
             "description": "Perform data quality cleanup across all relevant tables: replace '--' and '---' with NULL, strip trailing spaces from METHOD, and normalize WEIGHTCLASS to a canonical set of values.",
             "dependencies": [],
             "details": "1. Identify all columns across fight_details, fight_results, fight_stats, and fighter_tott that contain '--' or '---' placeholder strings.\n2. Generate and execute UPDATE statements using sqlalchemy.text() to SET col = NULL WHERE col IN ('--', '---') for each identified column.\n3. Strip trailing (and leading) spaces from the METHOD column in fight_results: UPDATE fight_results SET method = TRIM(method).\n4. Define canonical WEIGHTCLASS values: ['Heavyweight', 'Light Heavyweight', 'Middleweight', 'Welterweight', 'Lightweight', 'Featherweight', 'Bantamweight', 'Flyweight', \"Women's Strawweight\", \"Women's Flyweight\", \"Women's Bantamweight\", \"Women's Featherweight\", 'Catch Weight', 'Open Weight'].\n5. Build a mapping of known variants to canonical values and apply via UPDATE.\n6. Log any unmapped WEIGHTCLASS values for manual review.\n7. Acceptance criteria: zero '--'/'---' values remain; METHOD has no trailing spaces; WEIGHTCLASS values match canonical set or are NULL.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -153,7 +153,7 @@
             "description": "Implement parsing functions to convert text-encoded numeric data into proper integer/float types: 'X of Y' strike strings, CTRL time strings, physical attributes, and total fight time seconds.",
             "dependencies": [],
             "details": "1. Strike parsing: write parse_strikes(val) -> (int, int) that splits 'X of Y' into (landed, attempted); handle NULL/invalid input gracefully.\n2. Apply to all strike columns in fight_stats, adding paired _landed and _attempted integer columns via ALTER TABLE and UPDATE using sqlalchemy.text().\n3. CTRL time parsing: write parse_ctrl_time(val) -> int that converts 'M:SS' to total seconds; UPDATE ctrl_time_seconds column.\n4. Physical attributes: write parse_height(val) -> float (cm), parse_weight(val) -> float (lbs), parse_reach(val) -> float (inches) for fighters table; UPDATE height_cm, weight_lbs, reach_inches.\n5. Fight time: calculate total_fight_time_seconds from round number and time-in-round columns using formula: (round-1)*300 + parse_ctrl_time(time); UPDATE fight_results.\n6. All operations use sqlalchemy.text(); functions are unit-testable in isolation.\n7. Acceptance criteria: all parsed columns contain correct integer/float values; original text columns preserved; edge cases (NULL, '--', malformed) return NULL without crashing.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -162,7 +162,7 @@
             "description": "Add and populate two new derived columns: is_title_fight (BOOLEAN) derived from WEIGHTCLASS or bout context, and fight_bonus (STRING) for performance bonuses like POTN and FOTN.",
             "dependencies": [],
             "details": "1. Add is_title_fight column: ALTER TABLE fight_results ADD COLUMN IF NOT EXISTS is_title_fight BOOLEAN DEFAULT FALSE using sqlalchemy.text().\n2. Derive is_title_fight by checking if WEIGHTCLASS contains 'Title' or if BOUT string contains 'Championship'/'Title'; UPDATE accordingly.\n3. Add fight_bonus column: ALTER TABLE fight_results ADD COLUMN IF NOT EXISTS fight_bonus VARCHAR(50).\n4. Parse bonus indicators from available text fields; map to canonical values: 'POTN' (Performance of the Night), 'FOTN' (Fight of the Night), 'KOTN' (KO of the Night), 'SOTN' (Submission of the Night).\n5. A fight may have multiple bonuses; store as comma-separated string or use the primary bonus.\n6. All DDL and DML via sqlalchemy.text().\n7. Acceptance criteria: is_title_fight correctly set for known title fights (spot-check 20 records); fight_bonus populated for events known to award bonuses; columns are idempotent on re-run (IF NOT EXISTS guards).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -171,7 +171,7 @@
             "description": "Write comprehensive unit tests for all parsing functions (strike, time, physical attributes, fight time) and rapidfuzz FK resolution logic with edge cases and invalid inputs.",
             "dependencies": [],
             "details": "1. Create backend/scraper/tests/test_parsers.py covering:\n   - parse_strikes: valid 'X of Y', '0 of 0', NULL, '--', malformed strings\n   - parse_ctrl_time: '0:00', '5:00', '2:34', NULL, '--', invalid format\n   - parse_height/weight/reach: various text formats, NULL, '--'\n   - total_fight_time_seconds: all 5 rounds, partial rounds, NULL inputs\n2. Create backend/scraper/tests/test_fk_resolution.py covering:\n   - Exact name matches\n   - Name variations (nicknames, abbreviations)\n   - Low-confidence matches that should be skipped\n   - Empty/NULL name inputs\n3. Use pytest; mock database calls with unittest.mock.\n4. Achieve >90% line coverage on all parsing modules.\n5. Acceptance criteria: all tests pass; edge cases documented; CI runs tests on push.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -180,7 +180,7 @@
             "description": "Create the backend/scraper/post_scrape_clean.py script that orchestrates all five ETL phases in sequence, is fully idempotent, and provides structured logging and error reporting.",
             "dependencies": [],
             "details": "1. Create backend/scraper/post_scrape_clean.py as the single entry point for all cleanup phases.\n2. Structure as sequential phase runner: Phase 1 (FK Resolution) -> Phase 2 (Quality Cleanup) -> Phase 3 (Type Parsing) -> Phase 4 (Derived Columns).\n3. Each phase wrapped in try/except with transaction rollback on failure; failed phase logs error and continues or halts based on severity flag.\n4. Idempotency: all UPDATE/ALTER statements use IF NOT EXISTS, WHERE col IS NULL guards, or UPSERT patterns so re-running produces no duplicate work.\n5. Accept --phase argument to run individual phases for debugging.\n6. Use Python logging module; output structured logs with phase name, rows affected, duration, and error details.\n7. Load DB connection string from environment variable SUPABASE_DB_URL.\n8. Acceptance criteria: script runs end-to-end without error on clean and already-processed data; --phase flag works; all phases complete in <30 minutes on full dataset.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -189,7 +189,7 @@
             "description": "Wire post_scrape_clean.py into a GitHub Actions workflow that triggers automatically after each scrape run, with proper secret management and failure notifications.",
             "dependencies": [],
             "details": "1. Create .github/workflows/post_scrape_clean.yml.\n2. Trigger: workflow_run with workflows: ['Scrape UFC Data'] and types: [completed]; also support manual workflow_dispatch trigger.\n3. Job steps:\n   a. Checkout repo\n   b. Set up Python 3.11\n   c. Install dependencies from backend/scraper/requirements.txt\n   d. Run python backend/scraper/post_scrape_clean.py with SUPABASE_DB_URL from GitHub Secrets\n4. Add conditional: only run if triggering workflow succeeded (github.event.workflow_run.conclusion == 'success').\n5. On failure: send notification via GitHub Actions built-in failure reporting; optionally post to Slack via webhook secret.\n6. Cache pip dependencies for faster runs.\n7. Acceptance criteria: workflow triggers correctly after scrape; SUPABASE_DB_URL secret used (never logged); workflow passes on successful scrape; skips on failed scrape; manual trigger works.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -198,7 +198,7 @@
             "description": "Implement a validation script that runs post-cleanup to verify data quality metrics, FK integrity, and column completeness, producing a summary report for each pipeline run.",
             "dependencies": [],
             "details": "1. Create backend/scraper/validate_etl.py that runs after post_scrape_clean.py.\n2. Validation checks using sqlalchemy.text() queries:\n   - FK completeness: % of fight_details rows with non-NULL fighter_a_id/fighter_b_id\n   - FK completeness: % of fight_results rows with non-NULL winner_id/loser_id\n   - FK completeness: % of fight_stats rows with non-NULL fighter_id\n   - Zero '--'/'---' values across all cleaned columns\n   - WEIGHTCLASS values all in canonical set\n   - Strike columns: % non-NULL for _landed/_attempted pairs\n   - is_title_fight: non-NULL rate\n   - fight_bonus: distribution of bonus types\n3. Output a JSON summary report to backend/scraper/reports/etl_validation_{timestamp}.json.\n4. Define pass/fail thresholds (e.g. FK completeness >95% = pass).\n5. Exit with non-zero code if any threshold fails (causes GitHub Actions job to fail).\n6. Integrate validate_etl.py call at end of post_scrape_clean.py and in GitHub Actions workflow.\n7. Acceptance criteria: validation report generated on every run; pipeline fails loudly if quality thresholds not met; report archived as GitHub Actions artifact.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -207,7 +207,7 @@
         "id": 4,
         "title": "FastAPI Backend Setup",
         "description": "Initialize the FastAPI project structure with middleware, error handling, logging, and basic health check endpoints. Uses raw SQL with sqlalchemy.text() and Pydantic schemas for serialization (no ORM models). Public platform with no authentication required.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           1,
           3
@@ -222,7 +222,7 @@
             "description": "Initialize the FastAPI project directory structure, core configuration module, and logging setup as the foundation for all other components.",
             "dependencies": [],
             "details": "Create the full directory tree under backend/ as specified: api/v1/endpoints/, core/, db/, schemas/, and main.py. Implement backend/core/config.py using Pydantic BaseSettings to load environment variables (DATABASE_URL, ENVIRONMENT, LOG_LEVEL, ALLOWED_ORIGINS, etc.). Implement backend/core/logging.py with structured JSON logging using python-json-logger, log rotation via logging.handlers.RotatingFileHandler, and environment-aware log levels (DEBUG for dev, INFO/WARNING for prod). Create empty __init__.py files in all packages. Acceptance criteria: All directories and files exist, config loads from .env without errors, logging outputs valid JSON to console and file, log rotation is configured.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -474,7 +474,7 @@
     ],
     "metadata": {
       "created": "2025-08-30T15:55:11.132Z",
-      "updated": "2026-02-21T16:46:24.132Z",
+      "updated": "2026-02-24T14:01:44.526Z",
       "description": "Tasks for master context"
     }
   }
