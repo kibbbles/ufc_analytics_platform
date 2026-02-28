@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
+        "id": "1",
         "title": "Database Schema Setup",
         "description": "Design and implement the PostgreSQL database schema with core entities (Fighter, Fight, FightStats, Event) as specified in the PRD.",
         "status": "done",
@@ -10,15 +10,18 @@
         "priority": "high",
         "details": "Create a Supabase PostgreSQL database with the following tables:\n\n1. fighters table with columns:\n   - id (SERIAL, primary key)\n   - name (varchar)\n   - height_cm (float)\n   - weight_lbs (float)\n   - reach_inches (float)\n   - stance (varchar)\n   - birth_date (date)\n   - wins (integer)\n   - losses (integer)\n   - draws (integer)\n   - no_contests (integer)\n\n2. events table with columns:\n   - id (SERIAL, primary key)\n   - name (varchar)\n   - date (timestamp)\n   - city (varchar)\n   - country (varchar)\n   - venue (varchar)\n\n3. fights table with columns:\n   - id (SERIAL, primary key)\n   - event_id (integer, foreign key)\n   - fighter_a_id (integer, foreign key)\n   - fighter_b_id (integer, foreign key)\n   - winner_id (integer, foreign key, nullable)\n   - method (varchar)\n   - round (integer)\n   - time (time)\n   - weight_class (varchar)\n   - is_title_fight (boolean)\n\n4. fight_stats table with columns:\n   - id (SERIAL, primary key)\n   - fight_id (integer, foreign key)\n   - fighter_id (integer, foreign key)\n   - total_strikes (integer)\n   - total_takedowns (integer)\n   - total_control_time (interval)\n\n5. round_stats table with columns:\n   - id (SERIAL, primary key)\n   - fight_stats_id (integer, foreign key)\n   - round_number (integer)\n   - strikes_landed (integer)\n   - strikes_attempted (integer)\n   - takedowns (integer)\n   - control_time (interval)\n\nImplement using SQLAlchemy 2.0 ORM with appropriate relationships and indexes. Create Alembic migrations for version control of the schema.",
         "testStrategy": "1. Write unit tests for SQLAlchemy models to verify relationships and constraints\n2. Create test fixtures with sample data\n3. Test database migrations (up and down)\n4. Verify foreign key constraints and cascading deletes\n5. Benchmark query performance with test data\n6. Validate SERIAL primary key generation and constraints",
-        "subtasks": []
+        "subtasks": [],
+        "complexity": 6,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down the Database Schema Setup task into 5 subtasks covering schema design, SQLAlchemy model implementation, relationship configuration, index creation, and Alembic migration setup. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 2,
+        "id": "2",
         "title": "Data Scraping Pipeline",
         "description": "Enhance the existing Greko scraper to extract UFC fight data from UFCStats.com, including fighter profiles, event information, fight results, and round-by-round statistics.",
         "status": "done",
         "dependencies": [
-          1
+          "1"
         ],
         "priority": "high",
         "details": "Extend and improve the existing Greko scraper API to efficiently collect UFC data. The current Greko implementation already contains significant data (744 events, 8287 fights, 4429 fighters, and 38958 fight statistics records) but has several limitations to address:\n\n1. Enhance Greko scraper modules for:\n   - Fighter profiles (physical attributes, record)\n   - Event listings (date, location, card details)\n   - Fight results (winners, methods, times)\n   - Round-by-round statistics\n\n2. Implement rate limiting and retry logic in Greko to avoid IP bans (currently missing):\n   - Random delays between requests (1-3 seconds)\n   - Exponential backoff for failed requests\n   - Rotate user agents\n\n3. Add robust error handling (currently crashes on failed requests):\n   - Graceful handling of HTTP errors\n   - Logging of failed requests\n   - Recovery mechanisms for partial scraping sessions\n\n4. Extend Greko's data transformation functions to normalize scraped data:\n   - Convert height from ft/in to cm\n   - Standardize weight class names\n   - Parse time strings to proper time objects\n\n5. Integrate data validation using Great Expectations (currently no quality checks):\n   - Validate data types and ranges\n   - Check for missing required fields\n   - Verify referential integrity\n\n6. Add incremental scraping logic to Greko (currently always scrapes everything):\n   - Track last scraped date\n   - Only fetch new or updated content\n\n7. Implement database integration (currently only outputs CSV):\n   - Connect to PostgreSQL database\n   - Create appropriate insert/update operations\n   - Maintain data consistency\n\n8. Create a scheduler using Airflow to run daily updates (currently manual execution only)\n\nStore raw scraped data in JSON format before processing to allow for reprocessing if needed.",
@@ -31,7 +34,8 @@
             "status": "done",
             "dependencies": [],
             "details": "Analyze the existing Greko scraper that has already collected 744 events, 8287 fights, 4429 fighters, and 38958 fight statistics records. Document the current architecture, data flow, and specific limitations: 1) No rate limiting, 2) No error handling, 3) No data validation, 4) No incremental updates, 5) CSV-only output, and 6) Manual execution requirement.",
-            "testStrategy": "Create a comprehensive report documenting findings and recommendations for improvements."
+            "testStrategy": "Create a comprehensive report documenting findings and recommendations for improvements.",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -40,7 +44,8 @@
             "status": "done",
             "dependencies": [],
             "details": "Build upon the existing Greko scraper modules to ensure comprehensive data collection while maintaining compatibility with the existing dataset of 744 events, 8287 fights, 4429 fighters, and 38958 fight statistics records.",
-            "testStrategy": "Compare output with existing CSV data to ensure consistency and identify any gaps or improvements."
+            "testStrategy": "Compare output with existing CSV data to ensure consistency and identify any gaps or improvements.",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -49,7 +54,8 @@
             "status": "done",
             "dependencies": [],
             "details": "Rate limiting implemented in live_scraper.py with random 1-3 second delays between requests and proper user agent headers.",
-            "testStrategy": "Test with mock responses to verify delays are working correctly and measure request patterns to ensure they don't trigger anti-scraping measures."
+            "testStrategy": "Test with mock responses to verify delays are working correctly and measure request patterns to ensure they don't trigger anti-scraping measures.",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -58,7 +64,8 @@
             "status": "done",
             "dependencies": [],
             "details": "Basic error handling implemented with try/catch blocks and logging throughout live_scraper.py and database_integration.py.",
-            "testStrategy": "Simulate various error conditions (timeouts, 404s, 500s, malformed HTML) and verify the scraper continues functioning."
+            "testStrategy": "Simulate various error conditions (timeouts, 404s, 500s, malformed HTML) and verify the scraper continues functioning.",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -67,7 +74,8 @@
             "status": "cancelled",
             "dependencies": [],
             "details": "Add data validation capabilities using Great Expectations to ensure data quality and consistency before storage. This is optional but recommended for production quality.",
-            "testStrategy": "Create test cases with both valid and invalid data to verify validation rules are working correctly."
+            "testStrategy": "Create test cases with both valid and invalid data to verify validation rules are working correctly.",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -76,7 +84,8 @@
             "status": "done",
             "dependencies": [],
             "details": "Incremental scraping implemented via get_existing_events() method that checks database for existing event URLs before scraping.",
-            "testStrategy": "Test with historical data to verify only new content is scraped, and validate that updates to existing content are properly detected."
+            "testStrategy": "Test with historical data to verify only new content is scraped, and validate that updates to existing content are properly detected.",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -85,7 +94,8 @@
             "status": "done",
             "dependencies": [],
             "details": "Database integration implemented in database_integration.py with direct PostgreSQL storage using SQLAlchemy.",
-            "testStrategy": "Test database connections, insertions, and updates with sample data to verify proper integration."
+            "testStrategy": "Test database connections, insertions, and updates with sample data to verify proper integration.",
+            "parentId": "undefined"
           },
           {
             "id": 8,
@@ -94,18 +104,22 @@
             "status": "done",
             "dependencies": [],
             "details": "Scheduler implemented in scheduler.py using schedule library for weekly automated runs (Sundays at 6 AM).",
-            "testStrategy": "Test scheduling with compressed timeframes to verify automated execution and proper handling of dependencies between tasks."
+            "testStrategy": "Test scheduling with compressed timeframes to verify automated execution and proper handling of dependencies between tasks.",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Break down the Data Scraping Pipeline task into 6 subtasks covering scraper implementation for different data types (fighters, events, fights, statistics), rate limiting and retry logic, data transformation, validation, incremental scraping, and scheduling. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 3,
+        "id": "3",
         "title": "ETL Pipeline for Historical Data",
         "description": "Transform and clean existing UFC data already in Supabase through 5 phases: FK resolution, quality cleanup, type parsing, new derived columns, and GitHub Actions automation. All work done in backend/scraper/ using raw sqlalchemy.text().",
         "status": "done",
         "dependencies": [
-          1,
-          2
+          "1",
+          "2"
         ],
         "priority": "high",
         "details": "Work directly against existing Supabase tables. No JSON files, no Airflow, no Great Expectations. Five phases:\n\n1. FK Resolution:\n   - Parse BOUT strings in fight_details using rapidfuzz to match fighter names and populate fighter_a_id and fighter_b_id (currently 100% NULL)\n   - Populate winner_id and loser_id FKs in fight_results using rapidfuzz name matching\n   - Populate fighter_id FK in fight_stats (currently 100% NULL)\n   - Scrape 8 career stat columns in fighter_tott that are missing\n\n2. Quality Cleanup:\n   - Replace '--' and '---' placeholder values with NULL across all relevant columns\n   - Strip trailing spaces from METHOD column\n   - Normalize WEIGHTCLASS values to a canonical set (e.g. 'Lightweight', 'Welterweight', etc.)\n\n3. Type Parsing:\n   - Parse 'X of Y' strike strings into integer pairs (landed, attempted)\n   - Parse CTRL time strings (e.g. '2:34') into total seconds as integer\n   - Parse physical attributes (height, weight, reach) from text to float values\n   - Calculate total_fight_time_seconds from round and time columns\n\n4. New Derived Columns:\n   - Add is_title_fight BOOLEAN column derived from WEIGHTCLASS or bout context\n   - Add fight_bonus STRING column for performance bonuses (POTN, FOTN, etc.)\n\n5. GitHub Actions Automation:\n   - Create backend/scraper/post_scrape_clean.py script that runs all cleanup phases\n   - Wire into GitHub Actions workflow to run automatically after each scrape\n   - Script must be idempotent (safe to rerun)\n\nAll database operations use raw sqlalchemy.text() queries. No ORM, no pandas required.",
@@ -118,7 +132,8 @@
             "dependencies": [],
             "details": "1. Query all rows from fight_details where fighter_a_id IS NULL or fighter_b_id IS NULL.\n2. For each row, parse the BOUT string (e.g. 'Fighter A vs. Fighter B') to extract two fighter name tokens.\n3. Load all fighter names and IDs from the fighters table into memory.\n4. Use rapidfuzz.process.extractOne with a score threshold (e.g. 85) to match each extracted name to a canonical fighter record.\n5. Log any unmatched or low-confidence matches for manual review.\n6. Execute UPDATE statements using sqlalchemy.text() to set fighter_a_id and fighter_b_id.\n7. Wrap updates in transactions; rollback on error.\n8. Acceptance criteria: fighter_a_id and fighter_b_id NULL rate reduced to <1% for parseable BOUT strings; all updates logged with match scores.\n<info added on 2026-02-21T15:32:42.451Z>\nCOMPLETED. Script: backend/scraper/populate_fighter_fks.py. Results: 8,482/8,533 fight_details rows now have both fighter_a_id and fighter_b_id (99.4%). 16,961 exact matches, 3 fuzzy matches (score_cutoff=88, WRatio). 51 unresolved rows are all scraper placeholder rows ('win vs. ' / 'draw vs. ') â€” not real fights. Real fight coverage is 100%. rapidfuzz 3.14.3 installed. Unresolved names logged to backend/scraper/unresolved_fighter_names.log.\n</info added on 2026-02-21T15:32:42.451Z>",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -127,7 +142,8 @@
             "dependencies": [],
             "details": "1. Query all fight_results rows where winner_id IS NULL or loser_id IS NULL.\n2. Extract winner and loser name strings from existing text columns.\n3. Load fighters table into memory (id, name).\n4. Apply rapidfuzz.process.extractOne with threshold 85 to match each name.\n5. For ambiguous matches (score between 75-85), log for manual review rather than auto-updating.\n6. Execute batch UPDATE statements via sqlalchemy.text() to set winner_id and loser_id.\n7. Verify referential integrity after updates.\n8. Acceptance criteria: winner_id and loser_id populated for all rows with parseable name data; match confidence scores stored in a log file.\n<info added on 2026-02-21T16:46:34.352Z>\nCOMPLETED. Script: backend/scraper/populate_result_fks.py. Results: 8,482/8,482 rows populated (100%). Breakdown: W/L: 5,369 rows, L/W: 2,963 rows, NC/Draw: 150 rows. is_winner=TRUE set for decisive results, FALSE for NC/Draw outcomes. Schema fix required prior to population: fight_results.fighter_id and opponent_id columns were VARCHAR(6) and widened to VARCHAR(8) to match Greko IDs; fight_stats.fighter_id also widened to VARCHAR(8).\n</info added on 2026-02-21T16:46:34.352Z>",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -136,7 +152,8 @@
             "dependencies": [],
             "details": "1. For fight_stats FK resolution: query rows where fighter_id IS NULL, extract fighter name text, match against fighters table using rapidfuzz, and UPDATE via sqlalchemy.text().\n2. For fighter_tott: identify the 8 missing career stat columns (e.g. sig_str_landed_per_min, sig_str_absorbed_per_min, takedown_avg, submission_avg, sig_str_defense, takedown_defense, knockdown_avg, avg_fight_time).\n3. Scrape each fighter's stats page on UFCStats.com using requests/BeautifulSoup.\n4. Parse the 8 stat values and INSERT/UPDATE into fighter_tott using sqlalchemy.text().\n5. Implement rate limiting (1 req/sec) and retry logic.\n6. Acceptance criteria: fight_stats.fighter_id NULL rate <1%; all 8 fighter_tott columns populated for fighters with UFCStats profiles.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -145,7 +162,8 @@
             "dependencies": [],
             "details": "1. Identify all columns across fight_details, fight_results, fight_stats, and fighter_tott that contain '--' or '---' placeholder strings.\n2. Generate and execute UPDATE statements using sqlalchemy.text() to SET col = NULL WHERE col IN ('--', '---') for each identified column.\n3. Strip trailing (and leading) spaces from the METHOD column in fight_results: UPDATE fight_results SET method = TRIM(method).\n4. Define canonical WEIGHTCLASS values: ['Heavyweight', 'Light Heavyweight', 'Middleweight', 'Welterweight', 'Lightweight', 'Featherweight', 'Bantamweight', 'Flyweight', \"Women's Strawweight\", \"Women's Flyweight\", \"Women's Bantamweight\", \"Women's Featherweight\", 'Catch Weight', 'Open Weight'].\n5. Build a mapping of known variants to canonical values and apply via UPDATE.\n6. Log any unmapped WEIGHTCLASS values for manual review.\n7. Acceptance criteria: zero '--'/'---' values remain; METHOD has no trailing spaces; WEIGHTCLASS values match canonical set or are NULL.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -154,7 +172,8 @@
             "dependencies": [],
             "details": "1. Strike parsing: write parse_strikes(val) -> (int, int) that splits 'X of Y' into (landed, attempted); handle NULL/invalid input gracefully.\n2. Apply to all strike columns in fight_stats, adding paired _landed and _attempted integer columns via ALTER TABLE and UPDATE using sqlalchemy.text().\n3. CTRL time parsing: write parse_ctrl_time(val) -> int that converts 'M:SS' to total seconds; UPDATE ctrl_time_seconds column.\n4. Physical attributes: write parse_height(val) -> float (cm), parse_weight(val) -> float (lbs), parse_reach(val) -> float (inches) for fighters table; UPDATE height_cm, weight_lbs, reach_inches.\n5. Fight time: calculate total_fight_time_seconds from round number and time-in-round columns using formula: (round-1)*300 + parse_ctrl_time(time); UPDATE fight_results.\n6. All operations use sqlalchemy.text(); functions are unit-testable in isolation.\n7. Acceptance criteria: all parsed columns contain correct integer/float values; original text columns preserved; edge cases (NULL, '--', malformed) return NULL without crashing.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -163,7 +182,8 @@
             "dependencies": [],
             "details": "1. Add is_title_fight column: ALTER TABLE fight_results ADD COLUMN IF NOT EXISTS is_title_fight BOOLEAN DEFAULT FALSE using sqlalchemy.text().\n2. Derive is_title_fight by checking if WEIGHTCLASS contains 'Title' or if BOUT string contains 'Championship'/'Title'; UPDATE accordingly.\n3. Add fight_bonus column: ALTER TABLE fight_results ADD COLUMN IF NOT EXISTS fight_bonus VARCHAR(50).\n4. Parse bonus indicators from available text fields; map to canonical values: 'POTN' (Performance of the Night), 'FOTN' (Fight of the Night), 'KOTN' (KO of the Night), 'SOTN' (Submission of the Night).\n5. A fight may have multiple bonuses; store as comma-separated string or use the primary bonus.\n6. All DDL and DML via sqlalchemy.text().\n7. Acceptance criteria: is_title_fight correctly set for known title fights (spot-check 20 records); fight_bonus populated for events known to award bonuses; columns are idempotent on re-run (IF NOT EXISTS guards).",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -172,7 +192,8 @@
             "dependencies": [],
             "details": "1. Create backend/scraper/tests/test_parsers.py covering:\n   - parse_strikes: valid 'X of Y', '0 of 0', NULL, '--', malformed strings\n   - parse_ctrl_time: '0:00', '5:00', '2:34', NULL, '--', invalid format\n   - parse_height/weight/reach: various text formats, NULL, '--'\n   - total_fight_time_seconds: all 5 rounds, partial rounds, NULL inputs\n2. Create backend/scraper/tests/test_fk_resolution.py covering:\n   - Exact name matches\n   - Name variations (nicknames, abbreviations)\n   - Low-confidence matches that should be skipped\n   - Empty/NULL name inputs\n3. Use pytest; mock database calls with unittest.mock.\n4. Achieve >90% line coverage on all parsing modules.\n5. Acceptance criteria: all tests pass; edge cases documented; CI runs tests on push.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 8,
@@ -181,7 +202,8 @@
             "dependencies": [],
             "details": "1. Create backend/scraper/post_scrape_clean.py as the single entry point for all cleanup phases.\n2. Structure as sequential phase runner: Phase 1 (FK Resolution) -> Phase 2 (Quality Cleanup) -> Phase 3 (Type Parsing) -> Phase 4 (Derived Columns).\n3. Each phase wrapped in try/except with transaction rollback on failure; failed phase logs error and continues or halts based on severity flag.\n4. Idempotency: all UPDATE/ALTER statements use IF NOT EXISTS, WHERE col IS NULL guards, or UPSERT patterns so re-running produces no duplicate work.\n5. Accept --phase argument to run individual phases for debugging.\n6. Use Python logging module; output structured logs with phase name, rows affected, duration, and error details.\n7. Load DB connection string from environment variable SUPABASE_DB_URL.\n8. Acceptance criteria: script runs end-to-end without error on clean and already-processed data; --phase flag works; all phases complete in <30 minutes on full dataset.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 9,
@@ -190,7 +212,8 @@
             "dependencies": [],
             "details": "1. Create .github/workflows/post_scrape_clean.yml.\n2. Trigger: workflow_run with workflows: ['Scrape UFC Data'] and types: [completed]; also support manual workflow_dispatch trigger.\n3. Job steps:\n   a. Checkout repo\n   b. Set up Python 3.11\n   c. Install dependencies from backend/scraper/requirements.txt\n   d. Run python backend/scraper/post_scrape_clean.py with SUPABASE_DB_URL from GitHub Secrets\n4. Add conditional: only run if triggering workflow succeeded (github.event.workflow_run.conclusion == 'success').\n5. On failure: send notification via GitHub Actions built-in failure reporting; optionally post to Slack via webhook secret.\n6. Cache pip dependencies for faster runs.\n7. Acceptance criteria: workflow triggers correctly after scrape; SUPABASE_DB_URL secret used (never logged); workflow passes on successful scrape; skips on failed scrape; manual trigger works.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 10,
@@ -199,18 +222,22 @@
             "dependencies": [],
             "details": "1. Create backend/scraper/validate_etl.py that runs after post_scrape_clean.py.\n2. Validation checks using sqlalchemy.text() queries:\n   - FK completeness: % of fight_details rows with non-NULL fighter_a_id/fighter_b_id\n   - FK completeness: % of fight_results rows with non-NULL winner_id/loser_id\n   - FK completeness: % of fight_stats rows with non-NULL fighter_id\n   - Zero '--'/'---' values across all cleaned columns\n   - WEIGHTCLASS values all in canonical set\n   - Strike columns: % non-NULL for _landed/_attempted pairs\n   - is_title_fight: non-NULL rate\n   - fight_bonus: distribution of bonus types\n3. Output a JSON summary report to backend/scraper/reports/etl_validation_{timestamp}.json.\n4. Define pass/fail thresholds (e.g. FK completeness >95% = pass).\n5. Exit with non-zero code if any threshold fails (causes GitHub Actions job to fail).\n6. Integrate validate_etl.py call at end of post_scrape_clean.py and in GitHub Actions workflow.\n7. Acceptance criteria: validation report generated on every run; pipeline fails loudly if quality thresholds not met; report archived as GitHub Actions artifact.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down the ETL Pipeline for Historical Data task into 5 subtasks covering data extraction from scraped sources, data transformation and cleaning, data loading with proper error handling, validation framework implementation, and pipeline orchestration with Airflow. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 4,
+        "id": "4",
         "title": "FastAPI Backend Setup",
         "description": "Initialize the FastAPI project structure with middleware, error handling, logging, and basic health check endpoints. Uses raw SQL with sqlalchemy.text() and Pydantic schemas for serialization (no ORM models). Public platform with no authentication required.",
         "status": "done",
         "dependencies": [
-          1,
-          3
+          "1",
+          "3"
         ],
         "priority": "high",
         "details": "Set up a FastAPI application with the following components:\n\n1. Project structure:\n   ```\n   backend/\n     â”œâ”€â”€ api/\n     â”‚   â”œâ”€â”€ v1/\n     â”‚   â”‚   â”œâ”€â”€ endpoints/\n     â”‚   â”‚   â”‚   â”œâ”€â”€ predictions.py\n     â”‚   â”‚   â”‚   â”œâ”€â”€ analytics.py\n     â”‚   â”‚   â”‚   â”œâ”€â”€ fighters.py\n     â”‚   â”‚   â”‚   â”œâ”€â”€ fights.py\n     â”‚   â”‚   â”‚   â””â”€â”€ events.py\n     â”‚   â”‚   â””â”€â”€ router.py\n     â”‚   â””â”€â”€ dependencies.py\n     â”œâ”€â”€ core/\n     â”‚   â”œâ”€â”€ config.py\n     â”‚   â””â”€â”€ logging.py\n     â”œâ”€â”€ db/\n     â”‚   â””â”€â”€ database.py  (SessionLocal, engine already configured - use as-is)\n     â”œâ”€â”€ schemas/\n     â”‚   â”œâ”€â”€ fighter.py\n     â”‚   â”œâ”€â”€ fight.py\n     â”‚   â”œâ”€â”€ event.py\n     â”‚   â”œâ”€â”€ prediction.py\n     â”‚   â””â”€â”€ analytics.py\n     â””â”€â”€ main.py\n   ```\n\n2. Key API endpoints to implement:\n   - `GET /fighters` - list all fighters\n   - `GET /fighters/{id}` - single fighter detail\n   - `GET /fights` - list all fights\n   - `GET /fights/{id}` - single fight detail\n   - `GET /events` - list all events\n   - `GET /events/{id}` - single event detail\n   - `POST /predictions/fight-outcome` - predict fight outcome\n   - `GET /analytics/style-evolution` - style evolution analytics\n   - `GET /analytics/fighter-endurance/{id}` - fighter endurance analytics\n\n3. Database access pattern:\n   - Import SessionLocal and engine from `backend/db/database.py`\n   - Use `sqlalchemy.text()` for all queries (no ORM models)\n   - Use Pydantic schemas for request/response serialization\n   - Example pattern:\n     ```python\n     from backend.db.database import SessionLocal\n     from sqlalchemy import text\n     \n     def get_fighters(db: Session):\n         result = db.execute(text(\"SELECT * FROM fighters\"))\n         return result.mappings().all()\n     ```\n\n4. Middleware configuration:\n   - CORS with appropriate origins (allow frontend dev server)\n   - Request ID generation\n   - Timing middleware\n   - Error handling middleware\n   - No authentication middleware needed (public platform)\n\n5. Pydantic schemas (no ORM, pure serialization):\n   - FighterBase, FighterResponse\n   - FightBase, FightResponse\n   - EventBase, EventResponse\n   - PredictionRequest, PredictionResponse\n   - AnalyticsResponse\n\n6. Health check endpoints:\n   - `/health` for basic API health\n   - `/health/db` for database connectivity (run a simple `SELECT 1` via sqlalchemy.text())\n\n7. Logging configuration:\n   - Structured JSON logging\n   - Log rotation\n   - Different log levels for environments\n\nImplement using Uvicorn for development and Gunicorn for production with appropriate worker configurations. No Redis, no security/auth module.",
@@ -223,7 +250,8 @@
             "dependencies": [],
             "details": "Create the full directory tree under backend/ as specified: api/v1/endpoints/, core/, db/, schemas/, and main.py. Implement backend/core/config.py using Pydantic BaseSettings to load environment variables (DATABASE_URL, ENVIRONMENT, LOG_LEVEL, ALLOWED_ORIGINS, etc.). Implement backend/core/logging.py with structured JSON logging using python-json-logger, log rotation via logging.handlers.RotatingFileHandler, and environment-aware log levels (DEBUG for dev, INFO/WARNING for prod). Create empty __init__.py files in all packages. Acceptance criteria: All directories and files exist, config loads from .env without errors, logging outputs valid JSON to console and file, log rotation is configured.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -232,7 +260,8 @@
             "dependencies": [],
             "details": "In backend/api/dependencies.py, implement a get_db() generator function that yields a SessionLocal instance and ensures the session is closed in a finally block. Verify the import from backend/db/database.py works correctly (SessionLocal, engine already configured). Add a utility function to test DB connectivity by executing sqlalchemy.text('SELECT 1'). Do NOT redefine engine or SessionLocal. Acceptance criteria: get_db() yields a valid session, session is always closed after request, connectivity test function returns True on success and raises a clear exception on failure.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -241,7 +270,8 @@
             "dependencies": [],
             "details": "Create the following schema files under backend/schemas/: fighter.py (FighterBase, FighterResponse with id, name, height_cm, weight_lbs, reach_inches, stance, birth_date, wins, losses, draws, no_contests), fight.py (FightBase, FightResponse with relevant fight fields), event.py (EventBase, EventResponse with id, name, date, city, country), prediction.py (PredictionRequest with fighter_a_id, fighter_b_id and optional parameters; PredictionResponse with win_probability, predicted_winner, confidence, method_probabilities), analytics.py (StyleEvolutionResponse, FighterEnduranceResponse). All schemas use Pydantic v2 with model_config = ConfigDict(from_attributes=False) since there are no ORM models. Acceptance criteria: All schemas import without errors, PredictionRequest validates required fields, all Response schemas serialize dict/mapping inputs correctly.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -250,7 +280,8 @@
             "dependencies": [],
             "details": "In backend/main.py, create the FastAPI app instance and add the following middleware in order: (1) CORSMiddleware with origins from config (e.g., http://localhost:3000, http://localhost:5173), allow_methods=['*'], allow_headers=['*']; (2) Custom RequestIDMiddleware that generates a UUID per request and attaches it to request.state and response headers as X-Request-ID; (3) Custom TimingMiddleware that measures request duration and logs it with the request ID and path; (4) Global exception handler using @app.exception_handler(Exception) that returns a structured JSON error response with request_id, message, and status_code, and logs the full traceback. No authentication middleware. Acceptance criteria: CORS headers present on responses, X-Request-ID header in every response, timing logged per request, unhandled exceptions return JSON (not HTML), 404s return structured JSON.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -259,7 +290,8 @@
             "dependencies": [],
             "details": "Implement each endpoint file under backend/api/v1/endpoints/: fighters.py (GET /fighters with optional pagination query params, GET /fighters/{id}), fights.py (GET /fights with optional filters, GET /fights/{id}), events.py (GET /events, GET /events/{id}), predictions.py (POST /predictions/fight-outcome â€” accepts PredictionRequest, queries fighter stats via raw SQL, returns PredictionResponse with placeholder logic until ML model is ready in Task 6), analytics.py (GET /analytics/style-evolution with fighter_id query param, GET /analytics/fighter-endurance/{id}). All DB queries use db.execute(text('...')).mappings().all() or .first(). Return 404 HTTPException when single resources are not found. In backend/api/v1/router.py, create an APIRouter and include all endpoint routers with appropriate prefixes and tags. In main.py, include the v1 router under prefix /api/v1. Acceptance criteria: All endpoints return correct HTTP status codes, 404 on missing resources, responses validate against Pydantic schemas, raw SQL used exclusively (no ORM), OpenAPI docs auto-generated at /docs.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -268,19 +300,23 @@
             "dependencies": [],
             "details": "Add health check routes directly in main.py or a dedicated health router: GET /health returns {status: 'ok', environment: str, version: str, timestamp: ISO datetime}; GET /health/db executes db.execute(text('SELECT 1')) via a direct SessionLocal() call (not the request-scoped dependency) and returns {status: 'ok', db: 'connected'} or {status: 'error', db: str(exception)} with HTTP 503 on failure. Create a backend/run_dev.py or document uvicorn command: uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000. Create a Procfile or gunicorn.conf.py for production: gunicorn backend.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile - --error-logfile -. Ensure app startup event logs the environment and config summary. Acceptance criteria: /health returns 200 with valid JSON, /health/db returns 200 when DB is reachable and 503 when not, Uvicorn starts successfully in dev mode, Gunicorn config file is valid, startup log message appears on launch.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Break down the FastAPI Backend Setup task into 6 subtasks covering project structure setup, middleware configuration, database connection management, Redis integration, API documentation, and health check endpoints. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 5,
+        "id": "5",
         "title": "Feature Engineering Pipeline",
         "description": "Develop a feature engineering pipeline to process raw UFC data into ML-ready features, including fighter differentials, rolling performance metrics, and style classifications.",
         "details": "Create a comprehensive feature engineering pipeline using pandas and numpy:\n\n1. Fighter differential features:\n   - Height differential (cm)\n   - Weight differential (lbs)\n   - Reach differential (inches)\n   - Age differential (years)\n   - Experience differential (fights)\n   - Win streak differential\n\n2. Rolling performance metrics:\n   - 3-fight rolling average for strikes landed/minute\n   - 3-fight rolling average for takedown accuracy\n   - 3-fight rolling average for submission attempts\n   - Exponentially weighted averages for recent performance\n\n3. Style classification features:\n   - Striking vs. grappling ratio\n   - Aggression score (forward pressure)\n   - Defensive metrics (strikes absorbed, takedown defense)\n   - Finishing ability (KO/submission percentage)\n\n4. Time-based features:\n   - Days since last fight\n   - Career length in days\n   - Age at fight time\n   - Time in specific weight class\n\n5. Opponent quality metrics:\n   - Opponent win percentage\n   - Strength of schedule\n   - Common opponents analysis\n\nImplement feature selection using mutual information and correlation analysis. Create a pipeline that can be used both for batch processing historical data and real-time feature generation for predictions.",
         "testStrategy": "1. Unit test each feature calculation function\n2. Verify feature distributions and ranges\n3. Test with edge cases (debut fighters, long layoffs)\n4. Validate feature importance with preliminary models\n5. Benchmark processing time for large datasets\n6. Test reproducibility with fixed random seeds\n7. Verify handling of missing data",
         "priority": "high",
         "dependencies": [
-          3
+          "3"
         ],
         "status": "in-progress",
         "subtasks": [
@@ -291,7 +327,8 @@
             "status": "done",
             "dependencies": [],
             "details": "Implement get_fights_df(), get_stats_df(), get_fighters_df(), and get_events_df() functions. Each returns a DataFrame using the SQLAlchemy engine from db.database. Use parameterized queries to support date-range filtering for incremental builds. No data transformation here -- raw extraction only.",
-            "testStrategy": "Spot-check row counts against known DB totals. Verify columns match schema. Confirm parameterized date filter returns correct subset."
+            "testStrategy": "Spot-check row counts against known DB totals. Verify columns match schema. Confirm parameterized date filter returns correct subset.",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -302,7 +339,8 @@
               1
             ],
             "details": "Features to compute: height_diff_inches, weight_diff_lbs, reach_diff_inches, age_diff_days (at fight date using dob_date), experience_diff (total UFC fights), win_streak_diff, loss_streak_diff. Join fighter_tott for physical stats. Use fight_results ordered by event date to compute streaks. Handle NULLs gracefully -- impute with 0 or median where appropriate.",
-            "testStrategy": "Verify known fighter matchup (e.g., Petr Yan vs Aljamain Sterling) produces correct height/reach differentials. Check streak logic against manually verified fight history."
+            "testStrategy": "Verify known fighter matchup (e.g., Petr Yan vs Aljamain Sterling) produces correct height/reach differentials. Check streak logic against manually verified fight history.",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -313,18 +351,21 @@
               1
             ],
             "details": "Metrics: 3-fight rolling avg for sig_str_pct, td_pct, kd_int, ctrl_seconds, sig_str_landed, sig_str_attempted. Also compute exponentially weighted averages (EWA) with alpha=0.5. Critical: shift(1) all rolling values so they reflect stats BEFORE the current fight. Merge on fighter_id and fight date order. Only use fight_stats rows where ROUND is numeric (already filtered in DB). Aggregate per fight first (sum across rounds), then roll.",
-            "testStrategy": "For a known fighter, manually compute 3-fight rolling sig_str_pct and compare. Confirm no data leakage by checking that fight N uses only fights 1 through N-1."
+            "testStrategy": "For a known fighter, manually compute 3-fight rolling sig_str_pct and compare. Confirm no data leakage by checking that fight N uses only fights 1 through N-1.",
+            "parentId": "undefined"
           },
           {
             "id": 4,
             "title": "Style classification features",
             "description": "Create backend/features/style_features.py that derives fighting style metrics from career aggregated stats.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               3
             ],
             "details": "Features: striking_ratio (sig_str_landed / total_str_landed), grappling_ratio (td_landed / (td_landed + sig_str_landed)), aggression_score (sig_str_attempted per minute), defense_score (1 - opp_sig_str_pct against this fighter), finish_rate (KO+Sub wins / total wins), ko_rate (KO wins / total fights), sub_rate (Sub wins / total fights), decision_rate (decision wins / total fights). Compute over career history up to but not including current fight.",
-            "testStrategy": "Verify a known striker (e.g., Justin Gaethje) has high striking_ratio and a known grappler (e.g., Khabib) has high grappling_ratio."
+            "testStrategy": "Verify a known striker (e.g., Justin Gaethje) has high striking_ratio and a known grappler (e.g., Khabib) has high grappling_ratio.",
+            "updatedAt": "2026-02-28T19:38:48.261Z",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -335,7 +376,8 @@
               1
             ],
             "details": "Features: days_since_last_fight (layoff duration), career_length_days (first UFC fight to current fight date), age_at_fight (computed from dob_date and event date_proper), days_in_weight_class (first fight in current weight class to current). All computed relative to the fight date -- not current date -- to keep the dataset point-in-time correct. Handle debut fights (days_since_last_fight = NULL -> encode as large value, e.g. 365).",
-            "testStrategy": "Check age_at_fight for a fighter with a known DOB and fight date. Verify days_since_last_fight is NULL for debut fights and correct for subsequent fights."
+            "testStrategy": "Check age_at_fight for a fighter with a known DOB and fight date. Verify days_since_last_fight is NULL for debut fights and correct for subsequent fights.",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -346,7 +388,8 @@
               1
             ],
             "details": "Features: avg_opponent_win_pct (avg win rate of past opponents at time of each fight), strength_of_schedule (sum of opponent win pcts normalized by number of fights), avg_opponent_losses (avg loss count of past opponents). Use only opponent records UP TO the date of each fight to avoid leakage. Merge on fight date ordering.",
-            "testStrategy": "Verify a fighter who fought mostly top-ranked opponents has higher avg_opponent_win_pct than one who fought mostly newcomers."
+            "testStrategy": "Verify a fighter who fought mostly top-ranked opponents has higher avg_opponent_win_pct than one who fought mostly newcomers.",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -361,7 +404,8 @@
               6
             ],
             "details": "Steps: 1) Build full training matrix by calling pipeline.py. 2) Compute mutual information scores (sklearn mutual_info_classif) against the binary win/loss target. 3) Compute Pearson correlation matrix and flag highly correlated pairs (|r| > 0.9) for removal. 4) Output selected_features.json listing the final feature set to backend/features/selected_features.json. This file is then read by the ML training scripts in Task 6.",
-            "testStrategy": "Confirm selected_features.json is valid JSON with at least 10 features. Verify that known strong predictors (e.g., sig_str_pct differentials) appear in the selected set."
+            "testStrategy": "Confirm selected_features.json is valid JSON with at least 10 features. Verify that known strong predictors (e.g., sig_str_pct differentials) appear in the selected set.",
+            "parentId": "undefined"
           },
           {
             "id": 8,
@@ -376,7 +420,8 @@
               6
             ],
             "details": "Two public functions: build_training_matrix(date_from=None, date_to=None) -> pd.DataFrame   - Calls all extractors, merges all feature DataFrames on fight_id,     adds binary target column (fighter_a_wins: 1 or 0), returns full matrix. build_prediction_features(fighter_a_id, fighter_b_id) -> dict   - Pulls latest stats for both fighters, computes all differentials     and rolling metrics on the fly, returns a flat dict of feature values     matching selected_features.json. Save the training matrix as a parquet file at backend/features/training_data.parquet for reuse across ML experiments.",
-            "testStrategy": "Call build_training_matrix() and verify shape, column names, and target distribution. Call build_prediction_features() with two known fighter IDs and verify all keys in selected_features.json are present in the returned dict."
+            "testStrategy": "Call build_training_matrix() and verify shape, column names, and target distribution. Call build_prediction_features() with two known fighter IDs and verify all keys in selected_features.json are present in the returned dict.",
+            "parentId": "undefined"
           },
           {
             "id": 9,
@@ -387,18 +432,23 @@
               8
             ],
             "details": "Workflow triggers: workflow_run on post-scrape-clean.yml completed with conclusion == success. Steps: 1) Checkout repo. 2) Set up Python + venv. 3) Run build_training_matrix() in append mode (new fights only) via a small runner script backend/features/run_build.py. 4) Commit and push the updated training_data.parquet back to the repo (or upload as a GitHub Actions artifact if parquet grows too large for git). This keeps the feature layer current without any manual intervention. The retrain.yml workflow (manual workflow_dispatch) is a separate concern handled in Task 6 -- this workflow only updates features, not the model.",
-            "testStrategy": "Manually trigger post-scrape-clean.yml on a branch and verify this workflow fires, completes, and produces an updated parquet with the correct row count."
+            "testStrategy": "Manually trigger post-scrape-clean.yml on a branch and verify this workflow fires, completes, and produces an updated parquet with the correct row count.",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 9,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down the Feature Engineering Pipeline task into 5 subtasks covering differential feature calculation, rolling performance metrics implementation, style classification features, time-based features, and feature selection/validation. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+        "updatedAt": "2026-02-28T19:38:48.261Z"
       },
       {
-        "id": 6,
+        "id": "6",
         "title": "ML Model Training and Serving",
         "description": "Implement the machine learning pipeline to train fight prediction models (win/loss and method prediction) and create a model serving infrastructure using joblib serialization, loaded at API startup.",
         "status": "pending",
         "dependencies": [
-          4,
-          5
+          "4",
+          "5"
         ],
         "priority": "high",
         "details": "Build a complete ML pipeline using scikit-learn 1.3+ and XGBoost 2.0:\n\n1. Data preparation:\n   - Train/validation/test splitting (temporal split)\n   - Feature scaling and normalization\n   - Class imbalance handling (SMOTE or class weights)\n\n2. Model training:\n   - Binary classification model for win/loss prediction\n     - XGBoost with hyperparameter tuning\n     - Cross-validation with time-based splits\n   - Multi-class model for fight outcome method\n     - Random Forest for KO/TKO vs Submission vs Decision\n     - Calibrated probabilities\n\n3. Model evaluation:\n   - Accuracy, precision, recall metrics\n   - ROC-AUC and PR-AUC curves\n   - Confusion matrices\n   - Feature importance analysis (critical for UI sliders feature)\n   - Backtesting on historical fights\n\n4. Model serialization:\n   - Use joblib to serialize trained models to backend/models/ directory\n   - Save feature scaler alongside models\n   - Store feature importance data as JSON for frontend consumption\n   - Version models with simple filename conventions (e.g., win_loss_v1.joblib, method_v1.joblib)\n\n5. Model serving:\n   - Models loaded at FastAPI application startup (Task 4 lifespan event)\n   - FastAPI endpoints for predictions in backend/api/v1/endpoints/predictions.py\n   - Input validation with Pydantic\n   - Batch prediction capability\n\n6. Interpretability (priority for UI):\n   - Export feature importance rankings from XGBoost and Random Forest\n   - Generate feature importance charts/data consumable by the frontend sliders feature\n   - SHAP values for individual prediction explanations (optional but valuable)\n\nImplement a simple model loader utility that reads joblib files from backend/models/ at startup and exposes them via FastAPI app state.\n\nGitHub Actions (retrain.yml): Add a manual workflow_dispatch trigger that runs the full model training pipeline. This is intentionally manual so retraining is a deliberate decision after reviewing new data. The feature-engineering.yml workflow (Task 5.9) handles automated feature updates after each scrape; retrain.yml is triggered separately when the team decides a new model is warranted.",
@@ -411,7 +461,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -420,7 +471,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -429,7 +481,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -438,7 +491,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -447,7 +501,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -456,7 +511,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -465,7 +521,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 8,
@@ -474,12 +531,16 @@
             "status": "pending",
             "dependencies": [],
             "details": "",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 9,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Break down the ML Model Training and Serving task into 6 subtasks covering data preparation, model training for win/loss prediction, model training for fight outcome method, model evaluation framework, model versioning with MLflow, and model serving infrastructure. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 7,
+        "id": "7",
         "title": "React Frontend Foundation",
         "description": "Set up the React frontend application with TypeScript, Vite, Tailwind CSS, routing, and state management according to the technical architecture specified in the PRD. Includes foundation for five frontend views: three ML dashboards (predictions, style evolution, endurance) and two data views (Recent Events, Fighter/Database Lookup).",
         "status": "pending",
@@ -495,7 +556,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "1. Run `npm create vite@latest` with React + TypeScript template\n2. Configure tsconfig.json with strict mode, path aliases (e.g., @/components, @/hooks, @/services)\n3. Install and configure ESLint with @typescript-eslint, eslint-plugin-react, eslint-plugin-react-hooks\n4. Install and configure Prettier with .prettierrc and .prettierignore\n5. Create the full directory structure: src/assets/, src/components/common/, src/components/layout/, src/components/features/, src/hooks/, src/pages/, src/services/, src/store/, src/types/, src/utils/\n6. Create placeholder index files in each directory\n7. Configure Vite with path aliases matching tsconfig\n8. Set up .env files (.env, .env.development, .env.production) with VITE_ prefixed variables\n9. Configure Jest and React Testing Library: install jest, @testing-library/react, @testing-library/jest-dom, jest-environment-jsdom\n10. Create jest.config.ts, setupTests.ts, and a test utilities file with mock providers\n11. Add npm scripts: dev, build, preview, lint, format, test\n\nAcceptance Criteria:\n- `npm run dev` starts the dev server without errors\n- `npm run build` produces a valid dist/ output\n- `npm run lint` and `npm run format` execute without errors\n- `npm run test` runs successfully with a sample test\n- All directories exist with placeholder files\n- TypeScript strict mode enabled with no type errors",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -504,7 +566,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "1. Install tailwindcss, postcss, autoprefixer and run `npx tailwindcss init -p`\n2. Configure tailwind.config.ts with content paths covering all src files\n3. Define custom design tokens in the theme.extend section:\n   - Colors: primary, secondary, accent, neutral, success, warning, error palettes\n   - Typography: font families, sizes, weights\n   - Spacing: custom spacing scale\n   - Border radius, shadows, z-index values\n4. Configure responsive breakpoints: sm: 320px, md: 768px, lg: 1024px, xl: 1440px\n5. Enable dark mode with class strategy: `darkMode: 'class'`\n6. Create src/styles/globals.css with @tailwind directives and CSS custom properties for design tokens\n7. Create src/styles/tokens.ts exporting design token constants for use in TypeScript\n8. Import globals.css in main.tsx\n9. Create a ThemeProvider component in src/components/layout/ that manages dark/light mode toggle using localStorage persistence\n10. Add a useDarkMode custom hook in src/hooks/\n11. Verify Tailwind purging works correctly in production build\n\nAcceptance Criteria:\n- Tailwind utility classes apply correctly in components\n- Dark mode toggles via class on html element and persists across page reloads\n- All four responsive breakpoints work as expected\n- Design tokens are accessible both as Tailwind classes and TypeScript constants\n- Production build CSS is properly purged and optimized",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -513,7 +576,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "1. Install react-router-dom v6\n2. Create src/router/index.tsx with centralized route definitions using createBrowserRouter\n3. Define routes for all planned pages:\n   - / (Home/Dashboard)\n   - /fighters (Fighter/Database Lookup view â€” search bar + fighter profiles)\n   - /fighters/:id (Fighter detail with profile, physical stats, fight history)\n   - /events (Recent Events view â€” last ~10 UFC events with card results)\n   - /events/:id (Event detail)\n   - /analytics (Analytics dashboard)\n   - /analytics/style-evolution (Style Evolution Timeline - Task 9)\n   - /analytics/endurance (Fighter Endurance Dashboard - Task 10)\n   - /predictions (Predictions page)\n   - /* (404 Not Found)\n4. Implement lazy loading for all page components using React.lazy() and Suspense with a loading fallback\n5. Create a RouteGuard component in src/components/common/ for future protected routes\n6. Create a Layout component in src/components/layout/ with Header, Sidebar/Nav, and Footer slots\n7. Create placeholder page components in src/pages/ for each route, including RecentEventsPage and FighterLookupPage\n8. Add a NotFound (404) page component\n9. Create a LoadingSpinner component used as Suspense fallback\n10. Configure RouterProvider in App.tsx\n11. Write tests for routing behavior and lazy loading\n\nAcceptance Criteria:\n- All defined routes render their respective page components\n- Lazy loading splits code into separate chunks (verify in build output)\n- Suspense fallback displays during chunk loading\n- 404 page renders for unknown routes\n- Navigation between routes works without full page reload\n- RouteGuard component correctly handles access control logic\n- /events and /fighters routes have placeholder pages ready for implementation in subtask 6",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -522,7 +586,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "1. Create src/store/index.ts as the main store entry point\n2. Define TypeScript interfaces for global state in src/types/store.ts:\n   - AppState (theme, notifications, ui state)\n   - FilterState (active filters for fighters/events/analytics)\n   - UserPreferencesState (dark mode, layout preferences)\n3. Create typed action types and action creators in src/store/actions.ts\n4. Implement reducers in src/store/reducers/:\n   - appReducer.ts\n   - filterReducer.ts\n   - userPreferencesReducer.ts\n5. Create a root reducer combining all reducers\n6. Create AppContext and AppProvider in src/store/AppContext.tsx using useReducer\n7. Implement localStorage persistence middleware pattern:\n   - Create src/utils/localStorage.ts with typed get/set/remove helpers\n   - Persist userPreferences and filterState to localStorage\n   - Rehydrate state from localStorage on app initialization\n8. Create custom hooks for consuming store slices: useAppState, useAppDispatch, useUserPreferences, useFilters in src/hooks/\n9. Wrap the app with AppProvider in main.tsx\n10. Write unit tests for reducers and custom hooks using mock providers\n\nAcceptance Criteria:\n- Global state is accessible from any component via custom hooks\n- State updates via dispatch trigger re-renders correctly\n- User preferences persist across browser sessions via localStorage\n- TypeScript provides full type safety for actions and state\n- Reducer tests cover all action types\n- No prop drilling required for global state access",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -531,7 +596,8 @@
             "status": "pending",
             "dependencies": [],
             "details": "1. Install axios\n2. Create src/services/api.ts with Axios instance configured with:\n   - Base URL from environment variable (VITE_API_BASE_URL)\n   - Request interceptor for headers (Content-Type, correlation IDs)\n   - Response interceptor for error normalization\n   - Timeout configuration\n3. Create typed API service classes in src/services/:\n   - fightersService.ts (getFighters, getFighterById, getFighterStats)\n   - eventsService.ts (getEvents, getEventById)\n   - fightsService.ts (getFights, getFightById)\n   - analyticsService.ts (getStyleEvolution, getEnduranceData)\n   - predictionsService.ts (getPredictions)\n4. Create src/types/api.ts with request/response TypeScript interfaces matching backend Pydantic schemas, including:\n   - Fighter profile types (physical stats from fighter_tott)\n   - Fight result types (winner, method, round from fight_results)\n   - Event listing types (event_details joined with fight_results)\n5. Implement a custom useApi hook in src/hooks/useApi.ts for data fetching with loading/error/data states\n6. Create common components in src/components/common/:\n   - Button.tsx (variants: primary, secondary, ghost, danger; sizes: sm, md, lg)\n   - Input.tsx (with label, error state, helper text)\n   - Card.tsx (with header, body, footer slots)\n   - LoadingSpinner.tsx and LoadingSkeleton.tsx\n   - ErrorBoundary.tsx (class component with fallback UI)\n   - Toast.tsx and ToastContainer.tsx (integrated with app state)\n   - Badge.tsx, Modal.tsx, Tooltip.tsx\n   - DataCaveatNote.tsx (reusable banner/note component for displaying data availability caveats)\n7. Integrate ToastContainer in App.tsx layout\n8. Add toast dispatch actions to the store (subtask 4)\n9. Write component tests for all common components\n10. Ensure all components meet WCAG 2.1 AA accessibility standards (aria labels, keyboard navigation, focus management)\n\nAcceptance Criteria:\n- Axios instance correctly sends requests to the configured API base URL\n- All service methods return properly typed responses\n- Error interceptor normalizes API errors and triggers toast notifications\n- All common components render correctly across responsive breakpoints\n- ErrorBoundary catches and displays errors gracefully without crashing the app\n- Toast notifications appear and auto-dismiss correctly\n- DataCaveatNote component renders correctly and is reusable\n- Components pass accessibility checks with axe-core\n- Component unit tests achieve >80% coverage",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -544,57 +610,74 @@
               5
             ],
             "details": "1. Recent Events View (src/pages/RecentEventsPage.tsx):\n   - Fetch data via eventsService.getEvents() (GET /events), ordered by date DESC, limit ~10\n   - Display each event as a card showing: event name, date, location\n   - Within each event card, list fight results: winner name, method (KO/TKO, Submission, Decision, etc.), round\n   - Data sourced from event_details joined with fight_results ordered by date_proper DESC\n   - Show loading skeletons while fetching\n   - Handle empty state and error state gracefully\n   - Responsive layout: stacked cards on mobile, grid on desktop\n\n2. Fighter/Database Lookup View (src/pages/FighterLookupPage.tsx and src/pages/FighterDetailPage.tsx):\n   - Search bar (Input component) for fighter name with debounced query\n   - Fighter list results via fightersService.getFighters(query) (GET /fighters?search=...)\n   - Fighter profile page via fightersService.getFighterById(id) (GET /fighters/{id}):\n     a. Physical stats section: height, weight, reach, stance, date of birth (from fighter_tott)\n     b. Record summary: wins, losses, draws, no contests\n     c. Full fight history table: opponent, event, date, result, method, round\n     d. IMPORTANT: Display a prominent, accessible caveat note â€” 'Detailed round stats available from 2015+' â€” on all fighter profiles. Use the DataCaveatNote component from subtask 5. This is because fight_stats (round-by-round detail) is only reliably available from 2015 onwards; older fights may show results but lack granular stats.\n   - Link fighter search results to individual fighter profile pages (/fighters/:id)\n   - Show loading skeletons during data fetch\n   - Handle no-results and error states\n\n3. Feature components in src/components/features/:\n   - EventCard.tsx (event summary with fight results list)\n   - FightResultRow.tsx (single fight result: winner, method, round)\n   - FighterSearchBar.tsx (debounced search input)\n   - FighterProfileHeader.tsx (name, record, physical stats)\n   - FightHistoryTable.tsx (sortable table of fight history)\n\n4. Write tests:\n   - Unit tests for EventCard, FightResultRow, FighterSearchBar, FighterProfileHeader, FightHistoryTable\n   - Integration tests for RecentEventsPage and FighterLookupPage with mocked API responses\n   - Test that DataCaveatNote renders on all fighter profile pages\n\nAcceptance Criteria:\n- Recent Events page displays last ~10 events with fight results (winner, method, round)\n- Fighter search returns relevant results and links to profile pages\n- Fighter profile shows physical stats, record, and full fight history\n- 'Detailed round stats available from 2015+' caveat note is always visible on fighter profiles\n- Both views are fully responsive (mobile-first)\n- Loading and error states are handled gracefully\n- No ML logic is involved in either view\n- All components pass accessibility checks",
-            "testStrategy": "1. Test RecentEventsPage renders event cards with correct winner/method/round data from mocked API\n2. Test FighterLookupPage search bar triggers API call with correct query params\n3. Test FighterDetailPage displays physical stats and fight history correctly\n4. Verify DataCaveatNote ('Detailed round stats available from 2015+') renders on every fighter profile\n5. Test responsive layout at all four breakpoints\n6. Test loading skeleton displays during fetch\n7. Test error state displays when API fails\n8. Test empty state when no fighters match search query\n9. Accessibility audit with axe-core on both pages"
+            "testStrategy": "1. Test RecentEventsPage renders event cards with correct winner/method/round data from mocked API\n2. Test FighterLookupPage search bar triggers API call with correct query params\n3. Test FighterDetailPage displays physical stats and fight history correctly\n4. Verify DataCaveatNote ('Detailed round stats available from 2015+') renders on every fighter profile\n5. Test responsive layout at all four breakpoints\n6. Test loading skeleton displays during fetch\n7. Test error state displays when API fails\n8. Test empty state when no fighters match search query\n9. Accessibility audit with axe-core on both pages",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Break down the React Frontend Foundation task into 6 subtasks covering project setup with Vite and TypeScript, styling configuration with Tailwind CSS, routing setup with React Router, state management implementation, API service integration, and common component development. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 8,
+        "id": "8",
         "title": "Interactive Fight Predictor UI",
         "description": "Develop the interactive fight predictor interface with fighter selection, parameter sliders, real-time prediction updates, and visualization of results.",
         "details": "Build the core fight predictor UI components:\n\n1. Fighter selection interface:\n   - Searchable fighter dropdown\n   - Fighter cards with photos and basic stats\n   - Weight class filtering\n   - Recent/popular fighter quick select\n\n2. Interactive parameter sliders:\n   - Adjustable physical attributes (height, weight, reach)\n   - Performance metrics sliders\n   - Style attribute adjustments\n   - Real-time visual feedback on changes\n\n3. Prediction visualization:\n   - Win probability gauge/meter\n   - Method probability distribution chart\n   - Round prediction distribution\n   - Confidence indicators\n\n4. Similar fights comparison:\n   - Table of historical similar matchups\n   - Outcome summaries\n   - Key stat comparisons\n   - Video link integration (where available)\n\n5. Real-time updates:\n   - Debounced API calls on slider changes\n   - Loading states for predictions\n   - Error handling with retry options\n   - Optimistic UI updates\n\n6. Mobile optimization:\n   - Touch-friendly slider controls\n   - Collapsible sections\n   - Responsive visualizations\n\nImplement using React components with Tailwind CSS for styling. Use Recharts for standard visualizations and consider D3.js for custom interactive elements.",
         "testStrategy": "1. Test slider interactions and updates\n2. Verify API integration with mock data\n3. Test responsive layouts on different devices\n4. Validate accessibility of interactive elements\n5. Test error states and recovery\n6. Verify performance with React profiler\n7. User testing for intuitiveness of controls\n8. Test touch interactions on mobile devices",
         "priority": "high",
         "dependencies": [
-          6,
-          7
+          "6",
+          "7"
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [],
+        "complexity": 8,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down the Interactive Fight Predictor UI task into 5 subtasks covering fighter selection interface, interactive parameter sliders, prediction visualization components, similar fights comparison feature, and real-time update implementation. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 9,
+        "id": "9",
         "title": "Style Evolution Timeline Analyzer",
         "description": "Implement the style evolution timeline analyzer that visualizes how fighting styles and finish rates have evolved throughout UFC history with filtering and trend analysis.",
         "details": "Create the style evolution timeline feature:\n\n1. Data processing:\n   - Aggregate fight data by era and weight class\n   - Calculate style metrics over time\n   - Identify significant trend changes\n   - Compute finish rate statistics\n\n2. Timeline visualization:\n   - D3.js interactive timeline\n   - Selectable metrics (KO rate, submission rate, etc.)\n   - Weight class filtering\n   - Era demarcation (Pre-Zuffa, Early UFC, Modern era, etc.)\n\n3. Trend analysis:\n   - Moving averages of key metrics\n   - Trend line overlays\n   - Statistical significance indicators\n   - Notable events marking (rule changes, etc.)\n\n4. Interactive elements:\n   - Zoom and pan controls\n   - Tooltips with detailed information\n   - Highlight specific fighters or events\n   - Comparison mode for multiple metrics\n\n5. Filtering capabilities:\n   - Weight class selector\n   - Date range picker\n   - Fighter type filters (champions, contenders, etc.)\n   - Style category filters\n\n6. Export and sharing:\n   - Image export of visualizations\n   - Shareable links with filter state\n   - Embed codes for analysts\n\nImplement responsive design to ensure visualizations work on different screen sizes, with simplified views for mobile devices.",
         "testStrategy": "1. Test data aggregation accuracy\n2. Verify visualization rendering\n3. Test interactive elements (zoom, pan, tooltips)\n4. Validate filtering functionality\n5. Test responsive behavior on different devices\n6. Verify export and sharing features\n7. Performance testing with large datasets\n8. User testing for intuitiveness and insights",
         "priority": "medium",
         "dependencies": [
-          3,
-          7
+          "3",
+          "7"
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [],
+        "complexity": 8,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down the Style Evolution Timeline Analyzer task into 5 subtasks covering data aggregation and processing, timeline visualization with D3.js, trend analysis implementation, interactive filtering capabilities, and export/sharing functionality. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 10,
+        "id": "10",
         "title": "Fighter Endurance & Pacing Dashboard",
         "description": "Develop the fighter endurance and pacing dashboard that analyzes round-by-round performance degradation and predicts cardio performance in hypothetical matchups.",
         "details": "Build the fighter endurance analysis dashboard:\n\n1. Round-by-round data analysis:\n   - Process historical round statistics\n   - Calculate performance degradation rates\n   - Identify pacing patterns\n   - Compare early vs. late round performance\n\n2. Endurance profile visualization:\n   - Line charts of key metrics by round\n   - Comparative analysis with division average\n   - Stamina indicators\n   - Historical trend analysis\n\n3. Performance prediction models:\n   - Implement time series models for round prediction\n   - Create hypothetical 5-round projections\n   - Model cardio impact on performance\n   - Predict late-round effectiveness\n\n4. Comparative analysis:\n   - Fighter vs. fighter endurance comparison\n   - Historical matchup analysis\n   - Style matchup impact on cardio\n   - Training camp/preparation effects\n\n5. Interactive elements:\n   - Round selector\n   - Metric toggles (strikes, accuracy, movement)\n   - Scenario adjustments (pace, fighting style)\n   - Fight length selector\n\n6. Mobile optimization:\n   - Simplified visualizations for small screens\n   - Touch-friendly controls\n   - Progressive disclosure of complex data\n\nImplement using a combination of Recharts for standard visualizations and D3.js for custom interactive elements. Ensure all data visualizations have appropriate legends and context.",
         "testStrategy": "1. Validate round-by-round calculations\n2. Test visualization accuracy with known data\n3. Verify prediction model outputs\n4. Test comparative analysis features\n5. Validate interactive elements\n6. Test responsive design on different devices\n7. Performance testing with multiple fighters\n8. User testing for insights and usability",
         "priority": "medium",
         "dependencies": [
-          3,
-          7
+          "3",
+          "7"
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [],
+        "complexity": 8,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down the Fighter Endurance & Pacing Dashboard task into 5 subtasks covering round-by-round data analysis, endurance profile visualization, performance prediction model implementation, comparative analysis features, and mobile optimization. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       }
     ],
     "metadata": {
-      "created": "2025-08-30T15:55:11.132Z",
-      "updated": "2026-02-24T21:43:38.775Z",
-      "description": "Tasks for master context"
+      "version": "1.0.0",
+      "lastModified": "2026-02-28T19:38:48.263Z",
+      "taskCount": 10,
+      "completedCount": 4,
+      "tags": [
+        "master"
+      ]
     }
   }
 }

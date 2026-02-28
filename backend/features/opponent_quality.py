@@ -28,10 +28,11 @@ def build_opponent_quality(fights: pd.DataFrame) -> pd.DataFrame:
     """Build opponent quality features for every (fighter_id, fight_id).
 
     Args:
-        fights: fight_results rows — fighter_id, fight_id, opponent_id,
-                date_proper, is_winner.  From get_fights_df().
-                Must be the full fight history (no date filter) so that
-                point-in-time opponent records are computed accurately.
+        fights: Long-format fight history — two rows per fight, one per
+                fighter (is_winner=True for winner, False for loser).
+                From get_fights_long_df().  Must be the full fight history
+                (no date filter) so point-in-time opponent records are
+                computed accurately for every fighter.
 
     Returns:
         DataFrame with one row per (fighter_id, fight_id).

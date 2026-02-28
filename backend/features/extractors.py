@@ -274,6 +274,68 @@ def get_events_df(
     return df
 
 
+def get_fights_long_df(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+) -> pd.DataFrame:
+    """Two rows per fight — one for the winner, one for the loser.
+
+    fight_results stores only the winner's row (fighter_id=winner,
+    opponent_id=loser).  This function uses UNION ALL to produce both
+    perspectives so feature modules can compute per-fighter career stats
+    correctly regardless of win/loss outcome.
+
+    Columns returned
+    ----------------
+    fight_id, fighter_id, opponent_id, is_winner,
+    weight_class, method, total_fight_time_seconds, date_proper
+    """
+    params: dict = {}
+    date_filter = _date_where("ed", date_from, date_to, params)
+
+    sql = text(f"""
+        SELECT
+            fr.fight_id,
+            fr.fighter_id,
+            fr.opponent_id,
+            TRUE                          AS is_winner,
+            fr.weight_class,
+            fr."METHOD"                   AS method,
+            fr.total_fight_time_seconds,
+            ed.date_proper
+        FROM fight_results fr
+        JOIN event_details ed ON ed.id = fr.event_id
+        WHERE fr.fighter_id  IS NOT NULL
+          AND fr.opponent_id IS NOT NULL
+          AND ed.date_proper  IS NOT NULL
+        {date_filter}
+        UNION ALL
+        SELECT
+            fr.fight_id,
+            fr.opponent_id                AS fighter_id,
+            fr.fighter_id                 AS opponent_id,
+            FALSE                         AS is_winner,
+            fr.weight_class,
+            fr."METHOD"                   AS method,
+            fr.total_fight_time_seconds,
+            ed.date_proper
+        FROM fight_results fr
+        JOIN event_details ed ON ed.id = fr.event_id
+        WHERE fr.fighter_id  IS NOT NULL
+          AND fr.opponent_id IS NOT NULL
+          AND ed.date_proper  IS NOT NULL
+        {date_filter}
+        ORDER BY date_proper, fight_id, fighter_id
+    """)
+
+    df = pd.read_sql(sql, engine, params=params)
+    logger.info(
+        "get_fights_long_df: %d rows (date_from=%s, date_to=%s)",
+        len(df), date_from, date_to,
+    )
+    return df
+
+
 def get_matchups_df(
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,

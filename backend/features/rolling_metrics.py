@@ -68,41 +68,38 @@ def _safe_pct(landed: pd.Series, attempted: pd.Series) -> pd.Series:
 
 def build_rolling_metrics(
     stats: pd.DataFrame,
-    fights: pd.DataFrame,
 ) -> pd.DataFrame:
     """Build rolling performance features for every (fighter_id, fight_id).
 
     Args:
         stats:  fight_stats rows — fighter_id, fight_id, ROUND, date_proper,
                 and all typed stat columns.  From get_stats_df().
-        fights: fight_results rows — fighter_id, fight_id, date_proper.
-                Used to include fights where the fighter has no stats rows
-                (pre-2008 events) so career ordering is preserved and rolling
-                windows are not artificially compressed.
+                fight_stats contains rows for BOTH fighters in every fight,
+                so winners and losers are both captured without any additional
+                fight-results merge.
 
     Returns:
         DataFrame with one row per (fighter_id, fight_id).
     """
-    # ---- 1. Filter to numeric rounds only --------------------------------
-    numeric = stats[stats["ROUND"].astype(str).str.match(r"^\d+$")].copy()
+    # ---- 1. Filter to per-round rows (exclude any future "Totals" rows) --
+    # DB values are "Round 1", "Round 2", etc.  Accept bare digits too as a
+    # defensive fallback in case the ETL format ever changes.
+    _round = stats["ROUND"].astype(str)
+    numeric = stats[
+        _round.str.match(r"^\d+$") | _round.str.match(r"^Round\s+\d+$")
+    ].copy()
 
     # ---- 2. Aggregate per (fighter_id, fight_id) — sum across rounds -----
+    # fight_stats contains rows for BOTH fighters in every fight, so winners
+    # and losers are both represented here.  date_proper comes from stats_df
+    # directly (via the event_details JOIN in get_stats_df), so no separate
+    # all_pairs merge is needed.
     per_fight = (
         numeric.groupby(["fighter_id", "fight_id", "date_proper"], as_index=False)[_SUM_COLS]
         .sum()
     )
 
-    # ---- 3. Ensure every fighter-fight pair is represented ---------------
-    # Some fights (pre-2008) have no fight_stats rows; include them so
-    # rolling windows are not artificially compressed.
-    all_pairs = (
-        fights[["fighter_id", "fight_id", "date_proper"]]
-        .drop_duplicates()
-        .copy()
-    )
-    per_fight = all_pairs.merge(per_fight, on=["fighter_id", "fight_id", "date_proper"], how="left")
-
-    # ---- 4. Sort chronologically within each fighter ---------------------
+    # ---- 3. Sort chronologically within each fighter ---------------------
     per_fight = per_fight.sort_values(
         ["fighter_id", "date_proper", "fight_id"]
     ).reset_index(drop=True)

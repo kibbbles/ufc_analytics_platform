@@ -81,10 +81,10 @@ def build_differentials(
                    date_proper, fighter_a_wins.  From get_matchups_df().
         fighters:  One row per fighter — id, height_inches, weight_lbs,
                    reach_inches, dob_date.  From get_fighters_df().
-        fights:    Full fight history (all dates) — fighter_id, fight_id,
-                   date_proper, is_winner.  From get_fights_df().
-                   Must cover the full career history of every fighter to
-                   produce accurate streak and experience counts.
+        fights:    Full fight history in long format — two rows per fight,
+                   one per fighter.  fighter_id covers both winners and
+                   losers.  From get_fights_long_df().
+                   Must cover the full career history of every fighter.
 
     Returns:
         DataFrame with one row per fight_id.

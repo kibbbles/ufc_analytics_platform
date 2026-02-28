@@ -31,8 +31,9 @@ def build_time_features(
     """Build time-based features for every (fighter_id, fight_id).
 
     Args:
-        fights:   fight_results rows — fighter_id, fight_id, date_proper,
-                  weight_class.  From get_fights_df().
+        fights:   Long-format fight history — two rows per fight, one per
+                  fighter.  fighter_id covers both winners and losers.
+                  From get_fights_long_df().
         fighters: fighter_details + tott — id, dob_date.
                   From get_fighters_df().
 
