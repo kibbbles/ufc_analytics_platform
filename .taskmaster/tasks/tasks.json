@@ -207,7 +207,7 @@
         "id": 4,
         "title": "FastAPI Backend Setup",
         "description": "Initialize the FastAPI project structure with middleware, error handling, logging, and basic health check endpoints. Uses raw SQL with sqlalchemy.text() and Pydantic schemas for serialization (no ORM models). Public platform with no authentication required.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           1,
           3
