@@ -1,8 +1,8 @@
 """api/v1/endpoints/fights.py — Fight endpoints.
 
 Routes:
-    GET /fights             Paginated list; optional filters: event_id, fighter_id,
-                            weight_class, method
+    GET /fights             Paginated list; filters: event_id, fighter_id,
+                            weight_class, method, date_from, date_to
     GET /fights/{id}        Single fight + round-by-round stats for both fighters
 """
 
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import math
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -32,6 +33,8 @@ def list_fights(
     fighter_id: str | None = Query(None, description="Filter to fights involving a fighter"),
     weight_class: str | None = Query(None, description="Filter by weight class"),
     method: str | None = Query(None, description="Filter by finish method (partial match)"),
+    date_from: date | None = Query(None, description="Fights on or after this date (YYYY-MM-DD)"),
+    date_to: date | None = Query(None, description="Fights on or before this date (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
 ):
     offset = (page - 1) * page_size
@@ -52,6 +55,12 @@ def list_fights(
     if method:
         conditions.append('fr."METHOD" ILIKE :method')
         params["method"] = f"%{method}%"
+    if date_from:
+        conditions.append("ed.date_proper >= :date_from")
+        params["date_from"] = date_from
+    if date_to:
+        conditions.append("ed.date_proper <= :date_to")
+        params["date_to"] = date_to
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
@@ -60,6 +69,7 @@ def list_fights(
             SELECT COUNT(*)
             FROM fight_details fd
             LEFT JOIN fight_results fr ON fr.fight_id = fd.id
+            LEFT JOIN event_details ed ON ed.id        = fd.event_id
             {where}
         """),
         params,
@@ -82,8 +92,9 @@ def list_fights(
             fr.is_championship_rounds
         FROM fight_details fd
         LEFT JOIN fight_results fr ON fr.fight_id = fd.id
+        LEFT JOIN event_details ed ON ed.id        = fd.event_id
         {where}
-        ORDER BY fd.event_id DESC, fd.id
+        ORDER BY ed.date_proper DESC, fd.id
         LIMIT :limit OFFSET :offset
     """), params).mappings().all()
 

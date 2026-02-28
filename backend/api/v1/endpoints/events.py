@@ -1,7 +1,7 @@
 """api/v1/endpoints/events.py — Event endpoints.
 
 Routes:
-    GET /events             Paginated list; optional ?year= filter
+    GET /events             Paginated list; filters: name, location, year, date_from, date_to
     GET /events/{id}        Single event + full fight card
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import math
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -28,16 +29,34 @@ router = APIRouter()
 def list_events(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    name: str | None = Query(None, description="Partial event name match (e.g. 'UFC 300')"),
+    location: str | None = Query(None, description="Partial location match (e.g. 'Las Vegas')"),
     year: int | None = Query(None, description="Filter by year (e.g. 2023)"),
+    date_from: date | None = Query(None, description="Events on or after this date (YYYY-MM-DD)"),
+    date_to: date | None = Query(None, description="Events on or before this date (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
 ):
     offset = (page - 1) * page_size
     params: dict = {"limit": page_size, "offset": offset}
+    conditions: list[str] = []
 
-    where = ""
+    if name:
+        conditions.append('ed."EVENT" ILIKE :name')
+        params["name"] = f"%{name}%"
+    if location:
+        conditions.append('ed."LOCATION" ILIKE :location')
+        params["location"] = f"%{location}%"
     if year:
-        where = "WHERE EXTRACT(YEAR FROM ed.date_proper) = :year"
+        conditions.append("EXTRACT(YEAR FROM ed.date_proper) = :year")
         params["year"] = year
+    if date_from:
+        conditions.append("ed.date_proper >= :date_from")
+        params["date_from"] = date_from
+    if date_to:
+        conditions.append("ed.date_proper <= :date_to")
+        params["date_to"] = date_to
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
     total = db.execute(
         text(f"SELECT COUNT(*) FROM event_details ed {where}"),
