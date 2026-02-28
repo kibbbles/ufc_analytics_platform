@@ -297,7 +297,7 @@
             "id": 2,
             "title": "Physical and experience differential features",
             "description": "Create backend/features/differentials.py that computes fighter-A minus fighter-B differentials for physical attributes and career experience.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               1
             ],
@@ -308,7 +308,7 @@
             "id": 3,
             "title": "Rolling performance metrics",
             "description": "Create backend/features/rolling_metrics.py computing rolling averages of striking and grappling performance over the last N fights, strictly using only pre-fight data to avoid leakage.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               1
             ],
@@ -330,7 +330,7 @@
             "id": 5,
             "title": "Time-based features",
             "description": "Create backend/features/time_features.py that extracts temporal context features for each fight.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               1
             ],
@@ -341,7 +341,7 @@
             "id": 6,
             "title": "Opponent quality metrics",
             "description": "Create backend/features/opponent_quality.py computing strength-of-schedule metrics based on the quality of past opponents.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               1
             ],

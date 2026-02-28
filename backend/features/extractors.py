@@ -272,3 +272,53 @@ def get_events_df(
     df = pd.read_sql(sql, engine, params=params)
     logger.info("get_events_df: %d rows (date_from=%s, date_to=%s)", len(df), date_from, date_to)
     return df
+
+
+def get_matchups_df(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+) -> pd.DataFrame:
+    """Return one row per fight with the canonical fighter-A / fighter-B pairing.
+
+    fighter_a_id and fighter_b_id come from fight_details (the ordering in the
+    original BOUT string), which is arbitrary with respect to outcome — safe
+    for use as the ML training frame.  fighter_a_wins is 1 if fighter_a won,
+    0 if fighter_b won, NULL for NC / Draw.
+
+    Columns returned
+    ----------------
+    fight_id, fighter_a_id, fighter_b_id, event_id, date_proper,
+    fighter_a_wins
+    """
+    params: dict = {}
+    date_filter = _date_where("ed", date_from, date_to, params)
+
+    sql = text(f"""
+        SELECT
+            fd.id          AS fight_id,
+            fd.fighter_a_id,
+            fd.fighter_b_id,
+            fd.event_id,
+            ed.date_proper,
+            CASE
+                WHEN winner.fighter_id = fd.fighter_a_id THEN 1
+                WHEN winner.fighter_id IS NOT NULL       THEN 0
+                ELSE NULL
+            END AS fighter_a_wins
+        FROM fight_details fd
+        JOIN event_details ed ON ed.id = fd.event_id
+        LEFT JOIN (
+            SELECT fight_id, fighter_id
+            FROM fight_results
+            WHERE is_winner = TRUE
+        ) winner ON winner.fight_id = fd.id
+        WHERE fd.fighter_a_id IS NOT NULL
+          AND fd.fighter_b_id IS NOT NULL
+          AND ed.date_proper IS NOT NULL
+        {date_filter}
+        ORDER BY ed.date_proper, fd.id
+    """)
+
+    df = pd.read_sql(sql, engine, params=params)
+    logger.info("get_matchups_df: %d rows (date_from=%s, date_to=%s)", len(df), date_from, date_to)
+    return df
