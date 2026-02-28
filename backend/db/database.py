@@ -1,77 +1,63 @@
-"""Database connection and session management."""
+"""Database connection and session management.
 
-import os
+Provides engine, SessionLocal, and Base for use across the application
+and scraper scripts. Configuration is read from core.config.settings
+(which loads DATABASE_URL from .env).
+
+The canonical FastAPI request-scoped get_db() dependency lives in
+api/dependencies.py. This module exposes get_db_engine() for scripts
+that need the engine directly.
+"""
+
+import logging
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Try to load dotenv, fallback if not available
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-    print("dotenv loaded successfully")
-except ImportError:
-    print("dotenv not available, using environment variables directly")
+from core.config import settings
 
-# Get database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL")
+logger = logging.getLogger(__name__)
 
-# If not in environment, try to read .env file manually
-if not DATABASE_URL:
-    try:
-        env_file = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
-        if os.path.exists(env_file):
-            with open(env_file, 'r') as f:
-                for line in f:
-                    if line.startswith('DATABASE_URL='):
-                        DATABASE_URL = line.split('=', 1)[1].strip()
-                        print("Found DATABASE_URL in .env file")
-                        break
-    except Exception as e:
-        print(f"Could not read .env file: {e}")
+# ---------------------------------------------------------------------------
+# URL normalisation — SQLAlchemy requires "postgresql://", not "postgres://"
+# ---------------------------------------------------------------------------
 
-# Note: If using Supabase Session Pooler (aws-*.pooler.supabase.com),
-# it already supports IPv4 on port 5432, so no changes needed
+_db_url = settings.database_url
+if _db_url and _db_url.startswith("postgres://"):
+    _db_url = _db_url.replace("postgres://", "postgresql://", 1)
 
-if not DATABASE_URL:
-    print("DATABASE_URL not found!")
+if not _db_url:
+    logger.warning("DATABASE_URL is not set — engine will not be usable")
 else:
-    print("DATABASE_URL loaded")
+    logger.debug("DATABASE_URL loaded")
 
-# Create engine
-# Note: SQLAlchemy requires "postgresql://" not "postgres://"
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-# Configure connection args to prefer IPv4 over IPv6
-# This fixes GitHub Actions connectivity issues where IPv6 is not available
-connect_args = {
-    "connect_timeout": 10,
-    "options": "-c client_encoding=utf8"
-}
+# ---------------------------------------------------------------------------
+# Engine
+# Note: pool_pre_ping re-validates connections before use, which avoids
+# stale-connection errors after Supabase's idle timeout.
+# ---------------------------------------------------------------------------
 
 engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,  # Verify connections before using them
-    pool_size=10,        # Number of connections to maintain
-    max_overflow=20,     # Maximum overflow connections
-    connect_args=connect_args
+    _db_url or "postgresql://",   # placeholder keeps create_engine from raising at import
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
+    connect_args={
+        "connect_timeout": 10,
+        "options": "-c client_encoding=utf8",
+    },
 )
 
-# Create session factory
+# ---------------------------------------------------------------------------
+# Session factory and ORM base
+# ---------------------------------------------------------------------------
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create base class for models
 Base = declarative_base()
 
-def get_db():
-    """Dependency to get database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def get_db_engine():
-    """Get database engine for direct SQL operations."""
+    """Return the shared engine (used by scraper scripts)."""
     return engine

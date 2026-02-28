@@ -19,12 +19,23 @@ Docs (once running):
     http://localhost:8000/redoc   — ReDoc (read-only)
 """
 
+from __future__ import annotations
+
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from api.routers import analytics, events, fighters, fights, predictions
+from api.routers.health import router as health_router
+from api.v1.router import v1_router
+from core.config import settings
+from core.logging import configure_logging
+from core.middleware import RequestIDMiddleware, TimingMiddleware
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -33,15 +44,20 @@ from api.routers import analytics, events, fighters, fights, predictions
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Code before `yield` runs once on startup.
-    Code after `yield` runs once on shutdown.
-
-    Startup tasks (added in later tasks):
-    - Verify DB connectivity
-    - Load ML models into memory
-    """
+    # ── Startup ────────────────────────────────────────────────────────────────
+    configure_logging(settings.log_level)
+    logger.info(
+        "UFC Analytics API starting",
+        extra={
+            "environment": settings.environment,
+            "version": "1.0.0",
+            "log_level": settings.log_level,
+            "allowed_origins": settings.allowed_origins,
+        },
+    )
     yield
+    # ── Shutdown ───────────────────────────────────────────────────────────────
+    logger.info("UFC Analytics API shutting down")
 
 
 # ---------------------------------------------------------------------------
@@ -63,34 +79,79 @@ app = FastAPI(
 
 
 # ---------------------------------------------------------------------------
-# Middleware
+# Middleware  (add_middleware order matters: last added = outermost = first to
+# handle incoming requests)
+#
+#   Execution order for a request:
+#     CORS → RequestID → Timing → route handler
+#   Execution order for a response:
+#     route handler → Timing → RequestID → CORS
 # ---------------------------------------------------------------------------
 
-# CORS — allow the React frontend dev server to call this API.
-# In production, replace localhost origins with the deployed frontend domain.
+# Timing — added first so it runs innermost (after RequestID has set the ID)
+app.add_middleware(TimingMiddleware)
+
+# RequestID — stamps request.state.request_id and X-Request-ID header
+app.add_middleware(RequestIDMiddleware)
+
+# CORS — outermost so browser preflight OPTIONS requests are handled immediately
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",   # Vite dev server (default)
-        "http://localhost:3000",   # fallback
-    ],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Request ID, timing, and structured error handling middleware added in Task 4.4.
+
+# ---------------------------------------------------------------------------
+# Exception handlers
+# ---------------------------------------------------------------------------
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Return structured JSON for all HTTP errors (404, 422, etc.)."""
+    request_id = getattr(request.state, "request_id", None)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "status_code": exc.status_code,
+            "request_id": request_id,
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions: log the traceback, return clean JSON."""
+    request_id = getattr(request.state, "request_id", None)
+    logger.error(
+        "unhandled exception",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "error": str(exc),
+        },
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal server error",
+            "status_code": 500,
+            "request_id": request_id,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
 
-app.include_router(fighters.router)
-app.include_router(fights.router)
-app.include_router(events.router)
-app.include_router(analytics.router)
-app.include_router(predictions.router)
+app.include_router(health_router)            # /health, /health/db  (unversioned)
+app.include_router(v1_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------------------------
