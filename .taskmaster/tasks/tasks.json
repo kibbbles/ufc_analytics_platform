@@ -288,7 +288,7 @@
             "id": 1,
             "title": "Data extraction queries",
             "description": "Create backend/features/extractors.py with SQL queries that pull raw fight data into pandas DataFrames for feature engineering. Covers fight_results, fight_stats, fighter_details, fighter_tott, and event_details tables.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "Implement get_fights_df(), get_stats_df(), get_fighters_df(), and get_events_df() functions. Each returns a DataFrame using the SQLAlchemy engine from db.database. Use parameterized queries to support date-range filtering for incremental builds. No data transformation here -- raw extraction only.",
             "testStrategy": "Spot-check row counts against known DB totals. Verify columns match schema. Confirm parameterized date filter returns correct subset."
