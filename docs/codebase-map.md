@@ -73,8 +73,10 @@ when building the API.
 ---
 
 #### `backend/db/__init__.py` — Package Exports
-Exports `SessionLocal`, `engine`, `Base`, and `get_db` from `database.py`.
-Import from here rather than importing `database.py` directly. 10 lines.
+Exports `SessionLocal`, `engine`, and `Base` from `database.py`.
+Import from here rather than importing `database.py` directly.
+Note: `get_db()` is **not** exported here — the canonical FastAPI dependency lives
+in `backend/api/dependencies.py`.
 
 ---
 
@@ -177,15 +179,39 @@ delete them unless you are certain Supabase has all the data and you have anothe
 
 ---
 
-## Empty Placeholder Directories
+## FastAPI Backend — Task 4 (Complete)
 
-These directories exist but contain zero files. They are where the FastAPI API will live.
+The API layer is fully implemented under `backend/`. All queries use raw SQL
+(`sqlalchemy.text()` + `.mappings()`). No ORM model layer.
 
-| Directory            | Intended Purpose                                      |
-|----------------------|-------------------------------------------------------|
-| `backend/app/`       | FastAPI application — routes, main.py, middleware     |
-| `backend/schemas/`   | Pydantic request/response models for the API          |
-| `backend/services/`  | Business logic layer between routes and database      |
+### Entry Points
+- `backend/main.py` — re-exports `app` for `uvicorn main:app` convenience
+- `backend/api/main.py` — FastAPI app instance, middleware stack, exception handlers, router wiring
+- `backend/run_dev.py` — dev launcher (`python run_dev.py`)
+- `backend/gunicorn.conf.py` — production server config
+
+### Core Layer (`backend/core/`)
+- `config.py` — Pydantic BaseSettings; reads DATABASE_URL, ENVIRONMENT, LOG_LEVEL, ALLOWED_ORIGINS from `.env`
+- `logging.py` — structured JSON logging with rotating file handler; call `configure_logging()` at startup
+- `middleware.py` — `RequestIDMiddleware` (X-Request-ID header), `TimingMiddleware` (logs duration per request)
+
+### API Layer (`backend/api/`)
+- `dependencies.py` — `get_db()` yield dependency (session always closes in `finally`)
+- `routers/health.py` — `GET /health` (liveness) and `GET /health/db` (readiness, 503 on DB failure)
+- `v1/router.py` — aggregates all v1 endpoint routers
+- `v1/endpoints/fighters.py` — `GET /api/v1/fighters`, `GET /api/v1/fighters/{id}`
+- `v1/endpoints/fights.py` — `GET /api/v1/fights`, `GET /api/v1/fights/{id}` + round stats
+- `v1/endpoints/events.py` — `GET /api/v1/events`, `GET /api/v1/events/{id}` + fight card
+- `v1/endpoints/predictions.py` — `POST /api/v1/predictions/fight-outcome` (stub until Task 6)
+- `v1/endpoints/analytics.py` — `GET /api/v1/analytics/style-evolution`, `GET /api/v1/analytics/fighter-endurance/{id}`
+
+### Schemas (`backend/schemas/`)
+- `shared.py` — `PaginationMeta`
+- `fighter.py` — `FighterResponse`, `FighterListItem`, `FighterListResponse`
+- `fight.py` — `FightResponse`, `FightStatsResponse`, `FightListItem`, `FightListResponse`
+- `event.py` — `EventResponse`, `EventWithFightsResponse`, `EventListResponse`
+- `prediction.py` — `PredictionRequest` (with slider overrides), `PredictionResponse`, `MethodProbabilities`
+- `analytics.py` — `StyleEvolutionResponse`, `FighterEnduranceResponse`
 
 ---
 

@@ -1,20 +1,21 @@
-# UFC Analytics Platform 🥊
+# UFC Analytics Platform
 
 ML-powered UFC fight analytics platform with interactive predictions and visualizations. Built to demonstrate production-level data science and software engineering skills.
 
-## 🎯 Features
+## Features
 
 - **Fight Outcome Predictor**: Interactive ML predictions with adjustable fighter parameters
-- **Style Evolution Timeline**: Visualize how fighting styles evolved throughout UFC history  
+- **Style Evolution Timeline**: Visualize how fighting styles evolved throughout UFC history
 - **Fighter Endurance Dashboard**: Round-by-round performance analysis and cardio predictions
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
-- **Framework**: FastAPI 0.104.1
+- **Framework**: FastAPI 0.115.5
 - **Database**: PostgreSQL (Supabase)
 - **ML**: XGBoost, scikit-learn
-- **ORM**: SQLAlchemy 2.0
+- **ORM**: SQLAlchemy 2.0 (raw SQL queries, no ORM model layer)
+- **Server**: Uvicorn (dev) / Gunicorn + UvicornWorker (production)
 
 ### Frontend (Coming Soon)
 - **Framework**: React 18 + TypeScript
@@ -22,157 +23,138 @@ ML-powered UFC fight analytics platform with interactive predictions and visuali
 - **Styling**: Tailwind CSS
 
 ### Data Pipeline
-- **Source**: Comprehensive UFC historical data + live updates
-  - **Complete Dataset**: 744 events (1994-2025), 4,429 fighters, 38,958+ fight statistics
-  - **Live Updates**: Smart scraper adds only NEW events from UFCStats.com
-- **Processing**: pandas, numpy with automated data loading
-- **Storage**: Clean PostgreSQL schema with 6 optimized tables
+- **Source**: UFCStats.com — 756 events (1994–2025), 4,449 fighters, 8,482 fights, 39,912 fight stats
+- **Processing**: pandas + numpy with automated ETL pipeline
+- **Storage**: PostgreSQL with 6 tables, fully resolved FK relationships
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Python 3.11+
-- Node.js 18+ (for frontend)
-- PostgreSQL (or Supabase account)
+- Node.js 18+ (for frontend, when built)
+- PostgreSQL or Supabase account
 
 ### Backend Setup
 
-1. Clone the repository:
 ```bash
 git clone https://github.com/kibbbles/ufc_analytics_platform.git
 cd ufc_analytics_platform
-```
 
-2. Create virtual environment:
-```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-3. Install dependencies:
-```bash
 pip install -r backend/requirements.txt
 ```
 
-4. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your Supabase credentials
+Create `.env` in the project root:
+```
+DATABASE_URL=postgresql://...
+ENVIRONMENT=development
+LOG_LEVEL=DEBUG
 ```
 
-5. Run database migrations:
+**Development server:**
 ```bash
 cd backend
-alembic upgrade head
+python run_dev.py
+# or: uvicorn api.main:app --reload --port 8000
 ```
 
-6. Start the API server:
+**Production server:**
 ```bash
-uvicorn app.main:app --reload
+cd backend
+gunicorn api.main:app -c gunicorn.conf.py
 ```
 
-API will be available at `http://localhost:8000`
-API docs at `http://localhost:8000/docs`
+API: `http://localhost:8000`
+Docs: `http://localhost:8000/docs`
 
-## 🔄 Keeping UFC Data Updated
+## API Endpoints
 
-Your database already contains comprehensive UFC data through 2025. To keep it current:
+All data endpoints are versioned under `/api/v1`.
 
-### Option 1: Manual Updates (Recommended)
-Check for new UFC events whenever you want:
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Liveness check |
+| GET | `/health/db` | DB readiness check (503 if unreachable) |
+| GET | `/api/v1/fighters` | Paginated fighter list (`?search=`, `?page=`, `?page_size=`) |
+| GET | `/api/v1/fighters/{id}` | Fighter profile: physical stats, career averages, record |
+| GET | `/api/v1/fights` | Paginated fight list (filters: event, fighter, weight class, method) |
+| GET | `/api/v1/fights/{id}` | Fight detail + round-by-round stats |
+| GET | `/api/v1/events` | Paginated event list (`?year=`) |
+| GET | `/api/v1/events/{id}` | Event detail + full fight card |
+| POST | `/api/v1/predictions/fight-outcome` | Win probability prediction (ML stub until Task 6) |
+| GET | `/api/v1/analytics/style-evolution` | Finish rates by year (`?weight_class=`) |
+| GET | `/api/v1/analytics/fighter-endurance/{id}` | Round-by-round performance profile |
+
+## Data Updates
+
+Data is kept current via GitHub Actions:
+
+**Weekly scrape** (every Sunday):
 ```bash
 cd backend/scraper
 python live_scraper.py
 ```
 
-### Option 2: Automated Weekly Updates
-Set up automatic checking every Sunday at 6 AM:
+**Manual ETL run:**
 ```bash
-cd backend/scraper
-python scheduler.py --action start --daemon
+python backend/scraper/post_scrape_clean.py
 ```
 
-**Monitoring Automated Updates:**
-- Check status: `python check_scheduler_status.py`  
-- View logs: `tail -f backend/scraper/logs/ufc_scraper_*.log`
-- View history: `cat backend/scraper/scheduler_history.jsonl`
-- Manual test: `python scheduler.py --action run-weekly`
+## Project Status
 
-The scraper will:
-- ✅ Only add NEW events (prevents duplicates)
-- ✅ Log all activity with timestamps
-- ✅ Email you when new data is found (if configured)
-- ✅ Run respectfully with rate limiting
+| Task | Description | Status |
+|------|-------------|--------|
+| 1 | Database schema | ✅ Done |
+| 2 | Data scraping pipeline | ✅ Done |
+| 3 | ETL pipeline | ✅ Done |
+| 4 | FastAPI backend | ✅ Done |
+| 5 | ML feature engineering | ⏳ Next |
+| 6 | ML models | ⏳ Planned |
+| 7–8 | Analytics (style evolution, endurance) | ⏳ Planned |
+| 9 | React frontend | ⏳ Planned |
+| 10 | Deployment | ⏳ Planned |
 
-## 📊 Project Status
-
-### ✅ Completed: Comprehensive Data Foundation
-- ✅ Complete UFC database: 744 events, 4,429 fighters, 38,958+ statistics (1994-2025)
-- ✅ Clean PostgreSQL schema with 6 optimized tables
-- ✅ Smart live scraper: Only adds NEW events, prevents duplicates
-- ✅ Weekly automation: Sunday 6 AM scheduling with flexible parsing
-- ✅ Production-ready: Rate limiting, error handling, comprehensive logging
-
-### 🚀 Ready for Next Phase
-- ✅ **Data Pipeline**: Complete and automated
-- ⏳ **ML Model Development**: Ready to begin with solid data foundation
-- ⏳ **Frontend Development**: Awaiting ML models
-- ⏳ **Analytics Dashboard**: Planned after frontend
-
-### Progress Tracking
-See [Task Master tasks](/.taskmaster/tasks/tasks.json) for detailed progress.
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 ufc_analytics_platform/
 ├── backend/
-│   ├── app/           # FastAPI application
-│   ├── db/            # Database models and config  
-│   ├── scraper/       # Live UFC data scraper (6 files)
-│   ├── models/        # ML models (coming soon)
-│   ├── schemas/       # Pydantic schemas
-│   ├── services/      # Business logic
-│   └── utils/         # Helper functions
-├── scrape_ufc_stats/  # Greko's comprehensive CSV data
-├── frontend/          # React application (coming soon)
-├── .taskmaster/       # Task management
-└── docs/             # Documentation
+│   ├── api/
+│   │   ├── main.py           # FastAPI app, middleware, exception handlers
+│   │   ├── dependencies.py   # get_db() session dependency
+│   │   ├── routers/
+│   │   │   └── health.py     # /health, /health/db
+│   │   └── v1/
+│   │       ├── router.py     # Aggregates all v1 routers
+│   │       └── endpoints/    # fighters, fights, events, predictions, analytics
+│   ├── core/
+│   │   ├── config.py         # Pydantic settings (reads .env)
+│   │   ├── logging.py        # Structured JSON logging
+│   │   └── middleware.py     # RequestID + Timing middleware
+│   ├── db/
+│   │   └── database.py       # SQLAlchemy engine + SessionLocal
+│   ├── schemas/              # Pydantic request/response models
+│   ├── scraper/              # Live scraper + ETL scripts
+│   ├── ml/                   # ML models (Task 6)
+│   ├── main.py               # Uvicorn entry point re-export
+│   ├── run_dev.py            # Dev server launcher
+│   └── gunicorn.conf.py      # Production server config
+├── frontend/                 # React app (Task 9)
+├── docs/                     # Technical documentation
+└── .taskmaster/              # Task management
 ```
 
-## 🔗 API Endpoints
+## Author
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/predictions/simulate` | POST | Get fight outcome prediction |
-| `/api/v1/analytics/style-evolution` | GET | Get style evolution data |
-| `/api/v1/fighters/{id}/endurance` | GET | Get fighter endurance profile |
-| `/health` | GET | API health check |
+**kabec** — [@kibbbles](https://github.com/kibbbles)
 
-## 🤝 Contributing
+## Acknowledgments
 
-This is a portfolio project for demonstration purposes. Feel free to explore the code!
-
-## 📝 License
-
-MIT License - See [LICENSE](LICENSE) file for details
-
-## 👤 Author
-
-**kabec**
-- GitHub: [@kibbbles](https://github.com/kibbbles)
-
-## 🙏 Acknowledgments
-
-- UFC Stats for providing fight data
-- Greko scraper for data collection capabilities
+- UFCStats.com for fight data
+- Greko scraper for initial data collection
 
 ---
 
-**Last Updated**: August 31, 2025  
-- ✅ Complete UFC data pipeline implemented and tested
-- ✅ Comprehensive dataset loaded: 744 events, 4,429 fighters, 38,958+ statistics
-- ✅ Live scraper system for automatic updates  
-- ✅ Clean database schema with 6 optimized tables
-- ✅ Production-ready with automated weekly scheduling
-- 🚀 Ready for ML model development phase
+**Last Updated:** 2026-02-28

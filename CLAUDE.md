@@ -54,11 +54,14 @@ UFC fans and analysts lack sophisticated tools to:
 ## Technical Architecture
 
 ### Backend Stack
-- **Framework:** FastAPI 0.104.1
+- **Framework:** FastAPI 0.115.5
 - **Database:** PostgreSQL (Supabase for deployment)
 - **ML Libraries:** scikit-learn, XGBoost, pandas, numpy
-- **API Documentation:** Automatic OpenAPI/Swagger generation
+- **API Documentation:** Automatic OpenAPI/Swagger generation at `/docs`
 - **Authentication:** None required (public analytics platform)
+- **Middleware:** CORS, RequestID (X-Request-ID header), Timing (logs per-request duration)
+- **Logging:** Structured JSON via python-json-logger, rotating file handler (`logs/app.log`)
+- **Server:** Uvicorn (dev, `run_dev.py`) / Gunicorn + UvicornWorker (prod, `gunicorn.conf.py`)
 
 ### Frontend Stack
 - **Framework:** React 18 with TypeScript
@@ -102,6 +105,32 @@ session.close()
 - **Foreign Keys**: ✅ All relationships populated (99.75%+ coverage)
 - **Typed columns**: fight_stats (sig_str_landed, ctrl_seconds, kd_int, etc.), fight_results (fight_time_seconds, total_fight_time_seconds), fighter_tott (height_inches, weight_lbs, reach_inches, dob_date)
 - **Derived columns**: fight_results.weight_class, is_title_fight, is_interim_title, is_championship_rounds
+
+### FastAPI Backend (Task 4 — COMPLETE 2026-02-28)
+
+**Entry point:** `cd backend && python run_dev.py` (dev) or `gunicorn api.main:app -c gunicorn.conf.py` (prod)
+
+**All routes:**
+```
+GET  /health                                  liveness check
+GET  /health/db                               DB readiness (503 on failure)
+GET  /api/v1/fighters                         paginated list (?search= ?page= ?page_size=)
+GET  /api/v1/fighters/{id}                    full profile + tott + record
+GET  /api/v1/fights                           paginated list (filters: event_id, fighter_id, weight_class, method)
+GET  /api/v1/fights/{id}                      fight detail + round-by-round stats
+GET  /api/v1/events                           paginated list (?year=)
+GET  /api/v1/events/{id}                      event + fight card
+POST /api/v1/predictions/fight-outcome        win probability (stub until Task 6 ML)
+GET  /api/v1/analytics/style-evolution        finish rates by year (?weight_class=)
+GET  /api/v1/analytics/fighter-endurance/{id} round-by-round performance profile
+```
+
+**Key files:**
+- `backend/api/main.py` — app, middleware, exception handlers
+- `backend/api/dependencies.py` — `get_db()` session dependency
+- `backend/core/config.py` — settings singleton (`from core.config import settings`)
+- `backend/core/middleware.py` — RequestIDMiddleware, TimingMiddleware
+- `backend/schemas/` — Pydantic v2 schemas for all endpoints
 
 ### ETL Pipeline (Task 3 — COMPLETE)
 Post-scrape cleanup runs automatically via GitHub Actions after each weekly scrape.
