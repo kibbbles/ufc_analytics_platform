@@ -395,7 +395,7 @@
             "id": 7,
             "title": "Feature selection analysis",
             "description": "Create backend/features/selection.py that runs mutual information and correlation analysis to identify the most predictive features, outputting a curated feature list.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               2,
               3,
@@ -405,7 +405,8 @@
             ],
             "details": "Steps: 1) Build full training matrix by calling pipeline.py. 2) Compute mutual information scores (sklearn mutual_info_classif) against the binary win/loss target. 3) Compute Pearson correlation matrix and flag highly correlated pairs (|r| > 0.9) for removal. 4) Output selected_features.json listing the final feature set to backend/features/selected_features.json. This file is then read by the ML training scripts in Task 6.",
             "testStrategy": "Confirm selected_features.json is valid JSON with at least 10 features. Verify that known strong predictors (e.g., sig_str_pct differentials) appear in the selected set.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-01T01:04:48.736Z"
           },
           {
             "id": 8,
@@ -439,7 +440,7 @@
         "complexity": 9,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Break down the Feature Engineering Pipeline task into 5 subtasks covering differential feature calculation, rolling performance metrics implementation, style classification features, time-based features, and feature selection/validation. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
-        "updatedAt": "2026-02-28T19:38:48.261Z"
+        "updatedAt": "2026-03-01T01:04:48.736Z"
       },
       {
         "id": "6",
@@ -672,7 +673,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-02-28T19:38:48.263Z",
+      "lastModified": "2026-03-01T01:04:48.738Z",
       "taskCount": 10,
       "completedCount": 4,
       "tags": [
