@@ -95,11 +95,36 @@ def _add_fighter_diffs(mat: pd.DataFrame, feat_df: pd.DataFrame) -> pd.DataFrame
     return mat
 
 
+# Weight class → weight limit in lbs (for ordinal encoding in MI scoring only).
+# Fighters who change weight classes are handled naturally: their cumulative
+# career features carry across divisions, and diff_days_in_weight_class
+# captures how established they are in the current class.
+_WEIGHT_CLASS_LBS: dict[str, int] = {
+    "Women's Strawweight":  115,
+    "Women's Flyweight":    125,
+    "Flyweight":            125,
+    "Women's Bantamweight": 135,
+    "Bantamweight":         135,
+    "Women's Featherweight": 145,
+    "Featherweight":        145,
+    "Lightweight":          155,
+    "Welterweight":         170,
+    "Middleweight":         185,
+    "Light Heavyweight":    205,
+    "Heavyweight":          265,
+    "Super Heavyweight":    285,
+    "Open Weight":          185,   # median fallback
+    "Catch Weight":         170,   # median fallback
+}
+
+
 def build_training_matrix() -> pd.DataFrame:
     """Assemble the full training matrix from all feature modules.
 
     Returns one row per fight (fights with NULL outcome are excluded) with:
       - fight_id, fighter_a_id, fighter_b_id, fighter_a_wins  (IDs + target)
+      - weight_class (string categorical — always included, encoded in Task 6)
+      - is_women_division, is_title_fight  (binary context flags)
       - height_diff_inches … loss_streak_diff                  (from differentials)
       - diff_roll3_* / diff_ewa_*                              (from rolling_metrics)
       - diff_striking_ratio … diff_decision_rate               (from style_features)
@@ -119,13 +144,20 @@ def build_training_matrix() -> pd.DataFrame:
     tf_df   = build_time_features(fights, fighters)
     oq_df   = build_opponent_quality(fights)
 
-    # Base frame: one row per fight with a known outcome
+    # Base frame: one row per fight with a known outcome + context columns
     mat = (
-        matchups[["fight_id", "fighter_a_id", "fighter_b_id", "fighter_a_wins"]]
+        matchups[[
+            "fight_id", "fighter_a_id", "fighter_b_id",
+            "fighter_a_wins", "weight_class", "is_title_fight",
+        ]]
         .copy()
     )
     mat = mat[mat["fighter_a_wins"].notna()].copy()
-    mat["fighter_a_wins"] = mat["fighter_a_wins"].astype(int)
+    mat["fighter_a_wins"]   = mat["fighter_a_wins"].astype(int)
+    mat["is_title_fight"]   = mat["is_title_fight"].astype(int)
+    mat["is_women_division"] = (
+        mat["weight_class"].str.startswith("Women's", na=False).astype(int)
+    )
 
     # Merge physical/experience diffs — already in A-B format from differentials.py
     diff_feat_cols = [
@@ -163,7 +195,11 @@ def run_feature_selection() -> dict:
     """
     mat = build_training_matrix()
 
-    id_cols = {"fight_id", "fighter_a_id", "fighter_b_id", "fighter_a_wins"}
+    # weight_class is a string categorical — always included, encoded by Task 6.
+    # It bypasses MI/Pearson here and is recorded separately in the JSON.
+    CATEGORICAL = ["weight_class"]
+
+    id_cols = {"fight_id", "fighter_a_id", "fighter_b_id", "fighter_a_wins"} | set(CATEGORICAL)
     feature_cols = [c for c in mat.columns if c not in id_cols]
 
     y = mat["fighter_a_wins"].astype(int)
@@ -176,7 +212,7 @@ def run_feature_selection() -> dict:
         X = X.drop(columns=all_nan)
         feature_cols = list(X.columns)
 
-    # Median imputation for MI scoring
+    # Median imputation for MI scoring (selection-only; training imputes differently)
     medians = X.median()
     X_filled = X.fillna(medians)
 
@@ -213,9 +249,9 @@ def run_feature_selection() -> dict:
         keep = f2 if drop == f1 else f1
         dropped.add(drop)
         removed.append({
-            "feature":         drop,
-            "correlated_with": keep,
-            "r":               round(float(r_val), 4),
+            "feature":          drop,
+            "correlated_with":  keep,
+            "r":                round(float(r_val), 4),
             "mi_score_dropped": round(float(mi_scores[drop]), 6),
             "mi_score_kept":    round(float(mi_scores[keep]), 6),
         })
@@ -231,8 +267,11 @@ def run_feature_selection() -> dict:
         "n_features_before":        len(feature_cols),
         "n_features_removed_collinear": len(removed),
         "n_features_selected":      len(selected),
+        # Numeric/binary features that passed selection (ordered by MI score)
         "feature_names":            selected,
         "mi_scores":                {c: round(float(mi_scores[c]), 6) for c in selected},
+        # Categorical features — always included; Task 6 handles encoding
+        "categorical_features":     CATEGORICAL,
         "removed_collinear":        removed,
     }
 

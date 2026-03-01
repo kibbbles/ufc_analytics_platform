@@ -350,7 +350,7 @@ def get_matchups_df(
     Columns returned
     ----------------
     fight_id, fighter_a_id, fighter_b_id, event_id, date_proper,
-    fighter_a_wins
+    fighter_a_wins, weight_class, is_title_fight
     """
     params: dict = {}
     date_filter = _date_where("ed", date_from, date_to, params)
@@ -366,7 +366,9 @@ def get_matchups_df(
                 WHEN winner.fighter_id = fd.fighter_a_id THEN 1
                 WHEN winner.fighter_id IS NOT NULL       THEN 0
                 ELSE NULL
-            END AS fighter_a_wins
+            END AS fighter_a_wins,
+            fr_meta.weight_class,
+            COALESCE(fr_meta.is_title_fight, FALSE) AS is_title_fight
         FROM fight_details fd
         JOIN event_details ed ON ed.id = fd.event_id
         LEFT JOIN (
@@ -374,6 +376,12 @@ def get_matchups_df(
             FROM fight_results
             WHERE is_winner = TRUE
         ) winner ON winner.fight_id = fd.id
+        LEFT JOIN (
+            SELECT DISTINCT ON (fight_id)
+                fight_id, weight_class, is_title_fight
+            FROM fight_results
+            ORDER BY fight_id
+        ) fr_meta ON fr_meta.fight_id = fd.id
         WHERE fd.fighter_a_id IS NOT NULL
           AND fd.fighter_b_id IS NOT NULL
           AND ed.date_proper IS NOT NULL
