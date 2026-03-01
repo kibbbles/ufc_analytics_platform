@@ -412,7 +412,7 @@
             "id": 8,
             "title": "Pipeline assembly",
             "description": "Create backend/features/pipeline.py that assembles all feature modules into a unified interface with both batch (training) and real-time (prediction) modes.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               2,
               3,
@@ -422,7 +422,8 @@
             ],
             "details": "Two public functions: build_training_matrix(date_from=None, date_to=None) -> pd.DataFrame   - Calls all extractors, merges all feature DataFrames on fight_id,     adds binary target column (fighter_a_wins: 1 or 0), returns full matrix. build_prediction_features(fighter_a_id, fighter_b_id) -> dict   - Pulls latest stats for both fighters, computes all differentials     and rolling metrics on the fly, returns a flat dict of feature values     matching selected_features.json. Save the training matrix as a parquet file at backend/features/training_data.parquet for reuse across ML experiments.",
             "testStrategy": "Call build_training_matrix() and verify shape, column names, and target distribution. Call build_prediction_features() with two known fighter IDs and verify all keys in selected_features.json are present in the returned dict.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-01T15:44:28.486Z"
           },
           {
             "id": 9,
@@ -440,7 +441,7 @@
         "complexity": 9,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Break down the Feature Engineering Pipeline task into 5 subtasks covering differential feature calculation, rolling performance metrics implementation, style classification features, time-based features, and feature selection/validation. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
-        "updatedAt": "2026-03-01T01:04:48.736Z"
+        "updatedAt": "2026-03-01T15:44:28.486Z"
       },
       {
         "id": "6",
@@ -673,7 +674,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-01T01:04:48.738Z",
+      "lastModified": "2026-03-01T15:44:28.487Z",
       "taskCount": 10,
       "completedCount": 4,
       "tags": [

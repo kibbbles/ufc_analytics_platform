@@ -29,17 +29,7 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import mutual_info_classif
 
-from features.differentials import build_differentials
-from features.extractors import (
-    get_fights_long_df,
-    get_fighters_df,
-    get_matchups_df,
-    get_stats_df,
-)
-from features.opponent_quality import build_opponent_quality
-from features.rolling_metrics import build_rolling_metrics
-from features.style_features import build_style_features
-from features.time_features import build_time_features
+from features.pipeline import build_training_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -50,130 +40,6 @@ OUTPUT_PATH = _HERE / "selected_features.json"
 # ---------------------------------------------------------------------------
 # Training matrix assembly (migrates to pipeline.py in Task 5.8)
 # ---------------------------------------------------------------------------
-
-def _add_fighter_diffs(mat: pd.DataFrame, feat_df: pd.DataFrame) -> pd.DataFrame:
-    """Merge a per-(fighter_id, fight_id) feature DataFrame into *mat* as A-B diffs.
-
-    For each feature column in feat_df (everything except fighter_id/fight_id):
-      1. Merge fighter_a's values via (fighter_a_id, fight_id).
-      2. Merge fighter_b's values via (fighter_b_id, fight_id).
-      3. Compute diff_<col> = a_<col> - b_<col> and drop the raw A/B columns.
-
-    *mat* must contain fighter_a_id, fighter_b_id, and fight_id.
-    """
-    feat_cols = [c for c in feat_df.columns if c not in ("fighter_id", "fight_id")]
-
-    # Fighter A side
-    a_df = (
-        feat_df
-        .rename(columns={"fighter_id": "fighter_a_id"})
-        .rename(columns={c: f"_a_{c}" for c in feat_cols})
-    )
-    mat = mat.merge(
-        a_df[["fighter_a_id", "fight_id"] + [f"_a_{c}" for c in feat_cols]],
-        on=["fighter_a_id", "fight_id"],
-        how="left",
-    )
-
-    # Fighter B side
-    b_df = (
-        feat_df
-        .rename(columns={"fighter_id": "fighter_b_id"})
-        .rename(columns={c: f"_b_{c}" for c in feat_cols})
-    )
-    mat = mat.merge(
-        b_df[["fighter_b_id", "fight_id"] + [f"_b_{c}" for c in feat_cols]],
-        on=["fighter_b_id", "fight_id"],
-        how="left",
-    )
-
-    # Compute diffs and drop raw A/B columns
-    for c in feat_cols:
-        mat[f"diff_{c}"] = mat[f"_a_{c}"] - mat[f"_b_{c}"]
-        mat = mat.drop(columns=[f"_a_{c}", f"_b_{c}"])
-
-    return mat
-
-
-# Weight class → weight limit in lbs (for ordinal encoding in MI scoring only).
-# Fighters who change weight classes are handled naturally: their cumulative
-# career features carry across divisions, and diff_days_in_weight_class
-# captures how established they are in the current class.
-_WEIGHT_CLASS_LBS: dict[str, int] = {
-    "Women's Strawweight":  115,
-    "Women's Flyweight":    125,
-    "Flyweight":            125,
-    "Women's Bantamweight": 135,
-    "Bantamweight":         135,
-    "Women's Featherweight": 145,
-    "Featherweight":        145,
-    "Lightweight":          155,
-    "Welterweight":         170,
-    "Middleweight":         185,
-    "Light Heavyweight":    205,
-    "Heavyweight":          265,
-    "Super Heavyweight":    285,
-    "Open Weight":          185,   # median fallback
-    "Catch Weight":         170,   # median fallback
-}
-
-
-def build_training_matrix() -> pd.DataFrame:
-    """Assemble the full training matrix from all feature modules.
-
-    Returns one row per fight (fights with NULL outcome are excluded) with:
-      - fight_id, fighter_a_id, fighter_b_id, fighter_a_wins  (IDs + target)
-      - weight_class (string categorical — always included, encoded in Task 6)
-      - is_women_division, is_title_fight  (binary context flags)
-      - height_diff_inches … loss_streak_diff                  (from differentials)
-      - diff_roll3_* / diff_ewa_*                              (from rolling_metrics)
-      - diff_striking_ratio … diff_decision_rate               (from style_features)
-      - diff_days_since_last_fight … diff_days_in_weight_class (from time_features)
-      - diff_avg_opponent_win_pct … diff_avg_opponent_losses   (from opponent_quality)
-    """
-    logger.info("build_training_matrix: loading raw data...")
-    stats    = get_stats_df()
-    fights   = get_fights_long_df()
-    fighters = get_fighters_df()
-    matchups = get_matchups_df()
-
-    logger.info("build_training_matrix: computing feature modules...")
-    diff_df = build_differentials(matchups, fighters, fights)
-    rm_df   = build_rolling_metrics(stats)
-    sf_df   = build_style_features(stats, fights)
-    tf_df   = build_time_features(fights, fighters)
-    oq_df   = build_opponent_quality(fights)
-
-    # Base frame: one row per fight with a known outcome + context columns
-    mat = (
-        matchups[[
-            "fight_id", "fighter_a_id", "fighter_b_id",
-            "fighter_a_wins", "weight_class", "is_title_fight",
-        ]]
-        .copy()
-    )
-    mat = mat[mat["fighter_a_wins"].notna()].copy()
-    mat["fighter_a_wins"]   = mat["fighter_a_wins"].astype(int)
-    mat["is_title_fight"]   = mat["is_title_fight"].astype(int)
-    mat["is_women_division"] = (
-        mat["weight_class"].str.startswith("Women's", na=False).astype(int)
-    )
-
-    # Merge physical/experience diffs — already in A-B format from differentials.py
-    diff_feat_cols = [
-        c for c in diff_df.columns
-        if c not in ("fight_id", "fighter_a_id", "fighter_b_id", "fighter_a_wins")
-    ]
-    mat = mat.merge(diff_df[["fight_id"] + diff_feat_cols], on="fight_id", how="left")
-
-    # Merge per-fighter features as A-B diffs
-    for feat_df in (rm_df, sf_df, tf_df, oq_df):
-        mat = _add_fighter_diffs(mat, feat_df)
-
-    n_feat = len(mat.columns) - 4  # subtract fight_id, fighter_a_id, fighter_b_id, target
-    logger.info("build_training_matrix: %d rows × %d feature columns", len(mat), n_feat)
-    return mat
-
 
 # ---------------------------------------------------------------------------
 # Feature selection
