@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install sqlalchemy psycopg2-binary python-dotenv
+          pip install -r requirements.txt
 
       - name: Force IPv4 DNS resolution
         run: |
