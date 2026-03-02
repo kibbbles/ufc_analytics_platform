@@ -251,12 +251,12 @@ def parse_fight_stats(conn):
         log.info(f"  {src:15s} → {landed}/{attempted}: {n:,} rows")
         total_xofy += n
 
-    # CTRL: "M:SS" → seconds
-    n = conn.execute(text("""
+    # CTRL: "M:SS" → seconds  (strip all whitespace first to handle scraped newlines)
+    n = conn.execute(text(r"""
         UPDATE fight_stats
         SET ctrl_seconds =
-            SPLIT_PART("CTRL", ':', 1)::INTEGER * 60 +
-            SPLIT_PART("CTRL", ':', 2)::INTEGER
+            SPLIT_PART(REGEXP_REPLACE("CTRL", '\s', '', 'g'), ':', 1)::INTEGER * 60 +
+            SPLIT_PART(REGEXP_REPLACE("CTRL", '\s', '', 'g'), ':', 2)::INTEGER
         WHERE "CTRL" IS NOT NULL
           AND "CTRL" LIKE '%:%'
           AND ctrl_seconds IS NULL
@@ -307,12 +307,12 @@ def parse_fight_results(conn):
         ("total_fight_time_seconds", "INTEGER"),
     ])
 
-    # TIME "M:SS" → seconds within round
-    n = conn.execute(text("""
+    # TIME "M:SS" → seconds within round  (strip whitespace first)
+    n = conn.execute(text(r"""
         UPDATE fight_results
         SET fight_time_seconds =
-            SPLIT_PART("TIME", ':', 1)::INTEGER * 60 +
-            SPLIT_PART("TIME", ':', 2)::INTEGER
+            SPLIT_PART(REGEXP_REPLACE("TIME", '\s', '', 'g'), ':', 1)::INTEGER * 60 +
+            SPLIT_PART(REGEXP_REPLACE("TIME", '\s', '', 'g'), ':', 2)::INTEGER
         WHERE "TIME" IS NOT NULL
           AND "TIME" LIKE '%:%'
           AND fight_time_seconds IS NULL
@@ -322,10 +322,10 @@ def parse_fight_results(conn):
 
     # total_fight_time_seconds = (ROUND - 1) * 300 + fight_time_seconds
     # Each UFC round is 5 minutes (300 seconds), regardless of title/non-title
-    n = conn.execute(text("""
+    n = conn.execute(text(r"""
         UPDATE fight_results
         SET total_fight_time_seconds =
-            ("ROUND"::INTEGER - 1) * 300 + fight_time_seconds
+            (REGEXP_REPLACE("ROUND", '\s', '', 'g')::INTEGER - 1) * 300 + fight_time_seconds
         WHERE fight_time_seconds IS NOT NULL
           AND "ROUND" IS NOT NULL
           AND total_fight_time_seconds IS NULL
