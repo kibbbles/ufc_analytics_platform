@@ -298,10 +298,12 @@ def parse_fight_stats(conn):
     log.info(f"  TD % → td_pct:               {n:,} rows")
 
     # KD: "1.0" → 1  (strip whitespace before cast)
+    # Guard: scraper column-shift writes "X of Y" strike counts into KD for some rows
     n = conn.execute(text(r"""
         UPDATE fight_stats
         SET kd_int = NULLIF(REGEXP_REPLACE("KD", '\s', '', 'g'), '')::FLOAT::INTEGER
         WHERE "KD" IS NOT NULL
+          AND "KD" NOT LIKE '% of %'
           AND kd_int IS NULL
     """)).rowcount
     conn.commit()
