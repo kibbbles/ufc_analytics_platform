@@ -61,7 +61,7 @@ Implement feature selection using mutual information and correlation analysis. C
 
 ### 5.1. Data extraction queries
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Create backend/features/extractors.py with SQL queries that pull raw fight data into pandas DataFrames for feature engineering. Covers fight_results, fight_stats, fighter_details, fighter_tott, and event_details tables.
@@ -72,7 +72,7 @@ Implement get_fights_df(), get_stats_df(), get_fighters_df(), and get_events_df(
 
 ### 5.2. Physical and experience differential features
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.1  
 
 Create backend/features/differentials.py that computes fighter-A minus fighter-B differentials for physical attributes and career experience.
@@ -83,7 +83,7 @@ Features to compute: height_diff_inches, weight_diff_lbs, reach_diff_inches, age
 
 ### 5.3. Rolling performance metrics
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.1  
 
 Create backend/features/rolling_metrics.py computing rolling averages of striking and grappling performance over the last N fights, strictly using only pre-fight data to avoid leakage.
@@ -94,7 +94,7 @@ Metrics: 3-fight rolling avg for sig_str_pct, td_pct, kd_int, ctrl_seconds, sig_
 
 ### 5.4. Style classification features
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.3  
 
 Create backend/features/style_features.py that derives fighting style metrics from career aggregated stats.
@@ -105,7 +105,7 @@ Features: striking_ratio (sig_str_landed / total_str_landed), grappling_ratio (t
 
 ### 5.5. Time-based features
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.1  
 
 Create backend/features/time_features.py that extracts temporal context features for each fight.
@@ -116,7 +116,7 @@ Features: days_since_last_fight (layoff duration), career_length_days (first UFC
 
 ### 5.6. Opponent quality metrics
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.1  
 
 Create backend/features/opponent_quality.py computing strength-of-schedule metrics based on the quality of past opponents.
@@ -146,3 +146,14 @@ Create backend/features/pipeline.py that assembles all feature modules into a un
 **Details:**
 
 Two public functions: build_training_matrix(date_from=None, date_to=None) -> pd.DataFrame   - Calls all extractors, merges all feature DataFrames on fight_id,     adds binary target column (fighter_a_wins: 1 or 0), returns full matrix. build_prediction_features(fighter_a_id, fighter_b_id) -> dict   - Pulls latest stats for both fighters, computes all differentials     and rolling metrics on the fly, returns a flat dict of feature values     matching selected_features.json. Save the training matrix as a parquet file at backend/features/training_data.parquet for reuse across ML experiments.
+
+### 5.9. GitHub Actions workflow for automated feature engineering
+
+**Status:** pending  
+**Dependencies:** 5.8  
+
+Create .github/workflows/feature-engineering.yml that runs automatically after post-scrape-clean.yml succeeds, triggering build_training_matrix() from pipeline.py to keep training_data.parquet up to date with every new UFC event.
+
+**Details:**
+
+Workflow triggers: workflow_run on post-scrape-clean.yml completed with conclusion == success. Steps: 1) Checkout repo. 2) Set up Python + venv. 3) Run build_training_matrix() in append mode (new fights only) via a small runner script backend/features/run_build.py. 4) Commit and push the updated training_data.parquet back to the repo (or upload as a GitHub Actions artifact if parquet grows too large for git). This keeps the feature layer current without any manual intervention. The retrain.yml workflow (manual workflow_dispatch) is a separate concern handled in Task 6 -- this workflow only updates features, not the model.

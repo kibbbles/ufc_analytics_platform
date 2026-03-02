@@ -1,0 +1,89 @@
+name: Feature Engineering Pipeline
+
+# Runs automatically after "Post-Scrape ETL Cleanup" succeeds.
+# Can also be triggered manually from the Actions tab.
+on:
+  workflow_run:
+    workflows: ['Post-Scrape ETL Cleanup']
+    types: [completed]
+  workflow_dispatch:
+
+# Allow the job to commit selected_features.json back to the repo
+permissions:
+  contents: write
+
+jobs:
+  build-features:
+    name: Rebuild training matrix and feature selection
+    runs-on: ubuntu-latest
+
+    # Skip if the triggering ETL workflow failed.
+    # When triggered manually (workflow_dispatch) there is no workflow_run
+    # context, so we always allow it through.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run feature engineering pipeline
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd backend
+          python features/run_build.py
+
+      - name: Commit updated selected_features.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/features/selected_features.json
+          git diff --staged --quiet || git commit -m "chore: update selected_features.json [skip ci]"
+          git push
+
+      - name: Upload training_data.parquet as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-data-parquet-${{ github.run_id }}
+          path: backend/features/training_data.parquet
+          retention-days: 90
+
+      - name: Upload selected_features.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: selected-features-${{ github.run_id }}
+          path: backend/features/selected_features.json
+          retention-days: 90
+
+      - name: Report success
+        if: success()
+        run: echo "Feature engineering pipeline completed successfully."
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-engineering-logs
+          path: backend/logs/*.log
+          if-no-files-found: ignore
+          retention-days: 7

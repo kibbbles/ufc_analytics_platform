@@ -318,7 +318,7 @@
         "dependencies": [
           "3"
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -429,19 +429,20 @@
             "id": 9,
             "title": "GitHub Actions workflow for automated feature engineering",
             "description": "Create .github/workflows/feature-engineering.yml that runs automatically after post-scrape-clean.yml succeeds, triggering build_training_matrix() from pipeline.py to keep training_data.parquet up to date with every new UFC event.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               8
             ],
             "details": "Workflow triggers: workflow_run on post-scrape-clean.yml completed with conclusion == success. Steps: 1) Checkout repo. 2) Set up Python + venv. 3) Run build_training_matrix() in append mode (new fights only) via a small runner script backend/features/run_build.py. 4) Commit and push the updated training_data.parquet back to the repo (or upload as a GitHub Actions artifact if parquet grows too large for git). This keeps the feature layer current without any manual intervention. The retrain.yml workflow (manual workflow_dispatch) is a separate concern handled in Task 6 -- this workflow only updates features, not the model.",
             "testStrategy": "Manually trigger post-scrape-clean.yml on a branch and verify this workflow fires, completes, and produces an updated parquet with the correct row count.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-02T02:04:03.660Z"
           }
         ],
         "complexity": 9,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Break down the Feature Engineering Pipeline task into 5 subtasks covering differential feature calculation, rolling performance metrics implementation, style classification features, time-based features, and feature selection/validation. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
-        "updatedAt": "2026-03-01T15:44:28.486Z"
+        "updatedAt": "2026-03-02T02:04:03.660Z"
       },
       {
         "id": "6",
@@ -674,9 +675,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-01T15:44:28.487Z",
+      "lastModified": "2026-03-02T02:04:03.661Z",
       "taskCount": 10,
-      "completedCount": 4,
+      "completedCount": 5,
       "tags": [
         "master"
       ]
