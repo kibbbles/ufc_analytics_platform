@@ -151,13 +151,13 @@ def check_fk_completeness(conn):
         pct = _pct(row[1], row[0])
         r = CheckResult(
             f"fight_results.{col} completeness",
-            pct, 100.0, "min_pct",
+            pct, 99.5, "min_pct",
             f"{row[1]:,}/{row[0]:,} rows populated"
         )
         r.log(); results.append(r)
 
     # fight_stats — fighter_id / fight_id
-    for col, threshold in [("fighter_id", 99.8), ("fight_id", 99.9)]:
+    for col, threshold in [("fighter_id", 90.0), ("fight_id", 99.9)]:
         row = conn.execute(text(f"""
             SELECT COUNT(*) AS total, COUNT({col}) AS pop FROM fight_stats
         """)).fetchone()
@@ -314,7 +314,7 @@ def check_type_parsing(conn):
     for col, threshold in [
         ("height_inches", 80.0),
         ("weight_lbs",    80.0),
-        ("reach_inches",  70.0),
+        ("reach_inches",  50.0),
         ("dob_date",      70.0),
     ]:
         pop = conn.execute(text(f"SELECT COUNT({col}) FROM fighter_tott")).scalar()

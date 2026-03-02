@@ -186,8 +186,8 @@ def parse_x_of_y(conn, src_col, landed_col, attempted_col):
     """Parse 'X of Y' text column into two INTEGER columns."""
     result = conn.execute(text(f"""
         UPDATE fight_stats
-        SET "{landed_col}"   = SPLIT_PART("{src_col}", ' of ', 1)::INTEGER,
-            "{attempted_col}" = SPLIT_PART("{src_col}", ' of ', 2)::INTEGER
+        SET "{landed_col}"    = TRIM(SPLIT_PART("{src_col}", ' of ', 1))::INTEGER,
+            "{attempted_col}" = TRIM(SPLIT_PART("{src_col}", ' of ', 2))::INTEGER
         WHERE "{src_col}" LIKE '% of %'
           AND "{landed_col}" IS NULL
     """))
