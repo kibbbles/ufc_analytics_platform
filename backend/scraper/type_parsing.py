@@ -265,20 +265,24 @@ def parse_fight_stats(conn):
     log.info(f"  CTRL → ctrl_seconds:         {n:,} rows")
 
     # SIG.STR. %: "47%" → 47.0  (strip whitespace before cast)
+    # Guard: skip rows where scraper wrote an "X of Y" count into the % column
     n = conn.execute(text(r"""
         UPDATE fight_stats
         SET sig_str_pct = NULLIF(REGEXP_REPLACE(REPLACE("SIG.STR. %", '%', ''), '\s', '', 'g'), '')::NUMERIC
         WHERE "SIG.STR. %" IS NOT NULL
+          AND "SIG.STR. %" NOT LIKE '% of %'
           AND sig_str_pct IS NULL
     """)).rowcount
     conn.commit()
     log.info(f"  SIG.STR. % → sig_str_pct:   {n:,} rows")
 
     # TD %: "29%" → 29.0  (strip whitespace before cast)
+    # Guard: skip rows where scraper wrote an "X of Y" count into the % column
     n = conn.execute(text(r"""
         UPDATE fight_stats
         SET td_pct = NULLIF(REGEXP_REPLACE(REPLACE("TD %", '%', ''), '\s', '', 'g'), '')::NUMERIC
         WHERE "TD %" IS NOT NULL
+          AND "TD %" NOT LIKE '% of %'
           AND td_pct IS NULL
     """)).rowcount
     conn.commit()
