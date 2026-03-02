@@ -264,30 +264,30 @@ def parse_fight_stats(conn):
     conn.commit()
     log.info(f"  CTRL → ctrl_seconds:         {n:,} rows")
 
-    # SIG.STR. %: "47%" → 47.0
-    n = conn.execute(text("""
+    # SIG.STR. %: "47%" → 47.0  (strip whitespace before cast)
+    n = conn.execute(text(r"""
         UPDATE fight_stats
-        SET sig_str_pct = REPLACE("SIG.STR. %", '%', '')::NUMERIC
+        SET sig_str_pct = NULLIF(REGEXP_REPLACE(REPLACE("SIG.STR. %", '%', ''), '\s', '', 'g'), '')::NUMERIC
         WHERE "SIG.STR. %" IS NOT NULL
           AND sig_str_pct IS NULL
     """)).rowcount
     conn.commit()
     log.info(f"  SIG.STR. % → sig_str_pct:   {n:,} rows")
 
-    # TD %: "29%" → 29.0
-    n = conn.execute(text("""
+    # TD %: "29%" → 29.0  (strip whitespace before cast)
+    n = conn.execute(text(r"""
         UPDATE fight_stats
-        SET td_pct = REPLACE("TD %", '%', '')::NUMERIC
+        SET td_pct = NULLIF(REGEXP_REPLACE(REPLACE("TD %", '%', ''), '\s', '', 'g'), '')::NUMERIC
         WHERE "TD %" IS NOT NULL
           AND td_pct IS NULL
     """)).rowcount
     conn.commit()
     log.info(f"  TD % → td_pct:               {n:,} rows")
 
-    # KD: "1.0" → 1
-    n = conn.execute(text("""
+    # KD: "1.0" → 1  (strip whitespace before cast)
+    n = conn.execute(text(r"""
         UPDATE fight_stats
-        SET kd_int = "KD"::FLOAT::INTEGER
+        SET kd_int = NULLIF(REGEXP_REPLACE("KD", '\s', '', 'g'), '')::FLOAT::INTEGER
         WHERE "KD" IS NOT NULL
           AND kd_int IS NULL
     """)).rowcount
@@ -348,13 +348,12 @@ def parse_fighter_tott(conn):
         ("dob_date",      "DATE"),
     ])
 
-    # HEIGHT: "5' 10\"" → (5*12 + 10) = 70.0 inches
-    # SPLIT_PART on ' gives feet; strip " from second part for inches
+    # HEIGHT: "5' 10\"" → (5*12 + 10) = 70.0 inches  (strip whitespace before parsing)
     n = conn.execute(text(r"""
         UPDATE fighter_tott
         SET height_inches =
-            SPLIT_PART("HEIGHT", '''', 1)::INTEGER * 12 +
-            TRIM(REPLACE(SPLIT_PART("HEIGHT", '''', 2), '"', ''))::INTEGER
+            SPLIT_PART(REGEXP_REPLACE("HEIGHT", '\s', '', 'g'), '''', 1)::INTEGER * 12 +
+            NULLIF(REGEXP_REPLACE(REPLACE(SPLIT_PART(REGEXP_REPLACE("HEIGHT", '\s', '', 'g'), '''', 2), '"', ''), '\s', '', 'g'), '')::INTEGER
         WHERE "HEIGHT" IS NOT NULL
           AND "HEIGHT" LIKE '%''%'
           AND height_inches IS NULL
@@ -362,10 +361,10 @@ def parse_fighter_tott(conn):
     conn.commit()
     log.info(f"  HEIGHT → height_inches:      {n:,} rows")
 
-    # WEIGHT: "170 lbs." → 170.0
-    n = conn.execute(text("""
+    # WEIGHT: "170 lbs." → 170.0  (strip whitespace before split)
+    n = conn.execute(text(r"""
         UPDATE fighter_tott
-        SET weight_lbs = SPLIT_PART("WEIGHT", ' ', 1)::NUMERIC
+        SET weight_lbs = NULLIF(SPLIT_PART(REGEXP_REPLACE("WEIGHT", '\s', ' ', 'g'), ' ', 1), '')::NUMERIC
         WHERE "WEIGHT" IS NOT NULL
           AND "WEIGHT" LIKE '% lbs%'
           AND weight_lbs IS NULL
@@ -373,20 +372,20 @@ def parse_fighter_tott(conn):
     conn.commit()
     log.info(f"  WEIGHT → weight_lbs:         {n:,} rows")
 
-    # REACH: "74\"" → 74.0
-    n = conn.execute(text("""
+    # REACH: "74\"" → 74.0  (strip whitespace before cast)
+    n = conn.execute(text(r"""
         UPDATE fighter_tott
-        SET reach_inches = REPLACE("REACH", '"', '')::NUMERIC
+        SET reach_inches = NULLIF(REGEXP_REPLACE(REPLACE("REACH", '"', ''), '\s', '', 'g'), '')::NUMERIC
         WHERE "REACH" IS NOT NULL
           AND reach_inches IS NULL
     """)).rowcount
     conn.commit()
     log.info(f"  REACH → reach_inches:        {n:,} rows")
 
-    # DOB: "Apr 01, 1988" → DATE
-    n = conn.execute(text("""
+    # DOB: "Apr 01, 1988" → DATE  (normalize whitespace before parsing)
+    n = conn.execute(text(r"""
         UPDATE fighter_tott
-        SET dob_date = TO_DATE("DOB", 'Mon DD, YYYY')
+        SET dob_date = TO_DATE(REGEXP_REPLACE(TRIM("DOB"), '\s+', ' ', 'g'), 'Mon DD, YYYY')
         WHERE "DOB" IS NOT NULL
           AND dob_date IS NULL
     """)).rowcount
