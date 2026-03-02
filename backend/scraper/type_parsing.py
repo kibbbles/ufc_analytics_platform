@@ -183,11 +183,16 @@ def add_columns(conn, table, col_defs):
 
 
 def parse_x_of_y(conn, src_col, landed_col, attempted_col):
-    """Parse 'X of Y' text column into two INTEGER columns."""
+    """Parse 'X of Y' text column into two INTEGER columns.
+
+    Uses REGEXP_REPLACE to strip all non-digit characters from each split
+    part before casting, so embedded newlines/spaces from scraped HTML do
+    not crash the ::INTEGER cast.
+    """
     result = conn.execute(text(f"""
         UPDATE fight_stats
-        SET "{landed_col}"    = TRIM(SPLIT_PART("{src_col}", ' of ', 1))::INTEGER,
-            "{attempted_col}" = TRIM(SPLIT_PART("{src_col}", ' of ', 2))::INTEGER
+        SET "{landed_col}"    = NULLIF(REGEXP_REPLACE(SPLIT_PART("{src_col}", ' of ', 1), '[^0-9]', '', 'g'), '')::INTEGER,
+            "{attempted_col}" = NULLIF(REGEXP_REPLACE(SPLIT_PART("{src_col}", ' of ', 2), '[^0-9]', '', 'g'), '')::INTEGER
         WHERE "{src_col}" LIKE '% of %'
           AND "{landed_col}" IS NULL
     """))
