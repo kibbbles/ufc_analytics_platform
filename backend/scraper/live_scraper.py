@@ -256,12 +256,13 @@ class LiveUFCScraper:
                     if len(cells) < 5:
                         continue
 
-                    # Cell 0: fight result flag + fight URL + fighter names
+                    # Cell 0: outcome flag — fight URL via data-link on <tr>, outcome via CSS class
                     fight_link = cells[0].find('a', class_='b-flag')
                     if not fight_link:
                         continue
 
-                    fight_url = fight_link.get('href')
+                    # Prefer data-link on <tr> (Greco's approach); fall back to href on flag
+                    fight_url = row.get('data-link') or fight_link.get('href')
 
                     # Outcome from flag CSS class (green = fighter A won)
                     flag_classes = fight_link.get('class', [])
@@ -276,26 +277,21 @@ class LiveUFCScraper:
                     else:
                         outcome = ''
 
-                    # Fighter names from the link text ("Fighter A vs. Fighter B")
-                    fighters_text = fight_link.text.strip()
-                    if ' vs. ' in fighters_text:
-                        parts = fighters_text.split(' vs. ')
-                        fighter_a = parts[0].strip()
-                        fighter_b = parts[1].strip() if len(parts) > 1 else ''
-                    else:
-                        fighter_a = fighters_text
-                        fighter_b = ''
+                    # Cell 1: two <p> tags, each with a fighter name link
+                    # p[0] = Fighter A, p[1] = Fighter B (same parity convention as stat tables)
+                    p_tags = cells[1].find_all('p') if len(cells) > 1 else []
+                    fighter_a = p_tags[0].get_text(strip=True) if p_tags else ''
+                    fighter_b = p_tags[1].get_text(strip=True) if len(p_tags) > 1 else ''
 
-                    # Fighter profile URLs (for tott scraping later)
                     fighter_links = cells[1].find_all('a') if len(cells) > 1 else []
                     fighter_a_url = fighter_links[0].get('href') if len(fighter_links) > 0 else None
                     fighter_b_url = fighter_links[1].get('href') if len(fighter_links) > 1 else None
 
-                    # Cell 1: weight class, Cell 2: method, Cell 3: round, Cell 4: time
-                    weight_class = cells[1].text.strip() if len(cells) > 1 else ''
-                    method       = cells[2].text.strip() if len(cells) > 2 else ''
-                    round_num    = cells[3].text.strip().split()[0] if len(cells) > 3 and cells[3].text.strip() else ''
-                    time_str     = cells[4].text.strip().split()[0] if len(cells) > 4 and cells[4].text.strip() else ''
+                    # Cell 2: weight class, Cell 3: method, Cell 4: round, Cell 5: time
+                    weight_class = cells[2].get_text(strip=True) if len(cells) > 2 else ''
+                    method       = cells[3].get_text(strip=True) if len(cells) > 3 else ''
+                    round_num    = cells[4].get_text(strip=True).split()[0] if len(cells) > 4 and cells[4].get_text(strip=True) else ''
+                    time_str     = cells[5].get_text(strip=True).split()[0] if len(cells) > 5 and cells[5].get_text(strip=True) else ''
 
                     fights.append({
                         'fighter_a_name': fighter_a,
@@ -492,41 +488,68 @@ class LiveUFCScraper:
             logging.warning(f"Error parsing fighter TOTT: {e}")
         return tott
 
-    def _parse_round_stats_row(self, row, round_num='1'):
-        """Parse one fighter's stats from a round stats table row."""
-        try:
+    def _parse_stat_table_by_parity(self, table, col_names):
+        """
+        Extract per-fighter, per-round stats from a UFC stat table.
+
+        UFCStats puts both fighters' values inside the same <td> as two <p> tags:
+            <td><p>Fighter A value</p><p>Fighter B value</p></td>
+
+        Using <p>-tag index parity (Greco's approach) we cleanly separate them
+        without any newline-merging artefacts.
+
+        Row 0 of each tbody is an "All Rounds" summary — always skipped.
+        Subsequent rows are Round 1, Round 2, ... assigned by position.
+
+        Returns (fighter_a_rounds, fighter_b_rounds) — lists of dicts.
+        """
+        results_a, results_b = [], []
+        tbody = table.find('tbody')
+        if not tbody:
+            return results_a, results_b
+
+        round_num = 0
+        for i, row in enumerate(tbody.find_all('tr')):
+            if i == 0:
+                continue  # "All Rounds" summary row — skip
+            round_num += 1
+
             cells = row.find_all('td', class_='b-fight-details__table-col')
             if not cells:
                 cells = row.find_all('td')
-            if len(cells) < 9:
-                return None
+            if not cells:
+                continue
 
-            stats = {
-                'fighter':     cells[0].text.strip(),
-                'round':       round_num,
-                'kd':          cells[1].text.strip(),
-                'sig_str':     cells[2].text.strip(),
-                'sig_str_pct': cells[3].text.strip(),
-                'total_str':   cells[4].text.strip(),
-                'td':          cells[5].text.strip(),
-                'td_pct':      cells[6].text.strip(),
-                'sub_att':     cells[7].text.strip(),
-                'rev':         cells[8].text.strip(),
-                'ctrl':        cells[9].text.strip() if len(cells) > 9 else '',
-                'head':        cells[10].text.strip() if len(cells) > 10 else '',
-                'body':        cells[11].text.strip() if len(cells) > 11 else '',
-                'leg':         cells[12].text.strip() if len(cells) > 12 else '',
-                'distance':    cells[13].text.strip() if len(cells) > 13 else '',
-                'clinch':      cells[14].text.strip() if len(cells) > 14 else '',
-                'ground':      cells[15].text.strip() if len(cells) > 15 else '',
-            }
-            return stats
-        except Exception as e:
-            logging.warning(f"Error parsing round stats row: {e}")
-            return None
+            vals_a = {'round': str(round_num)}
+            vals_b = {'round': str(round_num)}
+
+            for j, cell in enumerate(cells):
+                p_tags = cell.find_all('p')
+                val_a = p_tags[0].text.strip() if p_tags else cell.text.strip()
+                val_b = p_tags[1].text.strip() if len(p_tags) > 1 else val_a
+
+                if j == 0:
+                    vals_a['fighter'] = val_a
+                    vals_b['fighter'] = val_b
+                elif j - 1 < len(col_names):
+                    vals_a[col_names[j - 1]] = val_a
+                    vals_b[col_names[j - 1]] = val_b
+
+            results_a.append(vals_a)
+            results_b.append(vals_b)
+
+        return results_a, results_b
 
     def scrape_fight_detail_stats(self, fight_url):
-        """Visit an individual fight page and scrape TOTT + round-by-round stats."""
+        """Visit an individual fight page and scrape TOTT + round-by-round stats.
+
+        UFCStats fight pages have two stat tables per fight:
+          - Totals        (columns: KD, SIG.STR., SIG.STR.%, TOTAL STR., TD, TD%, SUB.ATT, REV., CTRL)
+          - Sig. Strikes  (columns: SIG.STR., SIG.STR.%, HEAD, BODY, LEG, DISTANCE, CLINCH, GROUND)
+
+        We detect each table by its header row, parse both with <p>-tag parity,
+        then merge them into one row per fighter per round.
+        """
         empty = {'fighter_a_tott': {}, 'fighter_b_tott': {}, 'round_stats': []}
         try:
             time.sleep(random.uniform(1.5, 3.0))
@@ -536,7 +559,7 @@ class LiveUFCScraper:
 
             result = {'fighter_a_tott': {}, 'fighter_b_tott': {}, 'round_stats': []}
 
-            # Tale of the Tape
+            # --- Tale of the Tape (unchanged) ---
             tott_section = soup.find('div', class_='b-fight-details__persons')
             if tott_section:
                 fighters = tott_section.find_all('div', class_='b-fight-details__person')
@@ -544,30 +567,50 @@ class LiveUFCScraper:
                     result['fighter_a_tott'] = self._parse_fighter_tott(fighters[0])
                     result['fighter_b_tott'] = self._parse_fighter_tott(fighters[1])
 
-            # Round-by-round stats
-            for section in soup.find_all('p', class_='b-fight-details__table-text'):
-                section_text = section.text.strip()
-                round_num = '1'
-                if 'Round' in section_text:
-                    parts = section_text.split()
-                    for i, part in enumerate(parts):
-                        if part == 'Round' and i + 1 < len(parts):
-                            round_num = parts[i + 1]
-                            break
+            # --- Round-by-round stats ---
+            TOTALS_COLS = ['kd', 'sig_str', 'sig_str_pct', 'total_str',
+                           'td', 'td_pct', 'sub_att', 'rev', 'ctrl']
+            SIG_COLS    = ['sig_str', 'sig_str_pct',
+                           'head', 'body', 'leg', 'distance', 'clinch', 'ground']
 
-                table = section.find_next('table', class_='b-fight-details__table')
-                if not table:
+            totals_a, totals_b = {}, {}
+            sig_a,    sig_b    = {}, {}
+
+            for table in soup.find_all('table', class_='b-fight-details__table'):
+                thead = table.find('thead')
+                if not thead:
                     continue
-                tbody = table.find('tbody')
-                if not tbody:
-                    continue
+                header_text = thead.get_text().upper()
 
-                rows = tbody.find_all('tr', class_='b-fight-details__table-row') or tbody.find_all('tr')
-                for row in rows:
-                    stats = self._parse_round_stats_row(row, round_num)
-                    if stats:
-                        result['round_stats'].append(stats)
+                if 'KD' in header_text:
+                    a_rounds, b_rounds = self._parse_stat_table_by_parity(table, TOTALS_COLS)
+                    for r in a_rounds:
+                        totals_a[r['round']] = r
+                    for r in b_rounds:
+                        totals_b[r['round']] = r
 
+                elif 'HEAD' in header_text:
+                    a_rounds, b_rounds = self._parse_stat_table_by_parity(table, SIG_COLS)
+                    for r in a_rounds:
+                        sig_a[r['round']] = r
+                    for r in b_rounds:
+                        sig_b[r['round']] = r
+
+            # Merge totals + sig strikes; emit Fighter A then Fighter B per round
+            all_rounds = sorted(
+                set(list(totals_a.keys()) + list(sig_a.keys())),
+                key=lambda x: int(x) if x.isdigit() else 0
+            )
+
+            for rnd in all_rounds:
+                stats_a = {**totals_a.get(rnd, {}), **sig_a.get(rnd, {}), 'round': rnd}
+                stats_b = {**totals_b.get(rnd, {}), **sig_b.get(rnd, {}), 'round': rnd}
+                if stats_a.get('fighter'):
+                    result['round_stats'].append(stats_a)
+                if stats_b.get('fighter'):
+                    result['round_stats'].append(stats_b)
+
+            logging.info(f"Parsed {len(result['round_stats'])} round-stat rows from {fight_url}")
             return result
 
         except Exception as e:

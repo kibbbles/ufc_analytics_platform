@@ -340,7 +340,7 @@ def parse_fight_results(conn):
     n = conn.execute(text(r"""
         UPDATE fight_results
         SET total_fight_time_seconds =
-            (REGEXP_REPLACE("ROUND", '\s', '', 'g')::INTEGER - 1) * 300 + fight_time_seconds
+            ("ROUND"::INTEGER - 1) * 300 + fight_time_seconds
         WHERE fight_time_seconds IS NOT NULL
           AND "ROUND" IS NOT NULL
           AND total_fight_time_seconds IS NULL

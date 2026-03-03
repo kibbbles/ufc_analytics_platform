@@ -214,6 +214,18 @@ def check_quality_cleanup(conn):
     )
     r.log(); results.append(r)
 
+    # No embedded newlines in fight_stats stat columns — catches scraper merge bug
+    newline_count = conn.execute(text(r"""
+        SELECT COUNT(*) FROM fight_stats
+        WHERE "KD" LIKE E'%\n%'
+    """)).scalar()
+    r = CheckResult(
+        "fight_stats.KD — no embedded newlines (scraper merge check)",
+        newline_count, 0, "max_count",
+        f"{newline_count} rows have newline-merged values"
+    )
+    r.log(); results.append(r)
+
     return results
 
 
