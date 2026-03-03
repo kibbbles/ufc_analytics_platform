@@ -5,6 +5,7 @@ Only scrapes events that aren't already in the database
 
 import sys
 import os
+import re
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
@@ -226,45 +227,39 @@ class LiveUFCScraper:
         return new_events
     
     def scrape_event_fights(self, event_url):
-        """Scrape fights for a specific event.
+        """Scrape fight URLs and outcomes from the event listing page.
 
-        3.9.1 — Captures full fight metadata from the event page:
-        outcome (W/L/D/NC), weight class, method, round, and time.
-        These are written to fight_results in store_new_fights().
+        Returns minimal stubs only — fight_url and outcome.
+        All other metadata (fighter names, weight class, method, round, time)
+        is sourced from individual fight detail pages (Greco's approach).
+
+        fight_url: from data-link attribute on <tr> (Greco's exact selector)
+        outcome:   from b-flag CSS class on the flag anchor in cells[0]
         """
         try:
             logging.info(f"Scraping fights from: {event_url}")
-
             time.sleep(random.uniform(1, 3))
 
             response = self.session.get(event_url, timeout=30)
             response.raise_for_status()
-
             soup = BeautifulSoup(response.content, 'html.parser')
-            fights = []
+            stubs = []
 
-            table = soup.find('table', class_='b-fight-details__table')
-            if not table:
-                logging.warning(f"No fights table found for {event_url}")
-                return fights
-
-            rows = table.find('tbody').find_all('tr', class_='b-fight-details__table-row')
-
-            for row in rows:
+            # Greco's exact row selector — only clickable fight rows
+            for row in soup.find_all('tr', class_='b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click'):
                 try:
-                    cells = row.find_all('td', class_='b-fight-details__table-col')
-                    if len(cells) < 5:
+                    fight_url = row.get('data-link')
+                    if not fight_url:
                         continue
 
-                    # Cell 0: outcome flag — fight URL via data-link on <tr>, outcome via CSS class
+                    cells = row.find_all('td', class_='b-fight-details__table-col')
+                    if not cells:
+                        continue
+
                     fight_link = cells[0].find('a', class_='b-flag')
                     if not fight_link:
                         continue
 
-                    # Prefer data-link on <tr> (Greco's approach); fall back to href on flag
-                    fight_url = row.get('data-link') or fight_link.get('href')
-
-                    # Outcome from flag CSS class (green = fighter A won)
                     flag_classes = fight_link.get('class', [])
                     if 'b-flag_style_green' in flag_classes:
                         outcome = 'W/L'
@@ -277,41 +272,14 @@ class LiveUFCScraper:
                     else:
                         outcome = ''
 
-                    # Cell 1: two <p> tags, each with a fighter name link
-                    # p[0] = Fighter A, p[1] = Fighter B (same parity convention as stat tables)
-                    p_tags = cells[1].find_all('p') if len(cells) > 1 else []
-                    fighter_a = p_tags[0].get_text(strip=True) if p_tags else ''
-                    fighter_b = p_tags[1].get_text(strip=True) if len(p_tags) > 1 else ''
-
-                    fighter_links = cells[1].find_all('a') if len(cells) > 1 else []
-                    fighter_a_url = fighter_links[0].get('href') if len(fighter_links) > 0 else None
-                    fighter_b_url = fighter_links[1].get('href') if len(fighter_links) > 1 else None
-
-                    # Cell 2: weight class, Cell 3: method, Cell 4: round, Cell 5: time
-                    weight_class = cells[2].get_text(strip=True) if len(cells) > 2 else ''
-                    method       = cells[3].get_text(strip=True) if len(cells) > 3 else ''
-                    round_num    = cells[4].get_text(strip=True).split()[0] if len(cells) > 4 and cells[4].get_text(strip=True) else ''
-                    time_str     = cells[5].get_text(strip=True).split()[0] if len(cells) > 5 and cells[5].get_text(strip=True) else ''
-
-                    fights.append({
-                        'fighter_a_name': fighter_a,
-                        'fighter_b_name': fighter_b,
-                        'fighter_a_url':  fighter_a_url,
-                        'fighter_b_url':  fighter_b_url,
-                        'fight_url':      fight_url,
-                        'outcome':        outcome,
-                        'weight_class':   weight_class,
-                        'method':         method,
-                        'round':          round_num,
-                        'time':           time_str,
-                    })
+                    stubs.append({'fight_url': fight_url, 'outcome': outcome})
 
                 except Exception as e:
                     logging.warning(f"Error parsing fight row: {e}")
                     continue
 
-            logging.info(f"Found {len(fights)} fights for event")
-            return fights
+            logging.info(f"Found {len(stubs)} fight stubs for event")
+            return stubs
 
         except Exception as e:
             logging.error(f"Error scraping event fights: {e}")
@@ -488,6 +456,65 @@ class LiveUFCScraper:
             logging.warning(f"Error parsing fighter TOTT: {e}")
         return tott
 
+    def _parse_fight_meta(self, soup):
+        """Parse fight metadata from an individual fight detail page.
+
+        Implements Greco's parse_fight_results selectors exactly:
+          - Fighter names/URLs: <a class="b-link b-fight-details__person-link">
+          - WEIGHTCLASS:        <div class="b-fight-details__fight-head">
+          - METHOD:             <i class="b-fight-details__text-item_first">  (label stripped)
+          - ROUND / TIME:       <p class="b-fight-details__text">[0]
+                                  -> <i class="b-fight-details__text-item">  (label stripped)
+
+        Cleaning mirrors Greco: .replace('\\n', '').replace('  ', '')
+        Label stripping: re.sub('^(.+?): ?', '', text)
+        """
+        meta = {}
+
+        def clean(text):
+            return text.replace('\n', '').replace('  ', '').strip()
+
+        def strip_label(text):
+            return re.sub(r'^(.+?): ?', '', text).strip()
+
+        try:
+            # Fighter names and profile URLs (Greco: b-fight-details__person-link)
+            fighter_links = soup.find_all('a', class_='b-link b-fight-details__person-link')
+            if len(fighter_links) >= 1:
+                meta['fighter_a_name'] = fighter_links[0].text.strip()
+                meta['fighter_a_url']  = fighter_links[0].get('href')
+            if len(fighter_links) >= 2:
+                meta['fighter_b_name'] = fighter_links[1].text.strip()
+                meta['fighter_b_url']  = fighter_links[1].get('href')
+
+            # Weight class (Greco: b-fight-details__fight-head)
+            # Raw text is e.g. "Flyweight Bout" — strip " Bout" for DB consistency
+            fight_head = soup.find('div', class_='b-fight-details__fight-head')
+            if fight_head:
+                raw_wc = clean(fight_head.get_text())
+                meta['weight_class'] = re.sub(r'\s+Bout$', '', raw_wc, flags=re.IGNORECASE)
+
+            # Method (Greco: b-fight-details__text-item_first, then strip label)
+            method_elem = soup.find('i', class_='b-fight-details__text-item_first')
+            if method_elem:
+                meta['method'] = strip_label(clean(method_elem.get_text()))
+
+            # Round and Time (Greco: first b-fight-details__text p, then b-fight-details__text-item i tags)
+            text_sections = soup.find_all('p', class_='b-fight-details__text')
+            if text_sections:
+                for i_tag in text_sections[0].find_all('i', class_='b-fight-details__text-item'):
+                    raw = clean(i_tag.get_text())
+                    lower = raw.lower()
+                    if lower.startswith('round:'):
+                        meta['round'] = strip_label(raw)
+                    elif lower.startswith('time:') and not lower.startswith('time format:'):
+                        meta['time'] = strip_label(raw)
+
+        except Exception as e:
+            logging.warning(f"Error parsing fight meta: {e}")
+
+        return meta
+
     def _parse_stat_table_by_parity(self, table, col_names):
         """
         Extract per-fighter, per-round stats from a UFC stat table.
@@ -550,7 +577,7 @@ class LiveUFCScraper:
         We detect each table by its header row, parse both with <p>-tag parity,
         then merge them into one row per fighter per round.
         """
-        empty = {'fighter_a_tott': {}, 'fighter_b_tott': {}, 'round_stats': []}
+        empty = {'fighter_a_tott': {}, 'fighter_b_tott': {}, 'round_stats': [], 'fight_meta': {}}
         try:
             time.sleep(random.uniform(1.5, 3.0))
             response = self.session.get(fight_url, timeout=30)
@@ -609,6 +636,9 @@ class LiveUFCScraper:
                     result['round_stats'].append(stats_a)
                 if stats_b.get('fighter'):
                     result['round_stats'].append(stats_b)
+
+            # Fight metadata from this same page (Greco's parse_fight_results selectors)
+            result['fight_meta'] = self._parse_fight_meta(soup)
 
             logging.info(f"Parsed {len(result['round_stats'])} round-stat rows from {fight_url}")
             return result
@@ -797,41 +827,54 @@ class LiveUFCScraper:
 
                 event_id = getattr(self, 'event_id_mapping', {}).get(event['name'])
 
-                # 3.9.1 — scrape fight list with results
-                fights = self.scrape_event_fights(event['url'])
-                if not fights:
+                # Step 1 — get fight URLs + outcomes from event listing page
+                fight_stubs = self.scrape_event_fights(event['url'])
+                if not fight_stubs:
                     print(f"   WARNING: No fights found for this event")
                     continue
 
-                # 3.9.1 — store fight_details + fight_results
-                stored_fights = self.store_new_fights(fights, event['name'], event_id)
-                total_fights += len(stored_fights)
-                print(f"   Stored {len(stored_fights)} fights — scraping per-fight details...")
+                print(f"   Found {len(fight_stubs)} fights — visiting each fight page...")
 
+                # Step 2 — visit each individual fight page (Greco's approach)
+                # get fight_meta (names, weight class, method, round, time) + stats + tott
+                full_fights = []
+                fight_details_map = {}
+                for stub in fight_stubs:
+                    detail = self.scrape_fight_detail_stats(stub['fight_url'])
+                    fight_data = {
+                        'fight_url': stub['fight_url'],
+                        'outcome':   stub['outcome'],
+                        **detail.get('fight_meta', {}),
+                    }
+                    full_fights.append(fight_data)
+                    fight_details_map[stub['fight_url']] = detail
+
+                # Step 3 — store fight_details + fight_results with accurate metadata
+                stored_fights = self.store_new_fights(full_fights, event['name'], event_id)
+                total_fights += len(stored_fights)
+                print(f"   Stored {len(stored_fights)} fights — saving stats...")
+
+                # Step 4 — store stats + tott (data already in memory from Step 2)
                 for fight_data, fight_id in stored_fights:
                     bout_str = (
-                        f"{fight_data['fighter_a_name']} vs. "
-                        f"{fight_data['fighter_b_name']}"
+                        f"{fight_data.get('fighter_a_name', '')} vs. "
+                        f"{fight_data.get('fighter_b_name', '')}"
                     )
+                    detail = fight_details_map.get(fight_data['fight_url'], {})
 
-                    # 3.9.2 — visit individual fight page for round stats + tott
-                    detail = self.scrape_fight_detail_stats(fight_data['fight_url'])
-
-                    # 3.9.2 — store fight_stats
                     if detail.get('round_stats'):
                         self.store_fight_stats(
                             event_id, event['name'], fight_id,
                             bout_str, detail['round_stats']
                         )
 
-                    # 3.9.3 — upsert fighter_tott (creates fighter_details if new)
                     if detail.get('fighter_a_tott'):
                         self.store_fighter_tott(
-                            fight_data['fighter_a_name'], detail['fighter_a_tott']
+                            fight_data.get('fighter_a_name', ''), detail['fighter_a_tott']
                         )
                     if detail.get('fighter_b_tott'):
                         self.store_fighter_tott(
-                            fight_data['fighter_b_name'], detail['fighter_b_tott']
+                            fight_data.get('fighter_b_name', ''), detail['fighter_b_tott']
                         )
 
                 print(f"   SUCCESS: {event['name']} fully scraped")
