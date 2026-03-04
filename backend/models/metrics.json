@@ -1,0 +1,15 @@
+{
+  "win_accuracy": 0.6072,
+  "win_roc_auc": 0.658,
+  "method_accuracy": 0.4719,
+  "train_rows": 5982,
+  "test_rows": 1283,
+  "train_date_range": [
+    "1994-03-11",
+    "2021-03-27"
+  ],
+  "test_date_range": [
+    "2023-09-02",
+    "2026-02-28"
+  ]
+}
