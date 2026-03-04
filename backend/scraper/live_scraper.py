@@ -136,79 +136,84 @@ class LiveUFCScraper:
             return set()
     
     def scrape_events_page(self):
-        """Scrape the main UFC events page to find new events"""
+        """Scrape the main UFC events page to find new events.
+
+        Mirrors Greco's parse_event_details selectors exactly:
+          - EVENT/URL: <a class="b-link b-link_style_black">
+          - DATE:      <span class="b-statistics__date"> (Greco's exact class)
+          - LOCATION:  <td class="b-statistics__table-col
+                           b-statistics__table-col_style_big-top-padding">
+
+        Guard: UFCStats always lists the upcoming (not-yet-completed) event
+        first. Greco explicitly drops the first DATE and LOCATION element.
+        We skip the first data row to match that behaviour.
+        """
         url = "http://ufcstats.com/statistics/events/completed?page=all"
-        
+
         try:
             logging.info(f"Scraping events from: {url}")
             response = self.session.get(url, timeout=30)
             response.raise_for_status()
-            
+
             soup = BeautifulSoup(response.content, 'html.parser')
             events = []
-            
-            # Find the events table (try multiple selectors)
-            table = soup.find('table', class_='b-statistics__table')
-            if not table:
-                # Try alternative selector
-                table = soup.find('table')
-                if not table:
-                    logging.warning("Could not find events table")
-                    return events
-                else:
-                    logging.info("Using alternative table selector")
-                
-            # Find table rows (try multiple selectors)
-            tbody = table.find('tbody') if table.find('tbody') else table
+
+            tbody = soup.find('tbody')
+            if not tbody:
+                logging.warning("Could not find events table tbody")
+                return events
+
             rows = tbody.find_all('tr', class_='b-statistics__table-row')
             if not rows:
-                # Try alternative selector
-                rows = tbody.find_all('tr')
-                logging.info(f"Using alternative row selector, found {len(rows)} rows")
-            
+                logging.warning("Could not find event rows")
+                return events
+
+            # Greco drops the first element of DATE and LOCATION lists because
+            # the first row is always the upcoming (not yet completed) event.
+            rows = rows[1:]
+
             for row in rows:
                 try:
-                    # Extract event data
-                    cells = row.find_all('td', class_='b-statistics__table-col')
-                    if not cells:
-                        # Try alternative selector
-                        cells = row.find_all('td')
-                    if len(cells) < 2:
+                    # EVENT name + URL — Greco: <a class="b-link b-link_style_black">
+                    event_link = row.find('a', class_='b-link b-link_style_black')
+                    if not event_link:
                         continue
-                        
-                    name_cell = cells[0]
-                    event_link = name_cell.find('a', class_='b-link')
-                    
-                    if event_link:
-                        event_name = event_link.text.strip()
-                        event_url = event_link.get('href')
-                        
-                        # Parse date and location
-                        date_text = cells[0].find_all('span')[0].text.strip() if cells[0].find_all('span') else ""
-                        location_text = cells[1].text.strip()
-                        
-                        # Parse date
-                        event_date = None
-                        if date_text:
-                            try:
-                                event_date = pd.to_datetime(date_text).date()
-                            except:
-                                pass
-                        
-                        events.append({
-                            'name': event_name,
-                            'url': event_url,
-                            'date': event_date,
-                            'location': location_text
-                        })
-                        
+
+                    event_name = event_link.text.strip()
+                    event_url  = event_link.get('href')
+
+                    # DATE — Greco: <span class="b-statistics__date">
+                    date_span = row.find('span', class_='b-statistics__date')
+                    date_text = date_span.text.strip() if date_span else ''
+
+                    # LOCATION — Greco: <td class="...b-statistics__table-col_style_big-top-padding">
+                    location_td = row.find(
+                        'td',
+                        class_='b-statistics__table-col b-statistics__table-col_style_big-top-padding'
+                    )
+                    location_text = location_td.text.strip() if location_td else ''
+
+                    event_date = None
+                    if date_text:
+                        try:
+                            event_date = pd.to_datetime(date_text).date()
+                        except Exception:
+                            pass
+
+                    events.append({
+                        'name':     event_name,
+                        'url':      event_url,
+                        'date':     event_date,
+                        'location': location_text,
+                    })
+
                 except Exception as e:
                     logging.warning(f"Error parsing event row: {e}")
                     continue
-            
-            logging.info(f"Found {len(events)} events on page")
+
+            logging.info(f"Found {len(events)} completed events on page")
             return events
-            
+
         except Exception as e:
             logging.error(f"Error scraping events page: {e}")
             return []
