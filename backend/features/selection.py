@@ -65,7 +65,10 @@ def run_feature_selection() -> dict:
     # It bypasses MI/Pearson here and is recorded separately in the JSON.
     CATEGORICAL = ["weight_class"]
 
-    id_cols = {"fight_id", "fighter_a_id", "fighter_b_id", "fighter_a_wins"} | set(CATEGORICAL)
+    id_cols = {
+        "fight_id", "fighter_a_id", "fighter_b_id", "fighter_a_wins",
+        "event_date", "method",   # metadata columns added in Task 6 for training only
+    } | set(CATEGORICAL)
     feature_cols = [c for c in mat.columns if c not in id_cols]
 
     y = mat["fighter_a_wins"].astype(int)
