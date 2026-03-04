@@ -1,7 +1,7 @@
 """features/rolling_metrics.py — Rolling performance metrics.
 
-Computes 3-fight rolling averages and exponentially weighted averages (EWA)
-of per-fight striking and grappling statistics for every fighter.
+Computes 3-, 5-, and 7-fight rolling averages and exponentially weighted
+averages (EWA) of per-fight striking and grappling statistics for every fighter.
 
 No data leakage: values at position i reflect only fights 0 … i-1.
 Implemented via roll-then-shift and ewm-then-shift within each fighter group.
@@ -12,11 +12,8 @@ build_rolling_metrics(stats, fights) -> DataFrame
 
 One row per (fighter_id, fight_id).  Columns:
     fighter_id, fight_id,
-    roll3_sig_str_pct, roll3_td_pct, roll3_kd, roll3_ctrl_s,
-    roll3_sig_str_landed, roll3_sig_str_att,
-    roll3_total_str_landed, roll3_total_str_att,
-    roll3_td_landed, roll3_td_att,
-    ewa_sig_str_pct, ewa_td_pct, ewa_kd, ewa_ctrl_s
+    roll3_*, roll5_*, roll7_*  (3/5/7-fight rolling averages)
+    ewa_*                      (exponentially weighted averages)
 """
 
 from __future__ import annotations
@@ -104,17 +101,21 @@ def build_rolling_metrics(
         ["fighter_id", "date_proper", "fight_id"]
     ).reset_index(drop=True)
 
-    # ---- 5. Rolling 3-fight averages (shift applied inside helper) -------
-    rolled = per_fight.groupby("fighter_id")[_SUM_COLS].transform(_roll_then_shift)
-    rolled.columns = [f"roll3_{c}" for c in _SUM_COLS]
-
-    # Derive pct from rolled sums (more accurate than averaging raw pct columns)
-    rolled["roll3_sig_str_pct"] = _safe_pct(
-        rolled["roll3_sig_str_landed"], rolled["roll3_sig_str_attempted"]
-    )
-    rolled["roll3_td_pct"] = _safe_pct(
-        rolled["roll3_td_landed"], rolled["roll3_td_attempted"]
-    )
+    # ---- 5. Rolling averages (3, 5, 7 fights) ----------------------------
+    # Each window is shift-by-1 to exclude the current fight (no leakage).
+    all_rolled_frames = []
+    for win in (3, 5, 7):
+        rolled = per_fight.groupby("fighter_id")[_SUM_COLS].transform(
+            lambda s, w=win: _roll_then_shift(s, window=w)
+        )
+        rolled.columns = [f"roll{win}_{c}" for c in _SUM_COLS]
+        rolled[f"roll{win}_sig_str_pct"] = _safe_pct(
+            rolled[f"roll{win}_sig_str_landed"], rolled[f"roll{win}_sig_str_attempted"]
+        )
+        rolled[f"roll{win}_td_pct"] = _safe_pct(
+            rolled[f"roll{win}_td_landed"], rolled[f"roll{win}_td_attempted"]
+        )
+        all_rolled_frames.append(rolled)
 
     # ---- 6. Exponentially weighted averages (shift applied inside helper) -
     ewa_base = [
@@ -128,30 +129,38 @@ def build_rolling_metrics(
     ewa["ewa_td_pct"]      = _safe_pct(ewa["ewa_td_landed"],      ewa["ewa_td_attempted"])
 
     # ---- 7. Assemble output ----------------------------------------------
+    rolled_cols_to_keep = []
+    rename_map = {}
+    for win in (3, 5, 7):
+        p = f"roll{win}_"
+        cols = [
+            f"{p}sig_str_pct", f"{p}td_pct",
+            f"{p}kd_int",      f"{p}ctrl_seconds",
+            f"{p}sig_str_landed", f"{p}sig_str_attempted",
+            f"{p}total_str_landed", f"{p}total_str_attempted",
+            f"{p}td_landed",   f"{p}td_attempted",
+        ]
+        rolled_cols_to_keep.extend(cols)
+        rename_map[f"{p}kd_int"]                = f"{p}kd"
+        rename_map[f"{p}ctrl_seconds"]          = f"{p}ctrl_s"
+        rename_map[f"{p}sig_str_attempted"]     = f"{p}sig_str_att"
+        rename_map[f"{p}total_str_attempted"]   = f"{p}total_str_att"
+        rename_map[f"{p}td_attempted"]          = f"{p}td_att"
+
+    rolled_combined = pd.concat(all_rolled_frames, axis=1)
+
     result = pd.concat(
         [
             per_fight[["fighter_id", "fight_id"]],
-            rolled[[
-                "roll3_sig_str_pct",    "roll3_td_pct",
-                "roll3_kd_int",         "roll3_ctrl_seconds",
-                "roll3_sig_str_landed", "roll3_sig_str_attempted",
-                "roll3_total_str_landed", "roll3_total_str_attempted",
-                "roll3_td_landed",      "roll3_td_attempted",
-            ]],
+            rolled_combined[rolled_cols_to_keep],
             ewa[["ewa_sig_str_pct", "ewa_td_pct", "ewa_kd_int", "ewa_ctrl_seconds"]],
         ],
         axis=1,
     )
 
-    result = result.rename(columns={
-        "roll3_kd_int":       "roll3_kd",
-        "roll3_ctrl_seconds": "roll3_ctrl_s",
-        "roll3_sig_str_attempted": "roll3_sig_str_att",
-        "roll3_total_str_attempted": "roll3_total_str_att",
-        "roll3_td_attempted": "roll3_td_att",
-        "ewa_kd_int":         "ewa_kd",
-        "ewa_ctrl_seconds":   "ewa_ctrl_s",
-    })
+    rename_map["ewa_kd_int"]       = "ewa_kd"
+    rename_map["ewa_ctrl_seconds"] = "ewa_ctrl_s"
+    result = result.rename(columns=rename_map)
 
     logger.info("build_rolling_metrics: %d rows", len(result))
     return result

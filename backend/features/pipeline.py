@@ -168,6 +168,28 @@ def build_training_matrix(
     for feat_df in (rm_df, sf_df, tf_df, oq_df):
         mat = _add_fighter_diffs(mat, feat_df)
 
+    # ---- Perspective flipping: balance the target class -------------------
+    # UFCStats fight detail pages list the winner on the left, making
+    # fighter_a_id systematically the winner (~64% without flipping).
+    # Randomly flip ~50% of rows so the model cannot exploit position bias:
+    #   - negate all diff_* columns  (A-B becomes B-A)
+    #   - swap fighter_a_id / fighter_b_id
+    #   - flip fighter_a_wins  (1 → 0, 0 → 1)
+    rng = np.random.default_rng(seed=42)
+    flip_mask = rng.random(len(mat)) < 0.5
+    diff_cols = [c for c in mat.columns if c.startswith("diff_")]
+    mat.loc[flip_mask, diff_cols] = -mat.loc[flip_mask, diff_cols].values
+    orig_a = mat.loc[flip_mask, "fighter_a_id"].values
+    orig_b = mat.loc[flip_mask, "fighter_b_id"].values
+    mat.loc[flip_mask, "fighter_a_id"] = orig_b
+    mat.loc[flip_mask, "fighter_b_id"] = orig_a
+    mat.loc[flip_mask, "fighter_a_wins"] = 1 - mat.loc[flip_mask, "fighter_a_wins"]
+    logger.info(
+        "build_training_matrix: flipped %d/%d rows — target balance: %.1f%%",
+        flip_mask.sum(), len(mat),
+        mat["fighter_a_wins"].mean() * 100,
+    )
+
     n_feat = len(mat.columns) - 4
     logger.info("build_training_matrix: %d rows x %d feature columns", len(mat), n_feat)
 
