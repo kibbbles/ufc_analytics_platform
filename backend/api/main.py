@@ -34,6 +34,7 @@ from api.v1.router import v1_router
 from core.config import settings
 from core.logging import configure_logging
 from core.middleware import RequestIDMiddleware, TimingMiddleware
+from ml.loader import ModelStore
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,15 @@ async def lifespan(app: FastAPI):
             "allowed_origins": settings.allowed_origins,
         },
     )
+
+    # Load ML models — non-fatal if not yet trained (returns empty store)
+    try:
+        app.state.models = ModelStore.load()
+        logger.info("ML models loaded successfully")
+    except FileNotFoundError as exc:
+        logger.warning("ML models not found (%s) — predictions will return 503", exc)
+        app.state.models = ModelStore.empty()
+
     yield
     # ── Shutdown ───────────────────────────────────────────────────────────────
     logger.info("UFC Analytics API shutting down")

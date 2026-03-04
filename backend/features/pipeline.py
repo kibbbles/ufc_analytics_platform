@@ -151,11 +151,21 @@ def build_training_matrix(
     mat = matchups[[
         "fight_id", "fighter_a_id", "fighter_b_id",
         "fighter_a_wins", "weight_class", "is_title_fight",
+        "date_proper",
     ]].copy()
     mat = mat[mat["fighter_a_wins"].notna()].copy()
     mat["fighter_a_wins"]    = mat["fighter_a_wins"].astype(int)
     mat["is_title_fight"]    = mat["is_title_fight"].astype(int)
     mat["is_women_division"] = mat["weight_class"].str.startswith("Women's", na=False).astype(int)
+    mat = mat.rename(columns={"date_proper": "event_date"})
+
+    # Method column for method classifier training (winner row has method)
+    method_map = (
+        fights[fights["is_winner"] == True][["fight_id", "method"]]  # noqa: E712
+        .drop_duplicates("fight_id")
+        .set_index("fight_id")["method"]
+    )
+    mat["method"] = mat["fight_id"].map(method_map)
 
     # Physical/experience diffs (already A-B format from differentials.py)
     diff_feat_cols = [

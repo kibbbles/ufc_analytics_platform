@@ -16,6 +16,7 @@ class PredictionRequest(BaseModel):
 
     fighter_a_id: str
     fighter_b_id: str
+    weight_class: Optional[str] = None   # inferred from fighter_a's history if omitted
 
     # Optional slider overrides — let the UI explore "what if" scenarios
     fighter_a_weight_lbs: Optional[float] = Field(None, gt=0)

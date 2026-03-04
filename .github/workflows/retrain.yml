@@ -1,0 +1,58 @@
+name: Retrain ML Models
+
+on:
+  workflow_dispatch:
+    inputs:
+      eval_only:
+        description: 'Evaluate only (do not commit model files)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  retrain:
+    name: Train and serialize models
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Rebuild training matrix (ensure parquet is fresh)
+        working-directory: backend
+        run: python features/run_build.py
+
+      - name: Train models
+        working-directory: backend
+        run: |
+          if [ "${{ github.event.inputs.eval_only }}" = "true" ]; then
+            python -m ml.run_train --eval-only
+          else
+            python -m ml.run_train
+          fi
+
+      - name: Commit model artefacts
+        if: ${{ github.event.inputs.eval_only != 'true' }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/models/win_loss_v1.joblib \
+                  backend/models/method_v1.joblib \
+                  backend/models/feature_importance.json \
+                  backend/models/metrics.json
+          git diff --cached --quiet || git commit -m "chore: retrain models [skip ci]"
+          git push
