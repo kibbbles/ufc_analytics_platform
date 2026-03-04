@@ -259,9 +259,9 @@ def train(eval_only: bool = False) -> dict:
         feat_imp = {}
 
     metrics = {
-        "win_accuracy": round(win_acc, 4),
-        "win_roc_auc":  round(win_auc, 4),
-        "method_accuracy": round(method_acc, 4),
+        "win_accuracy": round(float(win_acc), 4),
+        "win_roc_auc":  round(float(win_auc), 4),
+        "method_accuracy": round(float(method_acc), 4),
         "train_rows":   len(train_df),
         "test_rows":    len(test_df),
         "train_date_range": [
