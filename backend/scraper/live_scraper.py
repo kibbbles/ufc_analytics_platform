@@ -461,6 +461,9 @@ class LiveUFCScraper:
 
         Implements Greco's parse_fight_results selectors exactly:
           - Fighter names/URLs: <a class="b-link b-fight-details__person-link">
+          - OUTCOME:            <div class="b-fight-details__person"> [0,1]
+                                  -> find_all('i')[0].text  ("W"/"L"/"D"/"NC")
+                                  -> joined as "W/L", "L/W", "D/D", "NC/NC"
           - WEIGHTCLASS:        <div class="b-fight-details__fight-head">
           - METHOD:             <i class="b-fight-details__text-item_first">  (label stripped)
           - ROUND / TIME:       <p class="b-fight-details__text">[0]
@@ -486,6 +489,19 @@ class LiveUFCScraper:
             if len(fighter_links) >= 2:
                 meta['fighter_b_name'] = fighter_links[1].text.strip()
                 meta['fighter_b_url']  = fighter_links[1].get('href')
+
+            # Outcome (Greco: b-fight-details__person divs, first <i> text per div)
+            # UFCStats event listing always puts winner first so the flag is always green.
+            # The fight detail page has the true per-fighter outcome in each person div.
+            person_divs = soup.find_all('div', class_='b-fight-details__person')
+            if len(person_divs) >= 2:
+                i_tags_a = person_divs[0].find_all('i')
+                i_tags_b = person_divs[1].find_all('i')
+                if i_tags_a and i_tags_b:
+                    outcome_a = i_tags_a[0].text.strip()  # "W", "L", "D", or "NC"
+                    outcome_b = i_tags_b[0].text.strip()
+                    if outcome_a and outcome_b:
+                        meta['outcome'] = outcome_a + '/' + outcome_b
 
             # Weight class (Greco: b-fight-details__fight-head)
             # Raw text is e.g. "Flyweight Bout" — strip " Bout" for DB consistency
