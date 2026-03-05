@@ -1,9 +1,10 @@
 {
-  "generated_at": "2026-03-04T16:32:58.386543+00:00",
+  "generated_at": "2026-03-05T18:16:45.810053+00:00",
   "n_training_rows": 8547,
   "n_features_before": 58,
   "n_features_removed_collinear": 22,
-  "n_features_selected": 36,
+  "n_features_removed_zero_mi": 7,
+  "n_features_selected": 29,
   "feature_names": [
     "diff_roll5_sig_str_pct",
     "diff_roll5_total_str_att",
@@ -33,14 +34,7 @@
     "diff_decision_rate",
     "diff_sub_rate",
     "diff_striking_ratio",
-    "diff_finish_rate",
-    "is_women_division",
-    "height_diff_inches",
-    "age_diff_days",
-    "experience_diff",
-    "win_streak_diff",
-    "loss_streak_diff",
-    "diff_ko_rate"
+    "diff_finish_rate"
   ],
   "mi_scores": {
     "diff_roll5_sig_str_pct": 0.016595,
@@ -71,14 +65,7 @@
     "diff_decision_rate": 0.001909,
     "diff_sub_rate": 0.001161,
     "diff_striking_ratio": 0.00048,
-    "diff_finish_rate": 0.000109,
-    "is_women_division": 0.0,
-    "height_diff_inches": 0.0,
-    "age_diff_days": 0.0,
-    "experience_diff": 0.0,
-    "win_streak_diff": 0.0,
-    "loss_streak_diff": 0.0,
-    "diff_ko_rate": 0.0
+    "diff_finish_rate": 0.000109
   },
   "categorical_features": [
     "weight_class"
