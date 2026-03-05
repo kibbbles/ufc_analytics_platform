@@ -11,7 +11,8 @@ build_differentials(matchups, fighters, fights) -> DataFrame
 One row per fight_id.  Columns:
     fight_id, fighter_a_id, fighter_b_id, fighter_a_wins,
     height_diff_inches, weight_diff_lbs, reach_diff_inches,
-    age_diff_days, experience_diff, win_streak_diff, loss_streak_diff
+    age_diff_days, experience_diff, win_streak_diff, loss_streak_diff,
+    win_rate_diff
 """
 
 from __future__ import annotations
@@ -42,6 +43,14 @@ def _career_stats(fights: pd.DataFrame) -> pd.DataFrame:
     # Previous fight result within each fighter's history (NaN for debut)
     df["prev_win"] = df.groupby("fighter_id")["is_winner"].shift(1)
 
+    # Cumulative wins before this fight (shift-then-cumsum keeps leakage-free)
+    df["cum_wins_before"] = (
+        df.groupby("fighter_id")["is_winner"]
+        .transform(lambda x: x.shift(1).fillna(0).cumsum())
+    )
+    # Win rate = wins before ÷ total fights before.  NaN for debut (0 prior fights).
+    df["win_rate"] = df["cum_wins_before"] / df["total_fights_before"].replace(0, float("nan"))
+
     # Run-break flag: 1 where the streak changes or at the start of a fighter's record.
     # Using transform so the comparison stays within each fighter group.
     run_break = df.groupby("fighter_id")["prev_win"].transform(
@@ -62,7 +71,7 @@ def _career_stats(fights: pd.DataFrame) -> pd.DataFrame:
         (streak_pos + 1).where(df["prev_win"] == False, 0).fillna(0).astype(int)
     )
 
-    return df[["fighter_id", "fight_id", "total_fights_before", "win_streak", "loss_streak"]]
+    return df[["fighter_id", "fight_id", "total_fights_before", "win_streak", "loss_streak", "win_rate"]]
 
 
 # ---------------------------------------------------------------------------
@@ -93,19 +102,21 @@ def build_differentials(
 
     # ---- Merge career stats for fighter_a --------------------------------
     career_a = career.rename(columns={
-        "fighter_id":         "fighter_a_id",
+        "fighter_id":          "fighter_a_id",
         "total_fights_before": "a_exp",
-        "win_streak":         "a_win_streak",
-        "loss_streak":        "a_loss_streak",
+        "win_streak":          "a_win_streak",
+        "loss_streak":         "a_loss_streak",
+        "win_rate":            "a_win_rate",
     })
     df = matchups.merge(career_a, on=["fighter_a_id", "fight_id"], how="left")
 
     # ---- Merge career stats for fighter_b --------------------------------
     career_b = career.rename(columns={
-        "fighter_id":         "fighter_b_id",
+        "fighter_id":          "fighter_b_id",
         "total_fights_before": "b_exp",
-        "win_streak":         "b_win_streak",
-        "loss_streak":        "b_loss_streak",
+        "win_streak":          "b_win_streak",
+        "loss_streak":         "b_loss_streak",
+        "win_rate":            "b_win_rate",
     })
     df = df.merge(career_b, on=["fighter_b_id", "fight_id"], how="left")
 
@@ -150,6 +161,7 @@ def build_differentials(
         "experience_diff":    df["a_exp"].fillna(0)        - df["b_exp"].fillna(0),
         "win_streak_diff":    df["a_win_streak"].fillna(0) - df["b_win_streak"].fillna(0),
         "loss_streak_diff":   df["a_loss_streak"].fillna(0) - df["b_loss_streak"].fillna(0),
+        "win_rate_diff":      df["a_win_rate"]             - df["b_win_rate"],
     })
 
     logger.info("build_differentials: %d rows", len(result))
