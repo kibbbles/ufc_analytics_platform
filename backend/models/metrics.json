@@ -1,7 +1,7 @@
 {
-  "win_accuracy": 0.6095,
-  "win_roc_auc": 0.6489,
-  "method_accuracy": 0.4648,
+  "win_accuracy": 0.615,
+  "win_roc_auc": 0.645,
+  "method_accuracy": 0.4813,
   "train_rows": 5982,
   "test_rows": 1283,
   "train_date_range": [

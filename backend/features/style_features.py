@@ -13,6 +13,8 @@ One row per (fighter_id, fight_id).  Columns:
     grappling_ratio,    # career td_landed / (td_landed + sig_str_landed)
     aggression_score,   # career sig_str_attempted per minute of fight time
     defense_score,      # 1 − mean opponent sig_str accuracy against this fighter
+    td_def_rate,        # 1 − (opp td_landed / opp td_attempted) — takedown defense %
+    sapm,               # opponent sig_str_landed per fight minute — strikes absorbed/min
     finish_rate,        # (KO + Sub wins) / total wins
     ko_rate,            # KO/TKO wins / total fights
     sub_rate,           # Submission wins / total fights
@@ -83,7 +85,7 @@ def build_style_features(
     ].copy()
     stat_agg_cols = [
         "sig_str_landed", "sig_str_attempted",
-        "total_str_landed", "td_landed",
+        "total_str_landed", "td_landed", "td_attempted",
     ]
     # Aggregate on (fighter_id, fight_id) only — date_proper is taken from
     # fights so the merge key is stable and not subject to dtype drift.
@@ -100,14 +102,16 @@ def build_style_features(
     ].drop_duplicates(subset=["fighter_id", "fight_id"])
     per_fight = per_fight.merge(fight_meta, on=["fighter_id", "fight_id"], how="left")
 
-    # ---- A4. Attach opponent's per-fight stats (for defense_score) -------
-    opp_stat_cols = ["sig_str_landed", "sig_str_attempted"]
+    # ---- A4. Attach opponent's per-fight stats (for defense_score, td_def_rate, sapm) ---
+    opp_stat_cols = ["sig_str_landed", "sig_str_attempted", "td_landed", "td_attempted"]
     opp_stats = (
         per_fight[["fighter_id", "fight_id"] + opp_stat_cols]
         .rename(columns={
-            "fighter_id":       "opponent_id",
-            "sig_str_landed":   "opp_sig_str_landed",
+            "fighter_id":        "opponent_id",
+            "sig_str_landed":    "opp_sig_str_landed",
             "sig_str_attempted": "opp_sig_str_attempted",
+            "td_landed":         "opp_td_landed",
+            "td_attempted":      "opp_td_attempted",
         })
     )
     per_fight = per_fight.merge(opp_stats, on=["opponent_id", "fight_id"], how="left")
@@ -126,6 +130,11 @@ def build_style_features(
     cum_td_landed        = grp["td_landed"].transform(_cumsum_shift)
     cum_fight_min        = grp["total_fight_time_seconds"].transform(_cumsum_shift) / 60.0
 
+    # Opponent cumulative stats (for defense_score, sapm, td_def_rate)
+    cum_opp_sig_str_landed = grp["opp_sig_str_landed"].transform(_cumsum_shift)
+    cum_opp_td_landed      = grp["opp_td_landed"].transform(_cumsum_shift)
+    cum_opp_td_att         = grp["opp_td_attempted"].transform(_cumsum_shift)
+
     # Per-fight opponent accuracy → expanding mean → shift (defense_score)
     per_fight["_opp_acc"] = _safe_div(
         per_fight["opp_sig_str_landed"].fillna(0),
@@ -142,6 +151,8 @@ def build_style_features(
     grappling_ratio  = _safe_div(cum_td_landed, cum_td_landed + cum_sig_str_landed)
     aggression_score = _safe_div(cum_sig_str_att, cum_fight_min)
     defense_score    = 1.0 - cum_opp_acc
+    td_def_rate      = 1.0 - _safe_div(cum_opp_td_landed, cum_opp_td_att)
+    sapm             = _safe_div(cum_opp_sig_str_landed, cum_fight_min)
 
     # ====================================================================
     # Part B — finish rate features (from fights_df METHOD + is_winner)
@@ -193,6 +204,8 @@ def build_style_features(
         "grappling_ratio": grappling_ratio,
         "aggression_score": aggression_score,
         "defense_score":   defense_score,
+        "td_def_rate":     td_def_rate,
+        "sapm":            sapm,
     }).merge(fin_features, on=["fighter_id", "fight_id"], how="left")
 
     logger.info("build_style_features: %d rows", len(result))
