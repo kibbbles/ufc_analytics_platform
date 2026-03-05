@@ -125,7 +125,14 @@ def run_feature_selection() -> dict:
             "mi_score_kept":    round(float(mi_scores[keep]), 6),
         })
 
-    # ---- Step 3: Sort survivors by MI score descending --------------------
+    # ---- Step 3: Drop zero-MI features, sort survivors by MI score ---------
+    # Features with MI=0 have no measurable relationship with the target and
+    # add noise without signal.  Drop them before passing to the model.
+    zero_mi = [c for c in feature_cols if c not in dropped and mi_scores[c] == 0.0]
+    if zero_mi:
+        logger.info("Dropping %d zero-MI features: %s", len(zero_mi), zero_mi)
+        dropped.update(zero_mi)
+
     selected = [c for c in feature_cols if c not in dropped]
     selected.sort(key=lambda c: mi_scores[c], reverse=True)
 
@@ -135,6 +142,7 @@ def run_feature_selection() -> dict:
         "n_training_rows":          int(len(mat)),
         "n_features_before":        len(feature_cols),
         "n_features_removed_collinear": len(removed),
+        "n_features_removed_zero_mi":   len(zero_mi),
         "n_features_selected":      len(selected),
         # Numeric/binary features that passed selection (ordered by MI score)
         "feature_names":            selected,
