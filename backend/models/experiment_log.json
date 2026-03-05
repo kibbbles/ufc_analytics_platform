@@ -1,0 +1,29 @@
+[
+  {
+    "timestamp": "2026-03-05T21:56:22.068659+00:00",
+    "feature_hash": "1006d6cd",
+    "n_features": 29,
+    "train_rows": 5982,
+    "val_rows": 1282,
+    "test_rows": 1283,
+    "models": {
+      "logistic_regression": {
+        "val_auc": 0.6318,
+        "test_accuracy": 0.6033,
+        "test_auc": 0.6392
+      },
+      "xgboost": {
+        "val_auc": 0.6341,
+        "test_accuracy": 0.615,
+        "test_auc": 0.645
+      },
+      "random_forest": {
+        "val_auc": 0.6341,
+        "test_accuracy": 0.5978,
+        "test_auc": 0.6427
+      }
+    },
+    "best_model": "xgboost",
+    "method_accuracy": 0.4813
+  }
+]
