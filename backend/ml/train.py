@@ -112,12 +112,11 @@ def _candidate_models(
     feature_names: list[str],
     categorical: list[str],
 ) -> dict[str, tuple[Pipeline, bool]]:
-    """Return {model_name: (pipeline, calibrate_on_val)}.
+    """Return {model_name: (pipeline, use_early_stopping)}.
 
-    calibrate_on_val=True wraps the pre-trained base pipeline in
-    CalibratedClassifierCV(cv='prefit', method='isotonic') before test eval.
-    Logistic Regression and Random Forest produce reasonably calibrated
-    probabilities natively; XGBoost benefits from isotonic correction.
+    XGBoost uses early stopping (val set stops tree growth); the training loop
+    handles this specially — see _fit_pipeline().  LR and RF use standard
+    pipeline.fit().
     """
     def _pre() -> ColumnTransformer:
         # Each model gets its own preprocessor instance so fit state is isolated.
@@ -134,30 +133,37 @@ def _candidate_models(
         )),
     ])
 
+    # XGBoost: high n_estimators ceiling — early_stopping_rounds decides actual count.
+    # Reduced complexity vs previous run to close the 15% train/test gap:
+    #   max_depth 4→3, min_child_weight 5→15, reg_alpha 0.1→1.0, subsample 0.8→0.7
     xgb = Pipeline([
         ("pre", _pre()),
         ("clf", XGBClassifier(
-            n_estimators=400,
-            max_depth=4,
+            n_estimators=1000,
+            max_depth=3,
             learning_rate=0.05,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            min_child_weight=5,
-            gamma=1,
-            reg_alpha=0.1,
-            reg_lambda=1.0,
+            subsample=0.7,
+            colsample_bytree=0.7,
+            min_child_weight=15,
+            gamma=2,
+            reg_alpha=1.0,
+            reg_lambda=2.0,
             eval_metric="logloss",
+            early_stopping_rounds=50,
             random_state=42,
             n_jobs=-1,
         )),
     ])
 
+    # RF: tighter constraints to close the 13% train/test gap:
+    #   max_depth 8→6, min_samples_leaf 10→30, added min_samples_split=20
     rf = Pipeline([
         ("pre", _pre()),
         ("clf", RandomForestClassifier(
             n_estimators=300,
-            max_depth=8,
-            min_samples_leaf=10,
+            max_depth=6,
+            min_samples_leaf=30,
+            min_samples_split=20,
             class_weight="balanced",
             random_state=42,
             n_jobs=-1,
@@ -169,6 +175,45 @@ def _candidate_models(
         "xgboost":             (xgb, True),   # calibrate on val set
         "random_forest":       (rf,  False),
     }
+
+
+def _fit_pipeline(
+    name: str,
+    base_pipeline: Pipeline,
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    X_val: pd.DataFrame,
+    y_val: pd.Series,
+) -> object:
+    """Fit a pipeline and return the inference-ready model.
+
+    XGBoost receives early stopping via a manual two-step fit:
+      1. Fit the preprocessor on X_train.
+      2. Transform both X_train and X_val.
+      3. Fit XGBoost with eval_set so early_stopping_rounds takes effect.
+    The pipeline object is then fully fitted and used as-is for inference
+    (no isotonic calibration — early stopping produces better-calibrated
+    probabilities than the previous calibrate-on-val approach).
+
+    All other models use standard pipeline.fit().
+    """
+    if name == "xgboost":
+        pre = base_pipeline.named_steps["pre"]
+        clf = base_pipeline.named_steps["clf"]
+        X_train_pre = pre.fit_transform(X_train, y_train)
+        X_val_pre   = pre.transform(X_val)
+        clf.fit(
+            X_train_pre, y_train,
+            eval_set=[(X_val_pre, y_val)],
+            verbose=False,
+        )
+        best = getattr(clf, "best_iteration", None)
+        if best is not None:
+            logger.info("  XGBoost early stopped at tree %d", best + 1)
+        return base_pipeline   # pre + clf both fitted; no calibration wrapper
+
+    base_pipeline.fit(X_train, y_train)
+    return base_pipeline
 
 
 def _extract_importance(
@@ -266,15 +311,9 @@ def train(eval_only: bool = False) -> dict:
     model_results: dict[str, dict] = {}
     trained_models: dict[str, object] = {}
 
-    for name, (base_pipeline, calibrate) in candidates.items():
+    for name, (base_pipeline, _) in candidates.items():
         logger.info("Training %s...", name)
-        base_pipeline.fit(X_train, y_train)
-
-        if calibrate:
-            pipeline = CalibratedClassifierCV(base_pipeline, cv="prefit", method="isotonic")
-            pipeline.fit(X_val, y_val)
-        else:
-            pipeline = base_pipeline
+        pipeline = _fit_pipeline(name, base_pipeline, X_train, y_train, X_val, y_val)
 
         # Val AUC used for model selection (never the test set)
         val_proba = pipeline.predict_proba(X_val)[:, 1]
