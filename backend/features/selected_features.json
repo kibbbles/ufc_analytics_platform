@@ -1,20 +1,23 @@
 {
-  "generated_at": "2026-03-05T21:33:13.286791+00:00",
+  "generated_at": "2026-03-06T03:00:56.666748+00:00",
   "n_training_rows": 8547,
   "n_features_before": 61,
-  "n_features_removed_collinear": 20,
-  "n_features_removed_zero_mi": 12,
-  "n_features_selected": 29,
+  "n_features_removed_collinear": 22,
+  "n_features_removed_zero_mi": 9,
+  "n_features_selected": 30,
   "feature_names": [
     "diff_roll5_td_pct",
+    "age_diff_days",
     "diff_roll5_total_str_att",
     "diff_days_in_weight_class",
     "diff_grappling_ratio",
     "diff_sapm",
     "diff_roll3_sig_str_landed",
     "diff_roll5_sig_str_pct",
-    "diff_age_at_fight",
+    "loss_streak_diff",
+    "win_rate_diff",
     "diff_finish_rate",
+    "weight_diff_lbs",
     "diff_roll7_td_landed",
     "diff_roll3_total_str_landed",
     "diff_roll3_ctrl_s",
@@ -25,27 +28,28 @@
     "diff_defense_score",
     "diff_avg_opponent_losses",
     "diff_striking_ratio",
-    "height_diff_inches",
     "diff_roll7_sig_str_landed",
     "diff_roll3_td_pct",
-    "weight_diff_lbs",
+    "win_streak_diff",
     "diff_avg_opponent_win_pct",
-    "loss_streak_diff",
     "diff_td_def_rate",
     "diff_days_since_last_fight",
-    "reach_diff_inches",
-    "diff_roll3_kd"
+    "diff_roll3_kd",
+    "height_diff_inches"
   ],
   "mi_scores": {
     "diff_roll5_td_pct": 0.01999,
+    "age_diff_days": 0.018263,
     "diff_roll5_total_str_att": 0.017551,
     "diff_days_in_weight_class": 0.015829,
     "diff_grappling_ratio": 0.015113,
     "diff_sapm": 0.01286,
     "diff_roll3_sig_str_landed": 0.012147,
     "diff_roll5_sig_str_pct": 0.012125,
-    "diff_age_at_fight": 0.011773,
+    "loss_streak_diff": 0.010458,
+    "win_rate_diff": 0.010449,
     "diff_finish_rate": 0.008918,
+    "weight_diff_lbs": 0.008633,
     "diff_roll7_td_landed": 0.007794,
     "diff_roll3_total_str_landed": 0.007553,
     "diff_roll3_ctrl_s": 0.007536,
@@ -56,16 +60,14 @@
     "diff_defense_score": 0.006063,
     "diff_avg_opponent_losses": 0.006004,
     "diff_striking_ratio": 0.005918,
-    "height_diff_inches": 0.005904,
     "diff_roll7_sig_str_landed": 0.005801,
     "diff_roll3_td_pct": 0.005553,
-    "weight_diff_lbs": 0.004291,
+    "win_streak_diff": 0.005055,
     "diff_avg_opponent_win_pct": 0.003738,
-    "loss_streak_diff": 0.00273,
     "diff_td_def_rate": 0.002169,
     "diff_days_since_last_fight": 0.002059,
-    "reach_diff_inches": 0.001785,
-    "diff_roll3_kd": 0.001251
+    "diff_roll3_kd": 0.001251,
+    "height_diff_inches": 3.4e-05
   },
   "categorical_features": [
     "weight_class"
@@ -128,6 +130,13 @@
       "mi_score_kept": 0.005801
     },
     {
+      "feature": "diff_age_at_fight",
+      "correlated_with": "age_diff_days",
+      "r": 0.9638,
+      "mi_score_dropped": 0.011773,
+      "mi_score_kept": 0.018263
+    },
+    {
       "feature": "diff_roll5_kd",
       "correlated_with": "diff_roll7_kd",
       "r": 0.9633,
@@ -140,6 +149,13 @@
       "r": 0.9616,
       "mi_score_dropped": 0.001626,
       "mi_score_kept": 0.009979
+    },
+    {
+      "feature": "experience_diff",
+      "correlated_with": "diff_strength_of_schedule",
+      "r": 0.9512,
+      "mi_score_dropped": 0.000295,
+      "mi_score_kept": 0.007018
     },
     {
       "feature": "diff_ewa_ctrl_s",

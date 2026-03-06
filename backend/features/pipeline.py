@@ -187,7 +187,7 @@ def build_training_matrix(
     #   - flip fighter_a_wins  (1 → 0, 0 → 1)
     rng = np.random.default_rng(seed=42)
     flip_mask = rng.random(len(mat)) < 0.5
-    diff_cols = [c for c in mat.columns if c.startswith("diff_")]
+    diff_cols = [c for c in mat.columns if "diff" in c]
     mat.loc[flip_mask, diff_cols] = -mat.loc[flip_mask, diff_cols].values
     orig_a = mat.loc[flip_mask, "fighter_a_id"].values
     orig_b = mat.loc[flip_mask, "fighter_b_id"].values

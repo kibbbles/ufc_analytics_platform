@@ -1,8 +1,8 @@
 {
-  "win_accuracy": 0.615,
-  "win_roc_auc": 0.645,
-  "best_model": "xgboost",
-  "method_accuracy": 0.4813,
+  "win_accuracy": 0.6267,
+  "win_roc_auc": 0.6599,
+  "best_model": "logistic_regression",
+  "method_accuracy": 0.4711,
   "train_rows": 5982,
   "test_rows": 1283,
   "train_date_range": [
