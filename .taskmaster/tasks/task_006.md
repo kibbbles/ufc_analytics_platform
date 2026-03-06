@@ -53,6 +53,8 @@ Build a complete ML pipeline using scikit-learn 1.3+ and XGBoost 2.0:
 
 Implement a simple model loader utility that reads joblib files from backend/models/ at startup and exposes them via FastAPI app state.
 
+GitHub Actions (retrain.yml): Add a manual workflow_dispatch trigger that runs the full model training pipeline. This is intentionally manual so retraining is a deliberate decision after reviewing new data. The feature-engineering.yml workflow (Task 5.9) handles automated feature updates after each scrape; retrain.yml is triggered separately when the team decides a new model is warranted.
+
 **Test Strategy:**
 
 1. Test model accuracy on holdout data

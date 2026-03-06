@@ -167,6 +167,49 @@ def build_training_matrix(
     )
     mat["method"] = mat["fight_id"].map(method_map)
 
+    # ---- Data quality filters (following Tilburg 2021) --------------------
+    # Applied to training rows only.  Pre-cutoff / debut fights still exist
+    # in `fights` and `stats` so rolling metrics retain full career history
+    # for fighters whose careers span the cutoff date.
+
+    # 1. October 1998 cutoff — frequent missing data in early UFC events.
+    #    event_date may be a datetime.date object (from PostgreSQL DATE column),
+    #    so cast to Timestamp for a type-safe comparison.
+    cutoff = pd.Timestamp("1998-10-01")
+    n_before_cutoff = len(mat)
+    mat = mat[pd.to_datetime(mat["event_date"]) >= cutoff]
+    logger.info(
+        "build_training_matrix: Oct-1998 cutoff removed %d fights",
+        n_before_cutoff - len(mat),
+    )
+
+    # 2. Debut filter — drop any fight where either fighter had zero prior
+    #    UFC fights.  Those rows have all stat-based features zero-imputed
+    #    (no career history) and add noise rather than signal.
+    career_all = _career_stats(fights)
+    debut_fight_ids = set(
+        career_all[career_all["total_fights_before"] == 0]["fight_id"].unique()
+    )
+    n_before_debut = len(mat)
+    mat = mat[~mat["fight_id"].isin(debut_fight_ids)]
+    logger.info(
+        "build_training_matrix: debut filter removed %d fights "
+        "(%d fight_ids had at least one debutant)",
+        n_before_debut - len(mat),
+        len(debut_fight_ids),
+    )
+
+    # 3. Remove Super Heavyweight and Open Weight matches — no upper weight
+    #    limit; too few fights and not representative (Tilburg 2021).
+    _no_limit_classes = {"Super Heavyweight", "Open Weight"}
+    n_before_shw = len(mat)
+    mat = mat[~mat["weight_class"].isin(_no_limit_classes)]
+    if n_before_shw > len(mat):
+        logger.info(
+            "build_training_matrix: removed %d Super Heavyweight / Open Weight fights",
+            n_before_shw - len(mat),
+        )
+
     # Physical/experience diffs (already A-B format from differentials.py)
     diff_feat_cols = [
         c for c in diff_df.columns
@@ -177,6 +220,18 @@ def build_training_matrix(
     # Per-fighter feature modules → A-B diffs
     for feat_df in (rm_df, sf_df, tf_df, oq_df):
         mat = _add_fighter_diffs(mat, feat_df)
+
+    # ---- Deduplication safety net -----------------------------------------
+    # If fighter_tott has duplicate rows per fighter_id the merge chain above
+    # can fan out.  Drop any resulting duplicate fight_ids before flipping.
+    n_before = len(mat)
+    mat = mat.drop_duplicates(subset="fight_id", keep="first")
+    if len(mat) < n_before:
+        logger.warning(
+            "build_training_matrix: dropped %d duplicate fight_id rows "
+            "(fighter_tott has duplicate records for some fighters)",
+            n_before - len(mat),
+        )
 
     # ---- Perspective flipping: balance the target class -------------------
     # UFCStats fight detail pages list the winner on the left, making

@@ -44,8 +44,8 @@ def main() -> None:
     print(f"Method     accuracy : {metrics['method_accuracy']:.4f}")
     print(f"Train rows          : {metrics['train_rows']:,}")
     print(f"Test rows           : {metrics['test_rows']:,}")
-    print(f"Train period        : {metrics['train_date_range'][0]} → {metrics['train_date_range'][1]}")
-    print(f"Test period         : {metrics['test_date_range'][0]} → {metrics['test_date_range'][1]}")
+    print(f"Train period        : {metrics['train_date_range'][0]} to {metrics['train_date_range'][1]}")
+    print(f"Test period         : {metrics['test_date_range'][0]} to {metrics['test_date_range'][1]}")
 
 
 if __name__ == "__main__":

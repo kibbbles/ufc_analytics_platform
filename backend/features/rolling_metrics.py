@@ -117,6 +117,21 @@ def build_rolling_metrics(
         )
         all_rolled_frames.append(rolled)
 
+    # ---- 5b. Career averages (Tilburg 2021 approach) ----------------------
+    # expanding().mean() at position i = mean of fights 0 … i (inclusive).
+    # shift(1) shifts that to mean of fights 0 … i-1 (all prior fights only).
+    # Complements the rolling windows: captures long-run career baseline.
+    career_avg = per_fight.groupby("fighter_id")[_SUM_COLS].transform(
+        lambda s: s.expanding(min_periods=1).mean().shift(1)
+    )
+    career_avg.columns = [f"career_avg_{c}" for c in _SUM_COLS]
+    career_avg["career_avg_sig_str_pct"] = _safe_pct(
+        career_avg["career_avg_sig_str_landed"], career_avg["career_avg_sig_str_attempted"]
+    )
+    career_avg["career_avg_td_pct"] = _safe_pct(
+        career_avg["career_avg_td_landed"], career_avg["career_avg_td_attempted"]
+    )
+
     # ---- 6. Exponentially weighted averages (shift applied inside helper) -
     ewa_base = [
         "kd_int", "sig_str_landed", "sig_str_attempted",
@@ -149,11 +164,22 @@ def build_rolling_metrics(
 
     rolled_combined = pd.concat(all_rolled_frames, axis=1)
 
+    career_avg_cols_to_keep = [
+        "career_avg_sig_str_pct", "career_avg_td_pct",
+        "career_avg_kd_int",      "career_avg_ctrl_seconds",
+        "career_avg_sig_str_landed", "career_avg_sig_str_attempted",
+        "career_avg_total_str_landed", "career_avg_total_str_attempted",
+        "career_avg_td_landed",   "career_avg_td_attempted",
+    ]
+    rename_map["career_avg_kd_int"]       = "career_avg_kd"
+    rename_map["career_avg_ctrl_seconds"] = "career_avg_ctrl_s"
+
     result = pd.concat(
         [
             per_fight[["fighter_id", "fight_id"]],
             rolled_combined[rolled_cols_to_keep],
             ewa[["ewa_sig_str_pct", "ewa_td_pct", "ewa_kd_int", "ewa_ctrl_seconds"]],
+            career_avg[career_avg_cols_to_keep],
         ],
         axis=1,
     )

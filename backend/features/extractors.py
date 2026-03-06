@@ -213,7 +213,7 @@ def get_fighters_df() -> pd.DataFrame:
     ft.td_avg, ft.td_acc, ft.td_def, ft.sub_avg
     """
     sql = text("""
-        SELECT
+        SELECT DISTINCT ON (fd.id)
             fd.id,
             fd."FIRST",
             fd."LAST",
@@ -233,7 +233,7 @@ def get_fighters_df() -> pd.DataFrame:
             ft.sub_avg
         FROM fighter_details fd
         LEFT JOIN fighter_tott ft ON ft.fighter_id = fd.id
-        ORDER BY fd."LAST", fd."FIRST"
+        ORDER BY fd.id
     """)
 
     df = pd.read_sql(sql, engine)
@@ -372,9 +372,10 @@ def get_matchups_df(
         FROM fight_details fd
         JOIN event_details ed ON ed.id = fd.event_id
         LEFT JOIN (
-            SELECT fight_id, fighter_id
+            SELECT DISTINCT ON (fight_id) fight_id, fighter_id
             FROM fight_results
             WHERE is_winner = TRUE
+            ORDER BY fight_id
         ) winner ON winner.fight_id = fd.id
         LEFT JOIN (
             SELECT DISTINCT ON (fight_id)

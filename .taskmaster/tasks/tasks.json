@@ -448,7 +448,7 @@
         "id": "6",
         "title": "ML Model Training and Serving",
         "description": "Implement the machine learning pipeline to train fight prediction models (win/loss and method prediction) and create a model serving infrastructure using joblib serialization, loaded at API startup.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "4",
           "5"
@@ -540,7 +540,8 @@
         ],
         "complexity": 9,
         "recommendedSubtasks": 6,
-        "expansionPrompt": "Break down the ML Model Training and Serving task into 6 subtasks covering data preparation, model training for win/loss prediction, model training for fight outcome method, model evaluation framework, model versioning with MLflow, and model serving infrastructure. For each subtask, provide a clear title, detailed description, and acceptance criteria."
+        "expansionPrompt": "Break down the ML Model Training and Serving task into 6 subtasks covering data preparation, model training for win/loss prediction, model training for fight outcome method, model evaluation framework, model versioning with MLflow, and model serving infrastructure. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+        "updatedAt": "2026-03-04T20:26:47.298Z"
       },
       {
         "id": "7",
@@ -675,9 +676,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-02T02:04:03.661Z",
+      "lastModified": "2026-03-04T20:26:47.301Z",
       "taskCount": 10,
-      "completedCount": 5,
+      "completedCount": 6,
       "tags": [
         "master"
       ]

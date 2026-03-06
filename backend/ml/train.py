@@ -216,6 +216,103 @@ def _fit_pipeline(
     return base_pipeline
 
 
+def _run_shap_analysis(
+    best_name: str,
+    best_pipeline,
+    X_test: pd.DataFrame,
+    feature_names: list[str],
+    categorical: list[str],
+) -> dict:
+    """Compute SHAP values for the best win/loss model on the held-out test set.
+
+    Saves:
+        models/shap_values.npy    — raw SHAP array  (n_test x n_features)
+        models/shap_summary.json  — mean |SHAP| per feature, sorted descending
+        models/shap_importance.png — horizontal bar chart of mean |SHAP|
+
+    Returns the shap_summary dict (empty on failure).
+    """
+    try:
+        import shap
+        import matplotlib
+        matplotlib.use("Agg")   # headless — no GUI or display needed
+        import matplotlib.pyplot as plt
+    except ImportError:
+        logger.warning(
+            "shap or matplotlib not installed — skipping SHAP analysis. "
+            "pip install shap matplotlib"
+        )
+        return {}
+
+    all_features = feature_names + categorical
+
+    pre = best_pipeline.named_steps["pre"]
+    clf = best_pipeline.named_steps["clf"]
+    X_test_pre = pre.transform(X_test)
+
+    logger.info(
+        "Running SHAP analysis for %s on %d test samples...",
+        best_name, len(X_test),
+    )
+
+    try:
+        if best_name == "logistic_regression":
+            explainer = shap.LinearExplainer(clf, X_test_pre)
+            shap_vals = explainer.shap_values(X_test_pre)
+        else:  # random_forest or xgboost
+            explainer = shap.TreeExplainer(clf)
+            raw = explainer.shap_values(X_test_pre)
+            # sklearn RF returns [class0_vals, class1_vals]; XGBoost returns 2-D array.
+            # Newer SHAP may return 3-D (n_samples, n_features, n_classes).
+            if isinstance(raw, list):
+                shap_vals = raw[1]           # class 1 = fighter A wins
+            elif isinstance(raw, np.ndarray) and raw.ndim == 3:
+                shap_vals = raw[:, :, 1]     # newer SHAP Explanation API
+            else:
+                shap_vals = raw
+    except Exception as exc:
+        logger.warning("SHAP computation failed: %s", exc)
+        return {}
+
+    # Mean absolute SHAP per feature — global importance ranking
+    mean_abs = np.abs(shap_vals).mean(axis=0)
+    shap_summary = {
+        col: float(mean_abs[i])
+        for i, col in enumerate(all_features)
+    }
+    shap_summary = dict(sorted(shap_summary.items(), key=lambda x: x[1], reverse=True))
+
+    # Persist raw values and summary
+    np.save(MODELS_DIR / "shap_values.npy", shap_vals)
+    (MODELS_DIR / "shap_summary.json").write_text(json.dumps(shap_summary, indent=2))
+
+    # Bar chart — top 20 features by mean |SHAP|
+    top_n = min(20, len(all_features))
+    top_f = list(shap_summary.keys())[:top_n]
+    top_v = [shap_summary[f] for f in top_f]
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax.barh(range(top_n), top_v[::-1], color="#2196F3", alpha=0.85)
+    ax.set_yticks(range(top_n))
+    ax.set_yticklabels(top_f[::-1], fontsize=9)
+    ax.set_xlabel("Mean |SHAP value|", fontsize=11)
+    ax.set_title(
+        f"SHAP Feature Importance — {best_name.replace('_', ' ').title()}"
+        f"  (n={len(X_test)} test fights)",
+        fontsize=12,
+    )
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    plt.tight_layout()
+    fig.savefig(MODELS_DIR / "shap_importance.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    top_feat = list(shap_summary.keys())[0]
+    top_val  = list(shap_summary.values())[0]
+    logger.info("SHAP done. Top feature: %s (mean|SHAP|=%.5f)", top_feat, top_val)
+    return shap_summary
+
+
 def _extract_importance(
     trained_pipeline,
     feature_names: list[str],
@@ -315,8 +412,14 @@ def train(eval_only: bool = False) -> dict:
         logger.info("Training %s...", name)
         pipeline = _fit_pipeline(name, base_pipeline, X_train, y_train, X_val, y_val)
 
-        # Val AUC used for model selection (never the test set)
+        # Train accuracy — overfitting diagnostic only, never used for selection
+        train_pred = pipeline.predict(X_train)
+        train_acc  = float(accuracy_score(y_train, train_pred))
+
+        # Val metrics — used for model selection (never the test set)
+        val_pred  = pipeline.predict(X_val)
         val_proba = pipeline.predict_proba(X_val)[:, 1]
+        val_acc   = float(accuracy_score(y_val, val_pred))
         val_auc   = float(roc_auc_score(y_val, val_proba))
 
         # Test metrics — final holdout evaluation only
@@ -325,18 +428,23 @@ def train(eval_only: bool = False) -> dict:
         test_acc   = float(accuracy_score(y_test, test_pred))
         test_auc   = float(roc_auc_score(y_test, test_proba))
 
+        gap = round(val_acc - test_acc, 4)   # Tilburg reports this difference
         logger.info(
-            "  %-22s val_auc=%.4f  test_acc=%.4f  test_auc=%.4f",
-            name, val_auc, test_acc, test_auc,
+            "  %-22s train_acc=%.4f  val_acc=%.4f  val_auc=%.4f  "
+            "test_acc=%.4f  test_auc=%.4f  gap(val-test)=%.4f",
+            name, train_acc, val_acc, val_auc, test_acc, test_auc, gap,
         )
         logger.info("\n%s", classification_report(
             y_test, test_pred, target_names=["B wins", "A wins"]
         ))
 
         model_results[name] = {
-            "val_auc":       round(val_auc,  4),
-            "test_accuracy": round(test_acc, 4),
-            "test_auc":      round(test_auc, 4),
+            "train_accuracy": round(train_acc, 4),
+            "val_accuracy":   round(val_acc,  4),
+            "val_auc":        round(val_auc,  4),
+            "test_accuracy":  round(test_acc, 4),
+            "test_auc":       round(test_auc, 4),
+            "val_test_gap":   round(gap,      4),
         }
         trained_models[name] = pipeline
 
@@ -348,8 +456,12 @@ def train(eval_only: bool = False) -> dict:
     best_res      = model_results[best_name]
 
     logger.info(
-        "Best model: %s  (val_auc=%.4f  test_acc=%.4f  test_auc=%.4f)",
-        best_name, best_res["val_auc"], best_res["test_accuracy"], best_res["test_auc"],
+        "Best model: %s  (val_acc=%.4f  val_auc=%.4f  test_acc=%.4f  "
+        "test_auc=%.4f  gap=%.4f)",
+        best_name,
+        best_res["val_accuracy"], best_res["val_auc"],
+        best_res["test_accuracy"], best_res["test_auc"],
+        best_res["val_test_gap"],
     )
 
     feat_imp = _extract_importance(best_pipeline, feature_names, categorical)
@@ -432,10 +544,19 @@ def train(eval_only: bool = False) -> dict:
         return metrics
 
     # ------------------------------------------------------------------ #
-    # 7. Serialize                                                        #
+    # 7. SHAP analysis on best model                                      #
     # ------------------------------------------------------------------ #
     MODELS_DIR.mkdir(exist_ok=True)
 
+    shap_summary = _run_shap_analysis(
+        best_name, best_pipeline, X_test, feature_names, categorical
+    )
+    if shap_summary:
+        metrics["shap_top10"] = dict(list(shap_summary.items())[:10])
+
+    # ------------------------------------------------------------------ #
+    # 8. Serialize                                                        #
+    # ------------------------------------------------------------------ #
     joblib.dump(best_pipeline,   MODELS_DIR / "win_loss_v1.joblib")
     joblib.dump(method_pipeline, MODELS_DIR / "method_v1.joblib")
 
