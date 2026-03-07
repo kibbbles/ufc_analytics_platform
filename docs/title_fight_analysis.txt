@@ -233,3 +233,322 @@ differentials narrow.
  Generated 2026-03-06 | Model: Random Forest win_loss_v1.joblib
  Data: UFCStats.com via Greco scraper | Test period: Dec 2023 – Feb 2026
 ================================================================================
+
+
+================================================================================
+ UFC 326 — UPCOMING FIGHT PREDICTIONS (2026-03-07)
+ Random Forest model | Features computed as of 2026-03-07
+================================================================================
+
+CONTEXT
+-------
+These predictions are generated using the same Random Forest model (win_loss_v1.joblib)
+that achieved 63.85% test-set accuracy and 67.82% AUC. Feature vectors are computed
+live from each fighter's full career history up to the fight date. Fights listed in
+card order, earliest to latest (main event last).
+
+All differentials are Fighter A minus Fighter B (the listed order below).
+"Method" = model's predicted finish type across three classes: KO/TKO, Submission,
+Decision. These are independent probabilities — they sum to 100%.
+
+Note: win_rate_diff and roll7_sig_str_landed are N/A for fighters not in the
+training parquet (fighters who debuted after the training cutoff, or whose
+fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
+
+--------------------------------------------------------------------------------
+ CARD SUMMARY
+--------------------------------------------------------------------------------
+
+ Fight  Matchup                              Weight Class   Model Pick        Confidence  Method (top pick)
+ -----  -----------------------------------  -------------  ----------------  ----------  --------------------
+   1    Gregory Rodrigues vs Brunno Ferreira  Middleweight  Rodrigues         58.9%       KO/TKO (45.0%)
+   2    Drew Dober vs Michael Johnson         Lightweight   Johnson           53.9%       Decision (35.9%)
+   3    Rob Font vs Raul Rosas Jr.            Bantamweight  Rosas Jr.         55.7%       Decision (36.5%)
+   4    Caio Borralho vs Reinier de Ridder    Middleweight  Borralho          55.5%       KO/TKO (37.3%)
+   5    Max Holloway vs Charles Oliveira      Lightweight   Holloway          60.1%       KO/TKO (40.0%)  [MAIN]
+
+--------------------------------------------------------------------------------
+ FIGHT 1 — GREGORY RODRIGUES vs BRUNNO FERREIRA
+ Middleweight | 3 rounds
+--------------------------------------------------------------------------------
+
+ Fighter            UFC Record  Ht     Reach  Stance    DOB
+ -----------------  ----------  -----  -----  --------  ----------
+ Gregory Rodrigues    3-9       75"    75"    Orthodox  1992-02-17
+ Brunno Ferreira      4-4       70"    72"    Orthodox  1992-11-04
+
+ Recent form (last 5):
+   Rodrigues:  L L W L L  (2 straight losses entering this fight)
+   Ferreira:   L W W W W  (4-fight win streak before Dec 2025 loss)
+
+ MODEL PREDICTION: Gregory Rodrigues wins — 58.9% confidence
+ Method breakdown: KO/TKO 45.0% | Decision 30.3% | Submission 24.8%
+
+ Key differentials driving prediction (Rodrigues - Ferreira):
+   diff_age_at_fight:        +261 days   (Rodrigues ~9 months older — slight disadvantage)
+   reach_diff_inches:         +3"        (Rodrigues has longer reach)
+   diff_sapm:                +1.748      (Rodrigues absorbs MORE strikes — disadvantage)
+   diff_defense_score:       +0.008      (near-identical defensive rating)
+   diff_ko_rate:             +0.117      (Rodrigues finishes by KO significantly more)
+   diff_aggression_score:    +4.351      (Rodrigues far more aggressive striker)
+   diff_td_def_rate:         +0.362      (Rodrigues defends takedowns better)
+   diff_career_avg_ctrl_s:   +79.2s      (Rodrigues controls more per fight on average)
+   diff_career_avg_td_att:   +1.455      (Rodrigues attempts more TDs per fight)
+   diff_career_length_days:  +595        (Rodrigues has more UFC experience by ~20 months)
+
+ ANALYSIS:
+   The model leans Rodrigues primarily on his higher aggression, KO finishing rate,
+   and reach advantage. However, this is one of the shakier predictions on the card —
+   Rodrigues's recent form is dismal (2-5 in his last 7), and his high SAPM (+1.75)
+   signals he absorbs significantly more punishment than Ferreira. The model is
+   essentially picking the "more active/aggressive" fighter, but Ferreira enters this
+   fight off a stronger run and at a lighter bodyweight suggesting fresher durability.
+
+   Ferreira's 4-fight win streak (all stoppages: 3 submissions, 1 KO) before his Dec
+   2025 loss suggests the model may be underweighting Ferreira's finishing ability.
+   The 58.9% confidence is low — treat this as a true coin-flip leaning Rodrigues.
+
+   Model's predicted method (KO/TKO at 45%) reflects both fighters' violent tendencies.
+   Rodrigues has never gone the distance in his last 8 fights.
+
+--------------------------------------------------------------------------------
+ FIGHT 2 — DREW DOBER vs MICHAEL JOHNSON
+ Lightweight | 3 rounds
+--------------------------------------------------------------------------------
+
+ Fighter          UFC Record  Ht     Reach  Stance    DOB
+ ---------------  ----------  -----  -----  --------  ----------
+ Drew Dober         17-8      68"    70"    Southpaw  1988-10-19
+ Michael Johnson    17-14     70"    73"    Southpaw  1986-06-04
+
+ Recent form (last 5):
+   Dober:    L W L W W  (most recent fight Oct 2025: KO/TKO loss)
+   Johnson:  W W W W W  (4-fight win streak, all 2023-2025)
+
+ MODEL PREDICTION: Michael Johnson wins — 53.9% confidence
+ Method breakdown: Decision 35.9% | KO/TKO 34.7% | Submission 29.4%
+
+ Key differentials driving prediction (Dober - Johnson):
+   diff_age_at_fight:        -868 days   (Johnson ~2.4 years older — disadvantage to Johnson)
+   reach_diff_inches:          -3"       (Johnson has 3" more reach — advantage to Johnson)
+   win_streak_diff:            +1        (Dober current win streak slightly longer)
+   loss_streak_diff:           -3        (Johnson has cleaner recent loss record)
+   diff_sapm:                +0.526      (Dober absorbs more strikes per minute)
+   diff_defense_score:       -0.126      (Johnson has clearly better defensive output)
+   diff_ko_rate:             +0.160      (Dober finishes by KO more often)
+   diff_td_def_rate:         -0.249      (Johnson better at stopping takedowns)
+   diff_ewa_kd:              -0.457      (Johnson's knockdown rate is exponentially weighted higher)
+   diff_career_length_days:  -1092       (Johnson has more career experience)
+   diff_avg_opponent_losses: -0.507      (Dober has faced slightly easier opposition)
+
+ ANALYSIS:
+   The model's pick of Johnson is the thinnest margin on the card at 53.9% — this is
+   effectively a coin flip. Both fighters are southpaw lightweights with lengthy careers.
+
+   The key differentiator is Johnson's superior defensive output (defense_score -0.126
+   differential, higher reach) and his remarkable 4-fight win streak for a 39-year-old
+   veteran. However, Johnson's age (39 on fight night) is a significant concern — the
+   model penalises age but may not fully capture the extent to which a 39-year-old
+   fighter's output declines sharply.
+
+   Dober's higher KO rate is the main countervailing factor — he is the bigger finisher
+   of the two historically. His most recent loss was a KO/TKO which may signal
+   durability concerns. Both fighters live and die by the KO.
+
+   Method is genuinely uncertain at nearly even odds. The decision line being highest
+   reflects that this is a fight between two experienced veterans who can eat shots
+   and keep fighting. A lively 3-round fight is the most likely scenario.
+
+--------------------------------------------------------------------------------
+ FIGHT 3 — ROB FONT vs RAUL ROSAS JR.
+ Bantamweight | 3 rounds
+--------------------------------------------------------------------------------
+
+ Fighter          UFC Record  Ht     Reach  Stance    DOB
+ ---------------  ----------  -----  -----  --------  ----------
+ Rob Font           13-7      68"    71"    Orthodox  1987-06-25
+ Raul Rosas Jr.      5-1      69"    67"    Switch    2004-10-08
+
+ Recent form (last 5):
+   Font:       L W W L W  (most recent: Sept 2025 loss by decision)
+   Rosas Jr.:  W W W W L  (4-fight win streak; debut-year loss in 2023)
+
+ MODEL PREDICTION: Raul Rosas Jr. wins — 55.7% confidence
+ Method breakdown: Decision 36.5% | Submission 34.6% | KO/TKO 28.9%
+
+ Key differentials driving prediction (Font - Rosas Jr.):
+   diff_age_at_fight:        +6315 days  (Font is 17.3 years older — massive disadvantage)
+   reach_diff_inches:           +4"      (Font has longer reach — advantage)
+   win_streak_diff:             0        (identical current win streak)
+   loss_streak_diff:           +2        (Rosas's loss record is cleaner)
+   diff_sapm:                +2.013      (Font absorbs far more strikes per minute)
+   diff_grappling_ratio:     -0.142      (Rosas significantly more grappling-focused)
+   diff_td_def_rate:         +0.420      (Font defends more takedowns — advantage)
+   diff_career_avg_ctrl_s:  -184.7s      (Rosas controls ground time far more per fight)
+   diff_career_avg_td_att:   -4.600      (Rosas attempts many more takedowns per fight)
+   diff_aggression_score:    +7.988      (Font is far more aggressive striker — advantage)
+   diff_career_length_days:  +3080       (Font has 8.4 more years of UFC experience)
+
+ ANALYSIS:
+   This is the most interesting prediction on the card. The model picks Rosas Jr. on
+   the back of two dominant signals: age differential (Font is 17+ years older) and
+   Rosas's overwhelming grappling profile. Rosas's control time and takedown attempts
+   are so far beyond Font's that even Font's superior striking aggression and reach
+   cannot compensate in the model's weights.
+
+   Rosas Jr. at 21 years old is one of the youngest fighters on the UFC roster.
+   His grappling credentials are exceptional for his age (3 submission wins, extensive
+   control time). Font has strong TD defense (+0.42) but if the fight hits the mat,
+   Rosas controls the pace.
+
+   The submission probability (34.6%) is the second-highest on the card after the
+   Borralho/de Ridder fight — appropriate given Rosas's grappling pedigree.
+
+   Counterpoint: Font's reach advantage (+4"), striking volume, and ring experience
+   are real factors. If Font keeps the fight standing and uses his reach, he can
+   outpoint the younger Rosas. The 55.7% confidence reflects genuine uncertainty.
+
+--------------------------------------------------------------------------------
+ FIGHT 4 — CAIO BORRALHO vs REINIER DE RIDDER
+ Middleweight | 3 rounds
+--------------------------------------------------------------------------------
+
+ Fighter              UFC Record  Ht     Reach  Stance    DOB
+ -------------------  ----------  -----  -----  --------  ----------
+ Caio Borralho          5-3       73"    75"    Southpaw  1993-01-16
+ Reinier de Ridder      1-4       76"    78"    Southpaw  1990-09-07
+
+ Recent form (last 5):
+   Borralho:    W L L W W  (most recent: Sept 2025 decision win)
+   de Ridder:   L L W L L  (most recent: Oct 2025 KO/TKO loss; 1-4 UFC record)
+
+ MODEL PREDICTION: Caio Borralho wins — 55.5% confidence
+ Method breakdown: KO/TKO 37.3% | Submission 31.5% | Decision 31.2%
+
+ Key differentials driving prediction (Borralho - de Ridder):
+   diff_age_at_fight:        -862 days   (de Ridder ~2.4 years older — slight disadvantage)
+   reach_diff_inches:          -3"       (de Ridder has 3" more reach — disadvantage for A)
+   win_streak_diff:            -1        (de Ridder's win streak is 1 ahead — his UFC 305 win)
+   diff_sapm:                -0.115      (de Ridder absorbs very slightly fewer strikes — small edge)
+   diff_defense_score:       +0.158      (Borralho has clearly better defensive rating)
+   diff_ko_rate:             -0.107      (de Ridder finishes by KO more often — advantage to de Ridder)
+   diff_decision_rate:       +0.464      (Borralho goes to decision far more often)
+   diff_td_def_rate:         +0.061      (marginal TD defense edge to Borralho)
+   diff_career_avg_td_att:   -5.964      (de Ridder attempts MANY more takedowns per fight)
+   diff_ewa_kd:              +0.500      (Borralho's knockdown rate is weighted higher)
+   diff_avg_opponent_losses: -3.000      (de Ridder has faced significantly tougher opposition)
+
+ ANALYSIS:
+   The model picks Borralho at 55.5% despite de Ridder having superior reach (+3"),
+   more KO finishing ability, and a substantially tougher opponent quality history.
+   Borralho's edge comes from a better defense score and the model's preference for
+   fighters with cleaner recent records — de Ridder is 1-4 in the UFC after a strong
+   career outside of it (ONE Championship etc.).
+
+   De Ridder is one of the most accomplished grapplers in the division on paper —
+   former ONE MMA and ONE Submission Grappling champion — but he has struggled to
+   translate that into UFC success. His UFC losses include submissions and KO/TKOs,
+   suggesting his grappling hasn't dominated as expected.
+
+   The model's method prediction is essentially even (KO 37, Sub 31, Dec 31), which
+   reflects genuine uncertainty about HOW this fight ends. If de Ridder gets
+   Borralho to the mat, the submission threat is real. If Borralho can keep it
+   standing, his superior defense score and knockdown rate edge carry weight.
+
+   NOTE: diff_avg_opponent_losses = -3.000 is a large gap, meaning de Ridder has
+   fought tougher opponents (fighters with fewer career losses = stronger SOS).
+   This is one case where the model may underweight de Ridder's true quality ceiling.
+
+--------------------------------------------------------------------------------
+ FIGHT 5 (MAIN EVENT) — MAX HOLLOWAY vs CHARLES OLIVEIRA
+ Lightweight | 5 rounds
+--------------------------------------------------------------------------------
+
+ Fighter           UFC Record  Ht     Reach  Stance    DOB
+ ----------------  ----------  -----  -----  --------  ----------
+ Max Holloway        23-8      71"    69"    Orthodox  1991-12-04
+ Charles Oliveira    21-14     70"    74"    Orthodox  1989-10-17
+
+ Recent form (last 5):
+   Holloway:  W W L W W  (current 2-fight win streak: UFC 308 beat Topuria, UFC 318 beat Poirier 3)
+   Oliveira:  W W W L W  (current 3-fight win streak: UFC 309 beat Jones, UFC 317 beat Topuria
+                          for LW title, Oct 2025 beat Gamrot by submission)
+
+ MODEL PREDICTION: Max Holloway wins — 60.1% confidence
+ Method breakdown: KO/TKO 40.0% | Decision 37.4% | Submission 22.6%
+
+ Key differentials driving prediction (Holloway - Oliveira):
+   diff_age_at_fight:        -778 days   (Oliveira ~2.1 years older — modest disadvantage)
+   reach_diff_inches:          -5"       (Oliveira has 5" more reach — major disadvantage for A)
+   win_streak_diff:            -3        (Oliveira on longer win streak — disadvantage for A)
+   loss_streak_diff:           +1        (Holloway has 1 more current loss streak — minor)
+   diff_sapm:                +1.496      (Holloway absorbs more strikes per minute)
+   diff_defense_score:       +0.085      (Holloway has better defensive rating)
+   diff_ko_rate:             +0.252      (Holloway finishes by KO significantly more often)
+   diff_decision_rate:       +0.214      (Holloway also goes to decision more — volume fighter)
+   diff_aggression_score:    +8.809      (Holloway is FAR more aggressive striker)
+   diff_grappling_ratio:     -0.040      (Oliveira slightly more grappling-focused)
+   diff_td_def_rate:         +0.270      (Holloway better at stopping takedowns — critical)
+   diff_career_avg_ctrl_s:   -81.1s      (Oliveira controls significantly more ground time)
+   diff_ewa_kd:              +0.413      (Holloway's knockdown rate is weighted higher)
+
+ ANALYSIS:
+   The model's most confident prediction on the card: Holloway at 60.1%. The two
+   features most responsible for this are Holloway's KO rate differential (+0.252,
+   the #17 feature by SHAP importance) and his aggression score (+8.809), combined
+   with his superior takedown defense (+0.270) that limits Oliveira's ground game.
+
+   Oliveira's major edge is his reach (+5", #18 SHAP importance) and his ongoing
+   3-fight win streak that includes a TITLE WIN over Topuria (UFC 317). The model
+   is aware of the win streak (win_streak_diff = -3) but weights the statistical
+   output profile more heavily.
+
+   The submission risk (22.6% method probability) is notably lower than Oliveira's
+   reputation might suggest. This is because the model captures Holloway's
+   outstanding TD defense (+0.270 td_def_rate differential) — Holloway almost
+   never gets taken down, which limits Oliveira's path to the submission.
+
+   The KO/TKO probability of 40.0% for this fight is driven by Holloway's offensive
+   profile — he has the highest strike output in Featherweight/Lightweight history.
+   However, this means a KO could go EITHER WAY: Oliveira's chin has been questioned
+   (has been finished 8 times), but Holloway himself has been stopped (Topuria twice).
+   The model predicts the fight ends in a finish more often than not (KO 40% +
+   Sub 22.6% = 62.6% finish probability).
+
+   BIGGEST MODEL CONCERN: Oliveira's reach (+5") is the largest physical disadvantage
+   in the model's inputs, and his recent form (beating Topuria, Jones, Gamrot) is
+   exceptional. The model may underestimate just how much Oliveira's submission
+   grappling and reach combination changes the gameplan. Oliveira has tapped out
+   numerous top lightweights from positions that seemed safe.
+
+   If Holloway can avoid the mat and use his volume striking over 5 rounds, the
+   prediction holds. If Oliveira gets even one takedown in the championship rounds,
+   the submission risk becomes significant.
+
+--------------------------------------------------------------------------------
+ UFC 326 PREDICTION SUMMARY
+--------------------------------------------------------------------------------
+
+ The model's picks are moderate-to-low confidence across the board — no fight exceeds
+ 61% — reflecting the competitive nature of this card. Three of five picks are below
+ 57% confidence, meaning the model essentially rates those matchups as uncertain.
+
+ Fights to watch for upsets (lower confidence = model less sure):
+   - Dober vs Johnson (53.9%) — genuine toss-up; Johnson's age a wild card
+   - Font vs Rosas Jr. (55.7%) — Font's experience and reach could neutralise Rosas
+   - Borralho vs de Ridder (55.5%) — de Ridder's grappling ceiling may be higher
+                                      than his UFC record suggests
+
+ Model's boldest call: Holloway over Oliveira at 60.1%.
+ This is the fight where statistical history most clearly favours one fighter.
+ Oliveira's submission game remains the primary threat to this prediction.
+
+ Combined predicted method profile across all 5 fights:
+   KO/TKO:     2-3 finishes expected (Rodrigues/Ferreira, Holloway/Oliveira likely)
+   Submission:  1 finish possible (Rosas Jr., de Ridder, Oliveira all credible threats)
+   Decision:    1-2 fights going the distance (Dober/Johnson most likely)
+
+================================================================================
+ Generated 2026-03-07 | UFC 326 preview | Model: Random Forest win_loss_v1.joblib
+ Features computed as-of 2026-03-07 from full career history in DB
+================================================================================
