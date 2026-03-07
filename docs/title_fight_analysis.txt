@@ -445,9 +445,8 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
    going 4-0 in the UFC. Borralho's edge in the model is a better defense score and
    higher knockdown rate differential.
 
-   De Ridder (4-1 in the UFC) is a genuinely accomplished fighter — former ONE MMA
-   and ONE Submission Grappling champion — who has shown he can compete at a high
-   level (wins over Meerschaert, Holland, Nickal, and Whittaker). His sole UFC loss
+   De Ridder (4-1 in the UFC) has shown he can compete at a high level
+   (wins over Meerschaert, Holland, Nickal, and Whittaker). His sole UFC loss
    was a late KO/TKO to Brendan Allen in Oct 2025. Borralho (7-1) similarly has
    only 1 UFC loss, to Imavov in Sep 2025. This is a closer contest than the model's
    55.5% edge implies.
