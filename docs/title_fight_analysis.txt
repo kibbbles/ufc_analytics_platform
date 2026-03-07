@@ -517,10 +517,10 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
    Sub 22.6% = 62.6% finish probability).
 
    BIGGEST MODEL CONCERN: Oliveira's reach (+5") is the largest physical disadvantage
-   in the model's inputs, and his recent form (beating Topuria, Jones, Gamrot) is
-   exceptional. The model may underestimate just how much Oliveira's submission
-   grappling and reach combination changes the gameplan. Oliveira has tapped out
-   numerous top lightweights from positions that seemed safe.
+   in the model's inputs, and his recent form (beating Chandler at UFC 309 and Gamrot
+   in Oct 2025) is solid. The model may underestimate just how much Oliveira's
+   submission grappling and reach combination changes the gameplan. Oliveira has tapped
+   out numerous top lightweights from positions that seemed safe.
 
    If Holloway can avoid the mat and use his volume striking over 5 rounds, the
    prediction holds. If Oliveira gets even one takedown in the championship rounds,
