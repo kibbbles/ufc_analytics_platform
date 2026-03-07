@@ -140,13 +140,15 @@ differentials narrow.
      situations — which the model partly captures but not fully — proved decisive.
 
    - UFC 323 Dvalishvili vs. Yan 2 (60.4% on Dvalishvili):
-     Dvalishvili had won 8 in a row and held the title. Yan's 7-fight data gap
-     (injury layoff from 2022–2024) likely distorted his rolling metrics. The model
-     treated him as statistically weaker than his actual skill ceiling.
+     Dvalishvili held the title with a long win streak. Yan had gone 0-3 from Apr 2022
+     to Mar 2023 (losses to Sterling, O'Malley, Dvalishvili), then won 3 straight
+     (Yadong Mar 2024, Figueiredo Nov 2024, McGhee Jul 2025) before UFC 323. Those
+     3 losses likely depressed his rolling metrics enough to make the model underrate
+     his skill ceiling despite his active win streak entering the fight.
 
    Notable non-misses at high confidence (model got these right despite difficulty):
    - UFC 302 Makhachev vs. Poirier (64.6%): Model correctly backed Makhachev.
-   - UFC 309 Jones vs. Miocic (62.6%): Model correctly backed Jones despite 4-year layoff.
+   - UFC 309 Jones vs. Miocic (62.6%): Model correctly backed Jones despite ~3-year layoff (Feb 2020 – Mar 2023).
 
 3. CHAMPION DEFENSE IS INCONSISTENTLY HANDLED
    Several misses involved reigning champions losing to challengers who had better
@@ -155,14 +157,15 @@ differentials narrow.
    variable. It treats each fighter as a statistical profile, which can disadvantage
    champions who have pulled back activity or face stylistically difficult opponents.
 
-4. INACTIVITY PENALTY
-   Yan (layoff Oct 2021 – Mar 2024, no UFC bouts in 2022 or 2023) had degraded
-   rolling metrics that made the model underestimate him — it backed Dvalishvili
-   (60.4%) but Yan won. Jones (~3-year layoff, Feb 2020 – Mar 2023) is a
-   counterexample where the model got it right anyway — career differential features
-   were sufficient. Volkanovski (post-KO-loss): model incorrectly backed Lopes twice
-   (#26, #42), undervaluing Volkanovski's historical profile. A future feature:
-   explicit activity gap penalty or "recency decay weight".
+4. LOSING STREAK DISTORTION
+   Yan went 0-3 from Apr 2022 to Mar 2023 (Sterling, O'Malley, Dvalishvili), then
+   won 3 straight before UFC 323. Those 3 consecutive losses depressed his rolling
+   metrics even though he entered the rematch on a win streak — the model backed
+   Dvalishvili (60.4%) but Yan won. Jones (~3-year layoff, Feb 2020 – Mar 2023) is
+   a contrast case where genuine inactivity existed but career differential features
+   were sufficient to identify him. Volkanovski (post-KO-loss): model incorrectly
+   backed Lopes twice (#26, #42), undervaluing Volkanovski's historical profile.
+   A future feature: explicit "recent loss weight decay" or win-streak recency bias.
 
 5. GENDER DIVISION PARITY
    Women's title fights: 6 correct / 10 total = 60.0% — essentially matching the
