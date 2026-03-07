@@ -46,54 +46,50 @@ differentials narrow.
   - Model picks the fighter it assigns >50% probability to.
 
   #  Date        Event                              Fighter A         Fighter B         Pick              Conf%  Actual Winner     Method                Rd  OK?
-  -  ----------  ---------------------------------  ----------------  ----------------  ----------------  -----  ----------------  --------------------  --  ---
-  1  2023-12-16  UFC 296: Edwards vs. Covington     Leon Edwards      Colby Covington   Covington         51.1%  Leon Edwards      Decision - Unanimous   5  YES
-  2  2023-12-16  UFC 296: Edwards vs. Covington     Alex Pantoja      Brandon Royval    Royval            53.4%  Alex Pantoja      Decision - Unanimous   5  YES
-  3  2024-01-20  UFC 297: Strickland vs. Du Plessis Sean Strickland   Dricus Du Plessis Du Plessis        60.0%  Dricus Du Plessis Decision - Split       5  YES
-  4  2024-01-20  UFC 297: Strickland vs. Du Plessis Raquel Pennington  Mayra Bueno Silva Bueno Silva      63.7%  R. Pennington     Decision - Unanimous   5  YES
-  5  2024-02-17  UFC 298: Volkanovski vs. Topuria   A. Volkanovski    Ilia Topuria      Topuria           60.5%  Ilia Topuria      KO/TKO                 2  YES
-  6  2024-03-09  UFC 299: O'Malley vs. Vera 2       Sean O'Malley     Marlon Vera       Vera              60.4%  Sean O'Malley     Decision - Unanimous   5  YES
-  7  2024-04-13  UFC 300: Pereira vs. Hill          Zhang Weili       Yan Xiaonan       Weili             57.8%  Zhang Weili       Decision - Unanimous   5  YES
-  8  2024-04-13  UFC 300: Pereira vs. Hill          Alex Pereira      Jamahal Hill      Hill              58.2%  Alex Pereira      KO/TKO                 1  NO
-  9  2024-05-04  UFC 301: Pantoja vs. Erceg         Alex Pantoja      Steve Erceg       Pantoja           56.3%  Alexandre Pantoja Decision - Unanimous   5  NO *
- 10  2024-06-01  UFC 302: Makhachev vs. Poirier     Islam Makhachev   Dustin Poirier    Poirier           64.6%  Islam Makhachev   Submission             5  YES
- 11  2024-06-29  UFC 303: Pereira vs. Prochazka 2   Alex Pereira      Jiri Prochazka    Pereira           51.8%  Alex Pereira      KO/TKO                 2  NO *
- 12  2024-07-27  UFC 304: Edwards vs. Muhammad 2    Tom Aspinall      Curtis Blaydes    Blaydes           51.2%  Tom Aspinall      KO/TKO                 1  YES
- 13  2024-07-27  UFC 304: Edwards vs. Muhammad 2    Leon Edwards      Belal Muhammad    Edwards           57.0%  Belal Muhammad    Decision - Unanimous   5  NO
- 14  2024-08-17  UFC 305: Du Plessis vs. Adesanya   Dricus Du Plessis Israel Adesanya   Du Plessis        62.8%  Dricus Du Plessis Submission             4  YES
- 15  2024-09-14  UFC 306: Noche UFC                 Sean O'Malley     Merab Dvalishvili O'Malley          53.5%  Merab Dvalishvili Decision - Unanimous   5  YES
- 16  2024-09-14  UFC 306: Noche UFC                 Alexa Grasso      V. Shevchenko     Grasso            54.2%  V. Shevchenko     Decision - Unanimous   5  YES
- 17  2024-10-05  UFC 307: Pereira vs. Rountree Jr.  R. Pennington     Julianna Pena     Pena              55.8%  Julianna Pena     Decision - Split       5  NO *
- 18  2024-10-05  UFC 307: Pereira vs. Rountree Jr.  Alex Pereira      Kevin Rountree Jr. Pereira          54.8%  Alex Pereira      KO/TKO                 4  YES
- 19  2024-10-26  UFC 308: Topuria vs. Holloway      Ilia Topuria      Max Holloway      Topuria           59.3%  Ilia Topuria      KO/TKO                 3  YES
- 20  2024-11-16  UFC 309: Jones vs. Miocic          Jon Jones         Stipe Miocic      Miocic            62.6%  Jon Jones         KO/TKO                 3  YES
- 21  2025-01-18  UFC 311: Makhachev vs. Moicano     Merab Dvalishvili Umar Nurmagomedov Nurmagomedov      50.9%  Merab Dvalishvili Decision - Unanimous   5  NO
- 22  2025-01-18  UFC 311: Makhachev vs. Moicano     Islam Makhachev   Renato Moicano    Moicano           64.5%  Islam Makhachev   Submission             1  YES
- 23  2025-02-08  UFC 312: Du Plessis vs. Strickland Zhang Weili       Tracy Suarez      Weili             57.4%  Zhang Weili       Decision - Unanimous   5  NO *
- 24  2025-02-08  UFC 312: Du Plessis vs. Strickland Dricus Du Plessis Sean Strickland   Du Plessis        57.0%  Dricus Du Plessis Decision - Unanimous   5  YES
- 25  2025-03-08  UFC 313: Pereira vs. Ankalaev      Alex Pereira      Magomed Ankalaev  Pereira           57.2%  Magomed Ankalaev  Decision - Unanimous   5  YES
- 26  2025-04-12  UFC 314: Volkanovski vs. Lopes     A. Volkanovski    Diego Lopes       Volkanovski       54.1%  A. Volkanovski    Decision - Unanimous   5  NO *
- 27  2025-05-10  UFC 315: Muhammad vs. Della Maddal V. Shevchenko     Manon Fiorot      Fiorot            52.7%  V. Shevchenko     Decision - Unanimous   5  NO
- 28  2025-05-10  UFC 315: Muhammad vs. Della Maddal Belal Muhammad    J. Della Maddalena Della Maddalena  53.4%  Della Maddalena   Decision - Unanimous   5  YES
- 29  2025-06-07  UFC 316: Dvalishvili vs. O'Malley  Julianna Pena     Ketlen Harrison   Harrison          63.7%  Ketlen Harrison   Submission             2  YES
- 30  2025-06-07  UFC 316: Dvalishvili vs. O'Malley  Merab Dvalishvili Sean O'Malley     Dvalishvili       55.9%  Merab Dvalishvili Submission             3  YES
- 31  2025-06-28  UFC 317: Topuria vs. Oliveira      Alexandre Pantoja Kai Kara-France   Kara-France       54.5%  Alexandre Pantoja Submission             3  YES
- 32  2025-06-28  UFC 317: Topuria vs. Oliveira      Ilia Topuria      Charles Oliveira  Topuria           67.0%  Ilia Topuria      KO/TKO                 1  YES
- 33  2025-08-16  UFC 319: Du Plessis vs. Chimaev    Dricus Du Plessis Khamzat Chimaev   Du Plessis        53.7%  Khamzat Chimaev   Decision - Unanimous   5  NO
- 34  2025-10-04  UFC 320: Ankalaev vs. Pereira 2    Magomed Ankalaev  Alex Pereira      Pereira           56.7%  Alex Pereira      KO/TKO                 1  NO *
- 35  2025-10-04  UFC 320: Ankalaev vs. Pereira 2    Merab Dvalishvili Cory Sandhagen    Dvalishvili       62.9%  Merab Dvalishvili Decision - Unanimous   5  YES
- 36  2025-10-25  UFC 321: Aspinall vs. Gane         Virna Jandiroba   Mackenzie Dern    Jandiroba         51.2%  Mackenzie Dern    Decision - Unanimous   5  NO
- 37  2025-11-15  UFC 322: Della Maddalena vs. Makh. V. Shevchenko     Zhang Weili       Shevchenko        50.5%  V. Shevchenko     Decision - Unanimous   5  YES
- 38  2025-11-15  UFC 322: Della Maddalena vs. Makh. J. Della Maddalena Islam Makhachev  Della Maddalena   52.1%  Islam Makhachev   Decision - Unanimous   5  NO
- 39  2025-12-06  UFC 323: Dvalishvili vs. Yan 2     Merab Dvalishvili Petr Yan          Dvalishvili       60.4%  Petr Yan          Decision - Unanimous   5  NO
- 40  2025-12-06  UFC 323: Dvalishvili vs. Yan 2     Alexandre Pantoja Junior Albini     Pantoja           59.7%  Junior Albini     KO/TKO                 1  YES
- 41  2026-01-24  UFC 324: Gaethje vs. Pimblett      Justin Gaethje    Paddy Pimblett    Pimblett          61.2%  Justin Gaethje    Decision - Unanimous   5  NO
- 42  2026-01-31  UFC 325: Volkanovski vs. Lopes 2   A. Volkanovski    Diego Lopes       Lopes             52.4%  A. Volkanovski    Decision - Unanimous   5  NO
+ -  ----------  ---------------------------------  ----------------  ----------------  ----------------  -----  ----------------  --------------------  --  ---
+  1  2023-12-16  UFC 296: Edwards vs. Covington     Leon Edwards      Colby Covington   Leon Edwards      51.1%  Leon Edwards      Decision - Unanimous  5.0  YES
+  2  2023-12-16  UFC 296: Edwards vs. Covington     Alexandre Pantoj  Brandon Royval    Alexandre Pantoj  53.4%  Alexandre Pantoj  Decision - Unanimous  5.0  YES
+  3  2024-01-20  UFC 297: Strickland vs. Du Plessi  Sean Strickland   Dricus Du Plessi  Dricus Du Plessi  60.0%  Dricus Du Plessi  Decision - Split      5.0  YES
+  4  2024-01-20  UFC 297: Strickland vs. Du Plessi  Raquel Penningto  Mayra Bueno Silv  Raquel Penningto  63.7%  Raquel Penningto  Decision - Unanimous  5.0  YES
+  5  2024-02-17  UFC 298: Volkanovski vs. Topuria   Alexander Volkan  Ilia Topuria      Ilia Topuria      60.5%  Ilia Topuria      KO/TKO                2.0  YES
+  6  2024-03-09  UFC 299: O'Malley vs. Vera 2       Sean O'Malley     Marlon Vera       Sean O'Malley     60.4%  Sean O'Malley     Decision - Unanimous  5.0  YES
+  7  2024-04-13  UFC 300: Pereira vs. Hill          Zhang Weili       Yan Xiaonan       Zhang Weili       57.8%  Zhang Weili       Decision - Unanimous  5.0  YES
+  8  2024-04-13  UFC 300: Pereira vs. Hill          Alex Pereira      Jamahal Hill      Jamahal Hill      58.2%  Alex Pereira      KO/TKO                1.0  NO
+  9  2024-05-04  UFC 301: Pantoja vs. Erceg         Alexandre Pantoj  Steve Erceg       Steve Erceg       56.3%  Alexandre Pantoj  Decision - Unanimous  5.0  NO
+ 10  2024-06-01  UFC 302: Makhachev vs. Poirier     Islam Makhachev   Dustin Poirier    Islam Makhachev   64.6%  Islam Makhachev   Submission            5.0  YES
+ 11  2024-06-29  UFC 303: Pereira vs. Prochazka 2   Alex Pereira      Jiri Prochazka    Jiri Prochazka    51.8%  Alex Pereira      KO/TKO                2.0  NO
+ 12  2024-07-27  UFC 304: Edwards vs. Muhammad 2    Tom Aspinall      Curtis Blaydes    Tom Aspinall      51.2%  Tom Aspinall      KO/TKO                1.0  YES
+ 13  2024-07-27  UFC 304: Edwards vs. Muhammad 2    Leon Edwards      Belal Muhammad    Leon Edwards      57.0%  Belal Muhammad    Decision - Unanimous  5.0  NO
+ 14  2024-08-17  UFC 305: Du Plessis vs. Adesanya   Dricus Du Plessi  Israel Adesanya   Dricus Du Plessi  62.8%  Dricus Du Plessi  Submission            4.0  YES
+ 15  2024-09-14  UFC 306: Riyadh Season Noche UFC   Sean O'Malley     Merab Dvalishvil  Merab Dvalishvil  53.5%  Merab Dvalishvil  Decision - Unanimous  5.0  YES
+ 16  2024-09-14  UFC 306: Riyadh Season Noche UFC   Alexa Grasso      Valentina Shevch  Valentina Shevch  54.2%  Valentina Shevch  Decision - Unanimous  5.0  YES
+ 17  2024-10-05  UFC 307: Pereira vs. Rountree Jr.  Raquel Penningto  Julianna Pena     Raquel Penningto  55.8%  Julianna Pena     Decision - Split      5.0  NO
+ 18  2024-10-05  UFC 307: Pereira vs. Rountree Jr.  Alex Pereira      Khalil Rountree   Alex Pereira      54.8%  Alex Pereira      KO/TKO                4.0  YES
+ 19  2024-10-26  UFC 308: Topuria vs. Holloway      Ilia Topuria      Max Holloway      Ilia Topuria      59.3%  Ilia Topuria      KO/TKO                3.0  YES
+ 20  2024-11-16  UFC 309: Jones vs. Miocic          Jon Jones         Stipe Miocic      Jon Jones         62.6%  Jon Jones         KO/TKO                3.0  YES
+ 21  2025-01-18  UFC 311: Makhachev vs. Moicano     Merab Dvalishvil  Umar Nurmagomedo  Umar Nurmagomedo  50.9%  Merab Dvalishvil  Decision - Unanimous  5.0  NO
+ 22  2025-01-18  UFC 311: Makhachev vs. Moicano     Islam Makhachev   Renato Moicano    Islam Makhachev   64.5%  Islam Makhachev   Submission            1.0  YES
+ 23  2025-02-08  UFC 312: Du Plessis vs. Stricklan  Zhang Weili       Tatiana Suarez    Tatiana Suarez    57.4%  Zhang Weili       Decision - Unanimous  5.0  NO
+ 24  2025-02-08  UFC 312: Du Plessis vs. Stricklan  Dricus Du Plessi  Sean Strickland   Dricus Du Plessi  57.0%  Dricus Du Plessi  Decision - Unanimous  5.0  YES
+ 25  2025-03-08  UFC 313: Pereira vs. Ankalaev      Alex Pereira      Magomed Ankalaev  Magomed Ankalaev  57.2%  Magomed Ankalaev  Decision - Unanimous  5.0  YES
+ 26  2025-04-12  UFC 314: Volkanovski vs. Lopes     Alexander Volkan  Diego Lopes       Diego Lopes       54.1%  Alexander Volkan  Decision - Unanimous  5.0  NO
+ 27  2025-05-10  UFC 315: Muhammad vs. Della Madda  Valentina Shevch  Manon Fiorot      Manon Fiorot      52.7%  Valentina Shevch  Decision - Unanimous  5.0  NO
+ 28  2025-05-10  UFC 315: Muhammad vs. Della Madda  Belal Muhammad    Jack Della Madda  Jack Della Madda  53.4%  Jack Della Madda  Decision - Unanimous  5.0  YES
+ 29  2025-06-07  UFC 316: Dvalishvili vs. O'Malley  Julianna Pena     Kayla Harrison    Kayla Harrison    63.7%  Kayla Harrison    Submission            2.0  YES
+ 30  2025-06-07  UFC 316: Dvalishvili vs. O'Malley  Merab Dvalishvil  Sean O'Malley     Merab Dvalishvil  55.9%  Merab Dvalishvil  Submission            3.0  YES
+ 31  2025-06-28  UFC 317: Topuria vs. Oliveira      Alexandre Pantoj  Kai Kara-France   Alexandre Pantoj  54.5%  Alexandre Pantoj  Submission            3.0  YES
+ 32  2025-06-28  UFC 317: Topuria vs. Oliveira      Ilia Topuria      Charles Oliveira  Ilia Topuria      67.0%  Ilia Topuria      KO/TKO                1.0  YES
+ 33  2025-08-16  UFC 319: Du Plessis vs. Chimaev    Dricus Du Plessi  Khamzat Chimaev   Dricus Du Plessi  53.7%  Khamzat Chimaev   Decision - Unanimous  5.0  NO
+ 34  2025-10-04  UFC 320: Ankalaev vs. Pereira 2    Magomed Ankalaev  Alex Pereira      Magomed Ankalaev  56.7%  Alex Pereira      KO/TKO                1.0  NO
+ 35  2025-10-04  UFC 320: Ankalaev vs. Pereira 2    Merab Dvalishvil  Cory Sandhagen    Merab Dvalishvil  62.9%  Merab Dvalishvil  Decision - Unanimous  5.0  YES
+ 36  2025-10-25  UFC 321: Aspinall vs. Gane         Virna Jandiroba   Mackenzie Dern    Virna Jandiroba   51.2%  Mackenzie Dern    Decision - Unanimous  5.0  NO
+ 37  2025-11-15  UFC 322: Della Maddalena vs. Makh  Valentina Shevch  Zhang Weili       Valentina Shevch  50.5%  Valentina Shevch  Decision - Unanimous  5.0  YES
+ 38  2025-11-15  UFC 322: Della Maddalena vs. Makh  Jack Della Madda  Islam Makhachev   Jack Della Madda  52.1%  Islam Makhachev   Decision - Unanimous  5.0  NO
+ 39  2025-12-06  UFC 323: Dvalishvili vs. Yan 2     Merab Dvalishvil  Petr Yan          Merab Dvalishvil  60.4%  Petr Yan          Decision - Unanimous  5.0  NO
+ 40  2025-12-06  UFC 323: Dvalishvili vs. Yan 2     Alexandre Pantoj  Joshua Van        Joshua Van        59.7%  Joshua Van        KO/TKO                1.0  YES
+ 41  2026-01-24  UFC 324: Gaethje vs. Pimblett      Justin Gaethje    Paddy Pimblett    Paddy Pimblett    61.2%  Justin Gaethje    Decision - Unanimous  5.0  NO
+ 42  2026-01-31  UFC 325: Volkanovski vs. Lopes 2   Alexander Volkan  Diego Lopes       Diego Lopes       52.4%  Alexander Volkan  Decision - Unanimous  5.0  NO
 
-  * = Entries marked with an asterisk are cases where the fighter_a / fighter_b
-      internal ordering in fight_details appears inverted relative to conventional
-      billing. The model's prediction (correct vs. incorrect) is still computed
-      accurately against the parquet ground-truth label (fighter_a_wins).
 
 --------------------------------------------------------------------------------
  RESULT: 26 / 42 CORRECT  =  61.9%   (AUC: 0.716)
@@ -103,24 +99,24 @@ differentials narrow.
  UNAMBIGUOUS MISSES — ANALYSIS
 --------------------------------------------------------------------------------
 
- #  Event                              Model Picked       Actual Winner      Method                Conf%
- --  ---------------------------------  -----------------  -----------------  --------------------  -----
-  8  UFC 300: Pereira vs. Hill          Jamahal Hill       Alex Pereira       KO/TKO Rd 1           58.2%
- 10  UFC 302: Makhachev vs. Poirier     Dustin Poirier     Islam Makhachev    Submission Rd 5       64.6%
- 13  UFC 304: Edwards vs. Muhammad 2    Leon Edwards       Belal Muhammad     Decision - Unanimous   57.0%
- 20  UFC 309: Jones vs. Miocic         Stipe Miocic       Jon Jones          KO/TKO Rd 3           62.6%
- 21  UFC 311: Makhachev vs. Moicano    U. Nurmagomedov    Merab Dvalishvili  Decision - Unanimous   50.9%
- 27  UFC 315: Muhammad vs. Del. Madd.  Manon Fiorot       V. Shevchenko      Decision - Unanimous   52.7%
- 28  UFC 315: Muhammad vs. Del. Madd.  J. Della Maddalena Belal Muhammad     Decision - Unanimous   53.4%
- 33  UFC 319: Du Plessis vs. Chimaev   Dricus Du Plessis  Khamzat Chimaev    Decision - Unanimous   53.7%
- 36  UFC 321: Aspinall vs. Gane        Virna Jandiroba    Mackenzie Dern     Decision - Unanimous   51.2%
- 38  UFC 322: Della Madd. vs. Makh.    J. Della Maddalena Islam Makhachev    Decision - Unanimous   52.1%
- 39  UFC 323: Dvalishvili vs. Yan 2    Merab Dvalishvili  Petr Yan           Decision - Unanimous   60.4%
- 41  UFC 324: Gaethje vs. Pimblett     Paddy Pimblett     Justin Gaethje     Decision - Unanimous   61.2%
- 42  UFC 325: Volkanovski vs. Lopes 2  Diego Lopes        A. Volkanovski     Decision - Unanimous   52.4%
-
- (Entries 9, 11, 17, 23, 26, 34 omitted — data alignment artifacts;
-  total misses = 16, see full table above)
+ #  Event                              Model Picked        Actual Winner       Method                Conf%
+ --  ---------------------------------  ------------------  ------------------  --------------------  -----
+  8  UFC 300: Pereira vs. Hill          Jamahal Hill        Alex Pereira        KO/TKO Rd 1           58.2%
+  9  UFC 301: Pantoja vs. Erceg         Steve Erceg         Alexandre Pantoja   Decision - Unanimous   56.3%
+ 11  UFC 303: Pereira vs. Prochazka 2   Jiri Prochazka      Alex Pereira        KO/TKO Rd 2           51.8%
+ 13  UFC 304: Edwards vs. Muhammad 2    Leon Edwards        Belal Muhammad      Decision - Unanimous   57.0%
+ 17  UFC 307: Pereira vs. Rountree Jr.  Raquel Pennington   Julianna Pena       Decision - Split Rd 5  55.8%
+ 21  UFC 311: Makhachev vs. Moicano     Umar Nurmagomedov   Merab Dvalishvili   Decision - Unanimous   50.9%
+ 23  UFC 312: Du Plessis vs. Stricklan  Tatiana Suarez      Zhang Weili         Decision - Unanimous   57.4%
+ 26  UFC 314: Volkanovski vs. Lopes     Diego Lopes         Alexander Volkanov. Decision - Unanimous   54.1%
+ 27  UFC 315: Muhammad vs. Del. Madd.   Manon Fiorot        Valentina Shevchen. Decision - Unanimous   52.7%
+ 33  UFC 319: Du Plessis vs. Chimaev    Dricus Du Plessis   Khamzat Chimaev     Decision - Unanimous   53.7%
+ 34  UFC 320: Ankalaev vs. Pereira 2    Magomed Ankalaev    Alex Pereira        KO/TKO Rd 1           56.7%
+ 36  UFC 321: Aspinall vs. Gane         Virna Jandiroba     Mackenzie Dern      Decision - Unanimous   51.2%
+ 38  UFC 322: Della Madd. vs. Makh.     Jack Della Maddal.  Islam Makhachev     Decision - Unanimous   52.1%
+ 39  UFC 323: Dvalishvili vs. Yan 2     Merab Dvalishvili   Petr Yan            Decision - Unanimous   60.4%
+ 41  UFC 324: Gaethje vs. Pimblett      Paddy Pimblett      Justin Gaethje      Decision - Unanimous   61.2%
+ 42  UFC 325: Volkanovski vs. Lopes 2   Diego Lopes         Alexander Volkanov. Decision - Unanimous   52.4%
 
 --------------------------------------------------------------------------------
  PATTERNS IN MISSES
@@ -136,7 +132,7 @@ differentials narrow.
    less predictive weight.
 
 2. HIGH-CONFIDENCE MISSES STAND OUT
-   Four misses exceeded 60% confidence — these are the model's biggest blind spots:
+   Two misses exceeded 60% confidence — these are the model's biggest blind spots:
 
    - UFC 324 Gaethje vs. Pimblett (61.2% on Pimblett):
      Gaethje's career stats (high output, durable) came in well below Pimblett's
@@ -148,17 +144,9 @@ differentials narrow.
      (injury layoff from 2022–2024) likely distorted his rolling metrics. The model
      treated him as statistically weaker than his actual skill ceiling.
 
-   - UFC 302 Makhachev vs. Poirier (64.6% on Poirier):
-     Poirier's output stats were higher across nearly every rolling window.
-     Makhachev's elite submission grappling — the decisive factor — is not directly
-     captured by striking/takedown differentials. The model didn't know the fight
-     would end at the championship round via submission.
-
-   - UFC 309 Jones vs. Miocic (62.6% on Miocic):
-     Jon Jones had a 4-year layoff before the fight; his rolling window features
-     were empty or stale. The model correctly identified Miocic's recent activity
-     and strong stats, but Jones's all-time pedigree wasn't encodable in
-     differential features.
+   Notable non-misses at high confidence (model got these right despite difficulty):
+   - UFC 302 Makhachev vs. Poirier (64.6%): Model correctly backed Makhachev.
+   - UFC 309 Jones vs. Miocic (62.6%): Model correctly backed Jones despite 4-year layoff.
 
 3. CHAMPION DEFENSE IS INCONSISTENTLY HANDLED
    Several misses involved reigning champions losing to challengers who had better
@@ -168,10 +156,12 @@ differentials narrow.
    champions who have pulled back activity or face stylistically difficult opponents.
 
 4. INACTIVITY PENALTY
-   Jones (4-year layoff), Yan (2-year layoff), Volkanovski (came off a KO loss to
-   Topuria) all had degraded rolling metrics. These fighters' true skill levels were
-   not reflected in their recent stats. A future feature: explicit activity gap
-   penalty or a "recency decay weight" on historical performance.
+   Yan (2-year layoff from 2022–2024) had degraded rolling metrics that made the
+   model underestimate him — it backed Dvalishvili (60.4%) but Yan won. Jones
+   (4-year layoff) is a counterexample where the model got it right anyway — career
+   differential features were sufficient. Volkanovski (post-KO-loss): model
+   incorrectly backed Lopes twice (#26, #42), undervaluing Volkanovski's historical
+   profile. A future feature: explicit activity gap penalty or "recency decay weight".
 
 5. GENDER DIVISION PARITY
    Women's title fights: 6 correct / 10 total = 60.0% — essentially matching the
@@ -185,16 +175,15 @@ differentials narrow.
    correctly identifying his superior recent form and striking output vs. a
    Volkanovski who had been KO'd recently.
 
- - UFC 309 Jones vs. Miocic — model picked Miocic (wrong outcome), but this shows
-   the model correctly flags when a fighter's stats are stale (Jones's 4-yr gap).
+ - UFC 309 Jones vs. Miocic (62.6%): Model correctly backed Jones despite his
+   4-year layoff. Rolling metrics for active fighters (Miocic) looked stronger,
+   but Jones's career differential features were still sufficient to identify him.
 
  - UFC 317 Topuria vs. Oliveira (67.0%): Highest confidence correct pick in the
    title subset. Topuria's dominant output differentials were the strongest signal.
 
- - UFC 302 / UFC 311 Makhachev bouts: Model was 1/2 — it correctly picked
-   Makhachev over Moicano (64.5%) but missed on the Poirier fight (64.6% wrong).
-   In both cases confidence was similarly high — illustrating the irreducible
-   variance in elite-level fights.
+ - UFC 302 / UFC 311 Makhachev bouts: Model was 2/2 — correctly picked Makhachev
+   over Poirier (64.6%) and over Moicano (64.5%). High confidence, both correct.
 
 --------------------------------------------------------------------------------
  COMPARISON TO BASELINE
