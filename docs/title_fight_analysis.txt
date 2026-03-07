@@ -156,12 +156,13 @@ differentials narrow.
    champions who have pulled back activity or face stylistically difficult opponents.
 
 4. INACTIVITY PENALTY
-   Yan (2-year layoff from 2022–2024) had degraded rolling metrics that made the
-   model underestimate him — it backed Dvalishvili (60.4%) but Yan won. Jones
-   (4-year layoff) is a counterexample where the model got it right anyway — career
-   differential features were sufficient. Volkanovski (post-KO-loss): model
-   incorrectly backed Lopes twice (#26, #42), undervaluing Volkanovski's historical
-   profile. A future feature: explicit activity gap penalty or "recency decay weight".
+   Yan (layoff Oct 2021 – Mar 2024, no UFC bouts in 2022 or 2023) had degraded
+   rolling metrics that made the model underestimate him — it backed Dvalishvili
+   (60.4%) but Yan won. Jones (~3-year layoff, Feb 2020 – Mar 2023) is a
+   counterexample where the model got it right anyway — career differential features
+   were sufficient. Volkanovski (post-KO-loss): model incorrectly backed Lopes twice
+   (#26, #42), undervaluing Volkanovski's historical profile. A future feature:
+   explicit activity gap penalty or "recency decay weight".
 
 5. GENDER DIVISION PARITY
    Women's title fights: 6 correct / 10 total = 60.0% — essentially matching the
@@ -176,8 +177,9 @@ differentials narrow.
    Volkanovski who had been KO'd recently.
 
  - UFC 309 Jones vs. Miocic (62.6%): Model correctly backed Jones despite his
-   4-year layoff. Rolling metrics for active fighters (Miocic) looked stronger,
-   but Jones's career differential features were still sufficient to identify him.
+   ~3-year layoff (Feb 2020 – Mar 2023). Rolling metrics for active fighters
+   (Miocic) looked stronger, but Jones's career differential features were
+   sufficient to identify him.
 
  - UFC 317 Topuria vs. Oliveira (67.0%): Highest confidence correct pick in the
    title subset. Topuria's dominant output differentials were the strongest signal.
@@ -459,9 +461,10 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
  Charles Oliveira    21-14     70"    74"    Orthodox  1989-10-17
 
  Recent form (last 5):
-   Holloway:  W W L W W  (current 2-fight win streak: UFC 308 beat Topuria, UFC 318 beat Poirier 3)
-   Oliveira:  W W W L W  (current 3-fight win streak: UFC 309 beat Jones, UFC 317 beat Topuria
-                          for LW title, Oct 2025 beat Gamrot by submission)
+   Holloway:  W W L L W  (current 1-fight win streak: UFC 318 beat Poirier; prior losses
+                          to Gaethje at UFC 300, Topuria at UFC 308)
+   Oliveira:  W W W L W  (current 1-fight win streak: Oct 2025 beat Gamrot by sub;
+                          UFC 309 beat Chandler by decision, UFC 317 LOST to Topuria KO Rd 1)
 
  MODEL PREDICTION: Max Holloway wins — 60.1% confidence
  Method breakdown: KO/TKO 40.0% | Decision 37.4% | Submission 22.6%
@@ -487,10 +490,10 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
    the #17 feature by SHAP importance) and his aggression score (+8.809), combined
    with his superior takedown defense (+0.270) that limits Oliveira's ground game.
 
-   Oliveira's major edge is his reach (+5", #18 SHAP importance) and his ongoing
-   3-fight win streak that includes a TITLE WIN over Topuria (UFC 317). The model
-   is aware of the win streak (win_streak_diff = -3) but weights the statistical
-   output profile more heavily.
+   Oliveira's major edge is his reach (+5", #18 SHAP importance) and his most recent
+   form: he beat Chandler at UFC 309 and Gamrot in Oct 2025, but suffered a KO/TKO
+   loss to Topuria at UFC 317 (Rd 1). The model is aware of the win-streak differential
+   but weights the statistical output profile more heavily.
 
    The submission risk (22.6% method probability) is notably lower than Oliveira's
    reputation might suggest. This is because the model captures Holloway's
