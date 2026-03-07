@@ -265,12 +265,14 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
 
  Fighter            UFC Record  Ht     Reach  Stance    DOB
  -----------------  ----------  -----  -----  --------  ----------
- Gregory Rodrigues    3-9       75"    75"    Orthodox  1992-02-17
- Brunno Ferreira      4-4       70"    72"    Orthodox  1992-11-04
+ Gregory Rodrigues    9-3       75"    75"    Orthodox  1992-02-17
+ Brunno Ferreira      6-2       70"    72"    Orthodox  1992-11-04
 
  Recent form (last 5):
-   Rodrigues:  L L W L L  (2 straight losses entering this fight)
-   Ferreira:   L W W W W  (4-fight win streak before Dec 2025 loss)
+   Rodrigues:  W W L W W  (2-win streak; beat Hermansson Jun 2025, Kopylov Nov 2025;
+                           prior loss to Cannonier Feb 2025)
+   Ferreira:   W L W W W  (3-win streak: Petrosyan Mar 2025, McVey Jul 2025, Vettori Dec 2025;
+                           prior loss to Magomedov Oct 2024)
 
  MODEL PREDICTION: Gregory Rodrigues wins — 58.9% confidence
  Method breakdown: KO/TKO 45.0% | Decision 30.3% | Submission 24.8%
@@ -288,19 +290,17 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
    diff_career_length_days:  +595        (Rodrigues has more UFC experience by ~20 months)
 
  ANALYSIS:
-   The model leans Rodrigues primarily on his higher aggression, KO finishing rate,
-   and reach advantage. However, this is one of the shakier predictions on the card —
-   Rodrigues's recent form is dismal (2-5 in his last 7), and his high SAPM (+1.75)
-   signals he absorbs significantly more punishment than Ferreira. The model is
-   essentially picking the "more active/aggressive" fighter, but Ferreira enters this
-   fight off a stronger run and at a lighter bodyweight suggesting fresher durability.
+   The model leans Rodrigues on his higher aggression, KO finishing rate, and reach
+   advantage. Both fighters are on active win streaks entering this fight (Rodrigues 2,
+   Ferreira 3), making this a genuine clash of in-form middleweights. Rodrigues's high
+   SAPM (+1.75) signals he absorbs significantly more punishment than Ferreira, which
+   is the main concern for his side.
 
-   Ferreira's 4-fight win streak (all stoppages: 3 submissions, 1 KO) before his Dec
-   2025 loss suggests the model may be underweighting Ferreira's finishing ability.
+   Ferreira's 3-win streak includes a Dec 2025 decision win over Marvin Vettori. His
+   prior loss (Oct 2024 to Magomedov by submission) is the one blemish. The model may
+   slightly underweight Ferreira's finishing ability — he has stoppages via both KO
+   and submission in recent wins.
    The 58.9% confidence is low — treat this as a true coin-flip leaning Rodrigues.
-
-   Model's predicted method (KO/TKO at 45%) reflects both fighters' violent tendencies.
-   Rodrigues has never gone the distance in his last 8 fights.
 
 --------------------------------------------------------------------------------
  FIGHT 2 — DREW DOBER vs MICHAEL JOHNSON
@@ -309,12 +309,14 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
 
  Fighter          UFC Record  Ht     Reach  Stance    DOB
  ---------------  ----------  -----  -----  --------  ----------
- Drew Dober         17-8      68"    70"    Southpaw  1988-10-19
- Michael Johnson    17-14     70"    73"    Southpaw  1986-06-04
+ Drew Dober         14-12     68"    70"    Southpaw  1988-10-19
+ Michael Johnson    16-15     70"    73"    Southpaw  1986-06-04
 
  Recent form (last 5):
-   Dober:    L W L W W  (most recent fight Oct 2025: KO/TKO loss)
-   Johnson:  W W W W W  (4-fight win streak, all 2023-2025)
+   Dober:    W L L L W  (most recent: KO/TKO WIN vs Prepolec Oct 2025; prior 3-fight
+                         skid: Moicano L Feb 2024, Silva L Jul 2024, Torres L Mar 2025)
+   Johnson:  W L W W W  (3-win streak: Flowers Feb 2024, Azaitar Dec 2024, Zellhuber Jul 2025;
+                         prior loss to Diego Ferreira May 2023)
 
  MODEL PREDICTION: Michael Johnson wins — 53.9% confidence
  Method breakdown: Decision 35.9% | KO/TKO 34.7% | Submission 29.4%
@@ -337,14 +339,14 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
    effectively a coin flip. Both fighters are southpaw lightweights with lengthy careers.
 
    The key differentiator is Johnson's superior defensive output (defense_score -0.126
-   differential, higher reach) and his remarkable 4-fight win streak for a 39-year-old
-   veteran. However, Johnson's age (39 on fight night) is a significant concern — the
-   model penalises age but may not fully capture the extent to which a 39-year-old
-   fighter's output declines sharply.
+   differential, higher reach) and his 3-fight win streak for a 39-year-old veteran.
+   However, Johnson's age (39 on fight night) is a significant concern — the model
+   penalises age but may not fully capture the decline a 39-year-old faces.
 
    Dober's higher KO rate is the main countervailing factor — he is the bigger finisher
-   of the two historically. His most recent loss was a KO/TKO which may signal
-   durability concerns. Both fighters live and die by the KO.
+   of the two historically. Dober enters on a 1-fight win streak (KO/TKO vs Prepolec
+   Oct 2025) after a 3-fight losing run, suggesting some uncertainty about his
+   durability. Both fighters live and die by the KO.
 
    Method is genuinely uncertain at nearly even odds. The decision line being highest
    reflects that this is a fight between two experienced veterans who can eat shots
@@ -357,12 +359,14 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
 
  Fighter          UFC Record  Ht     Reach  Stance    DOB
  ---------------  ----------  -----  -----  --------  ----------
- Rob Font           13-7      68"    71"    Orthodox  1987-06-25
+ Rob Font           12-8      68"    71"    Orthodox  1987-06-25
  Raul Rosas Jr.      5-1      69"    67"    Switch    2004-10-08
 
  Recent form (last 5):
-   Font:       L W W L W  (most recent: Sept 2025 loss by decision)
-   Rosas Jr.:  W W W W L  (4-fight win streak; debut-year loss in 2023)
+   Font:       L L W W L  (on 1-loss streak; most recent: Sep 2025 loss to Martinez;
+                           prior losses to Sandhagen Aug 2023, Figueiredo Dec 2023)
+   Rosas Jr.:  L W W W W  (4-win streak: Mitchell Sep 2023, Turcios Jun 2024,
+                           Aoriqileng Sep 2024, Morales Mar 2025; loss to Rodriguez Apr 2023)
 
  MODEL PREDICTION: Raul Rosas Jr. wins — 55.7% confidence
  Method breakdown: Decision 36.5% | Submission 34.6% | KO/TKO 28.9%
@@ -406,12 +410,14 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
 
  Fighter              UFC Record  Ht     Reach  Stance    DOB
  -------------------  ----------  -----  -----  --------  ----------
- Caio Borralho          5-3       73"    75"    Southpaw  1993-01-16
- Reinier de Ridder      1-4       76"    78"    Southpaw  1990-09-07
+ Caio Borralho          7-1       73"    75"    Southpaw  1993-01-16
+ Reinier de Ridder      4-1       76"    78"    Southpaw  1990-09-07
 
  Recent form (last 5):
-   Borralho:    W L L W W  (most recent: Sept 2025 decision win)
-   de Ridder:   L L W L L  (most recent: Oct 2025 KO/TKO loss; 1-4 UFC record)
+   Borralho:    W W W W L  (most recent: Sep 2025 LOSS to Imavov; prior 4-win streak:
+                            Oleksiejczuk, Magomedov, Craig, Cannonier)
+   de Ridder:   W W W W L  (most recent: Oct 2025 LOSS to Brendan Allen KO Rd 4;
+                            prior 4-win streak: Meerschaert, Holland, Nickal, Whittaker)
 
  MODEL PREDICTION: Caio Borralho wins — 55.5% confidence
  Method breakdown: KO/TKO 37.3% | Submission 31.5% | Decision 31.2%
@@ -432,14 +438,16 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
  ANALYSIS:
    The model picks Borralho at 55.5% despite de Ridder having superior reach (+3"),
    more KO finishing ability, and a substantially tougher opponent quality history.
-   Borralho's edge comes from a better defense score and the model's preference for
-   fighters with cleaner recent records — de Ridder is 1-4 in the UFC after a strong
-   career outside of it (ONE Championship etc.).
+   Both fighters enter on identical loss streaks (1 fight each) after previously
+   going 4-0 in the UFC. Borralho's edge in the model is a better defense score and
+   higher knockdown rate differential.
 
-   De Ridder is one of the most accomplished grapplers in the division on paper —
-   former ONE MMA and ONE Submission Grappling champion — but he has struggled to
-   translate that into UFC success. His UFC losses include submissions and KO/TKOs,
-   suggesting his grappling hasn't dominated as expected.
+   De Ridder (4-1 in the UFC) is a genuinely accomplished fighter — former ONE MMA
+   and ONE Submission Grappling champion — who has shown he can compete at a high
+   level (wins over Meerschaert, Holland, Nickal, and Whittaker). His sole UFC loss
+   was a late KO/TKO to Brendan Allen in Oct 2025. Borralho (7-1) similarly has
+   only 1 UFC loss, to Imavov in Sep 2025. This is a closer contest than the model's
+   55.5% edge implies.
 
    The model's method prediction is essentially even (KO 37, Sub 31, Dec 31), which
    reflects genuine uncertainty about HOW this fight ends. If de Ridder gets
@@ -458,13 +466,14 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
  Fighter           UFC Record  Ht     Reach  Stance    DOB
  ----------------  ----------  -----  -----  --------  ----------
  Max Holloway        23-8      71"    69"    Orthodox  1991-12-04
- Charles Oliveira    21-14     70"    74"    Orthodox  1989-10-17
+ Charles Oliveira    24-12     70"    74"    Orthodox  1989-10-17
 
  Recent form (last 5):
-   Holloway:  W W L L W  (current 1-fight win streak: UFC 318 beat Poirier; prior losses
-                          to Gaethje at UFC 300, Topuria at UFC 308)
-   Oliveira:  W W W L W  (current 1-fight win streak: Oct 2025 beat Gamrot by sub;
-                          UFC 309 beat Chandler by decision, UFC 317 LOST to Topuria KO Rd 1)
+   Holloway:  W W W L W  (1-win streak; beat Gaethje UFC 300 Apr 2024 (KO Rd 5),
+                          lost to Topuria UFC 308 Oct 2024 (KO Rd 3), beat Poirier UFC 318 Jul 2025)
+   Oliveira:  W L W L W  (1-win streak; beat Dariush Jun 2023, lost to Tsarukyan Apr 2024,
+                          beat Chandler UFC 309 Nov 2024, lost to Topuria UFC 317 Jun 2025 KO Rd 1,
+                          beat Gamrot Oct 2025)
 
  MODEL PREDICTION: Max Holloway wins — 60.1% confidence
  Method breakdown: KO/TKO 40.0% | Decision 37.4% | Submission 22.6%
