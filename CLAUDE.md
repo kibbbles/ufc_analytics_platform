@@ -123,6 +123,12 @@ GET  /api/v1/events/{id}                      event + fight card
 POST /api/v1/predictions/fight-outcome        win probability (stub until Task 6 ML)
 GET  /api/v1/analytics/style-evolution        finish rates by year (?weight_class=)
 GET  /api/v1/analytics/fighter-endurance/{id} round-by-round performance profile
+
+# Phase 2 — Upcoming Events (Tasks 11-20, pending)
+GET  /api/v1/upcoming/events                  list upcoming events (ordered by date ASC)
+GET  /api/v1/upcoming/events/{id}             event card + fight list + pre-computed predictions
+GET  /api/v1/upcoming/fights/{id}             single fight prediction + full feature differentials
+POST /api/v1/admin/refresh-upcoming           manual trigger: re-scrape upcoming page + recompute
 ```
 
 **Key files:**
@@ -160,18 +166,25 @@ python backend/scraper/validate_etl.py                # standalone validation
 
 ### Available Scrapers
 - `backend/scraper/live_scraper.py` — Active scraper; writes to all 6 tables (events, fights, results, stats, fighter profiles, tott)
+- `backend/scraper/upcoming_scraper.py` — **Phase 2 (Task 13, pending)** Scrapes UFCStats /upcoming, stores in upcoming_events/upcoming_fights/upcoming_predictions tables
+- `backend/scraper/run_upcoming.py` — **Phase 2 (Task 15, pending)** Entry point for upcoming scraper (mirrors live_scraper.py main)
 - `backend/scraper/bulk_scrape_career_stats.py` — Career stats scraper (manual use)
 - `backend/scraper/bulk_scrape_physical_stats.py` — Physical stats scraper (manual use)
 
 ### Database Schema (Current)
 ```sql
--- Core tables
+-- Phase 1 core tables
 event_details (756 rows)       -- UFC events
 fighter_details (4,449 rows)   -- Fighter profiles
 fight_details (~8,482 rows)    -- Fight matchups
 fight_results (8,482 rows)     -- Fight outcomes + typed/derived columns
 fighter_tott (4,435 rows)      -- Tale of the Tape + typed columns
 fight_stats (39,912 rows)      -- Round-by-round stats + typed columns
+
+-- Phase 2 upcoming tables (Tasks 11-20, to be created)
+upcoming_events                -- Booked UFC events not yet completed
+upcoming_fights                -- Announced bouts with fighter FK refs (nullable for new fighters)
+upcoming_predictions           -- Pre-computed ML predictions + full feature differential JSON
 ```
 
 ### Data Loading Procedure
@@ -186,8 +199,21 @@ python post_scrape_clean.py        # Run full ETL pipeline + validation
 ```
 
 ### Automation
-- `.github/workflows/scraper.yml` — Weekly scrape via live_scraper.py (GitHub Actions)
+- `.github/workflows/weekly-ufc-scraper.yml` — Sunday 18:00 UTC: live_scraper.py → completed events
 - `.github/workflows/post-scrape-clean.yml` — ETL cleanup + validation, auto-triggered after scrape
+- `.github/workflows/feature-engineering.yml` — Rebuild training matrix, auto-triggered after ETL
+- `.github/workflows/retrain.yml` — Retrain ML models, auto-triggered after feature engineering
+- `.github/workflows/upcoming-predictions.yml` — **Phase 2 (Task 15, pending)** Friday 12:00 UTC: upcoming_scraper + pre-compute predictions
+
+**Weekly automation chain:**
+```
+Sunday 18:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
+                  → post-scrape-clean     (ETL cleanup)
+                  → feature-engineering  (rebuild training_data.parquet)
+                  → retrain              (retrain + commit model artefacts)
+
+Friday 12:00 UTC  → upcoming-predictions  (scrape next Saturday's card + pre-compute)
+```
 
 
 ## Database Schema & Relationships
@@ -274,6 +300,56 @@ fight_stats (  -- Per fighter, per round statistics
 );
 ```
 
+### Phase 2 Tables (to be created — Tasks 11-20)
+```sql
+upcoming_events (
+    id            VARCHAR(6) PRIMARY KEY,
+    event_name    TEXT,
+    date_proper   DATE,
+    location      TEXT,
+    ufcstats_url  TEXT UNIQUE,       -- used for upsert deduplication
+    is_numbered   BOOLEAN,           -- TRUE if "UFC [number]:" format
+    scraped_at    TIMESTAMPTZ DEFAULT now()
+);
+
+upcoming_fights (
+    id              VARCHAR(6) PRIMARY KEY,
+    event_id        VARCHAR(6) REFERENCES upcoming_events(id),
+    fighter_a_name  TEXT,
+    fighter_b_name  TEXT,
+    fighter_a_id    VARCHAR(6) REFERENCES fighter_details(id),  -- nullable (new fighters)
+    fighter_b_id    VARCHAR(6) REFERENCES fighter_details(id),  -- nullable (new fighters)
+    fighter_a_url   TEXT,            -- UFCStats profile URL, used for fighter matching
+    fighter_b_url   TEXT,
+    weight_class    TEXT,
+    is_title_fight  BOOLEAN DEFAULT FALSE,
+    ufcstats_url    TEXT,            -- fight-details page URL
+    scraped_at      TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(event_id, fighter_a_url, fighter_b_url)  -- idempotent upsert key
+);
+
+upcoming_predictions (
+    id             VARCHAR(6) PRIMARY KEY,
+    fight_id       VARCHAR(6) UNIQUE REFERENCES upcoming_fights(id),
+    model_version  TEXT DEFAULT 'win_loss_v1',
+    win_prob_a     FLOAT,            -- P(fighter_a wins)
+    win_prob_b     FLOAT,            -- P(fighter_b wins)
+    method_ko_tko  FLOAT,
+    method_sub     FLOAT,
+    method_dec     FLOAT,
+    features_json  JSONB,            -- full 31-feature differential dict
+    feature_hash   TEXT,             -- hash of feature vector for staleness detection
+    predicted_at   TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**Fighter Matching Logic (upcoming_scraper.py):**
+UFCStats event page cell[1] contains `<a href="http://ufcstats.com/fighter-details/XXXXX">`.
+This URL matches `fighter_details."URL"` exactly.
+Primary: `SELECT id FROM fighter_details WHERE "URL" = :ufcstats_url`
+Fallback: fuzzy FIRST+LAST name match if URL not found.
+If no match: store fight with fighter_a_id/b_id = NULL, skip prediction.
+
 ### Relationship Status (Updated 2026-02-23)
 - ✅ **Complete**: event_details ↔ fight_details via event_id (100%)
 - ✅ **Complete**: event_details ↔ fight_results via event_id (100%)
@@ -289,6 +365,27 @@ fight_stats (  -- Per fighter, per round statistics
 - **Winner Logic**: In OUTCOME "W/L", first fighter in BOUT won
 - **Coverage**: Detailed stats (fight_stats) mainly available 2015+
 - **2014 and earlier**: Limited to basic fight results only
+
+### CRITICAL: fight_results Query Pattern
+fight_results has ONE row per fight. `fighter_id` = winner, `opponent_id` = loser.
+Querying only `WHERE fighter_id = :id` returns WINS ONLY — losses are invisible.
+
+**Always use the OR pattern for full fight history:**
+```sql
+SELECT
+    e.date_proper,
+    fr."BOUT",
+    fr."METHOD",
+    (fr.fighter_id = fd.id) AS is_win
+FROM fight_results fr
+JOIN fighter_details fd ON fd.id = :fighter_id
+JOIN event_details e ON e.id = fr.event_id
+WHERE fr.fighter_id = fd.id OR fr.opponent_id = fd.id
+ORDER BY e.date_proper
+```
+`get_fights_long_df()` in `backend/features/extractors.py` handles this correctly
+via UNION ALL — training pipeline is unaffected. The OR pattern is only needed
+for ad-hoc queries and API endpoints that return fighter history.
 
 ## Documentation Guidelines
 - All .md files should be placed in the `docs/` directory

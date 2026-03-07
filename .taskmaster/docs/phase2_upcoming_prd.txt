@@ -1,0 +1,193 @@
+Phase 2 — Upcoming Events Scraper & Pre-Computed Predictions
+=============================================================
+
+## Overview
+
+Phase 2 extends the UFC Analytics Platform with automated upcoming event
+scraping and zero-latency pre-computed fight predictions. When users land
+on the site before a UFC event, they see the full fight card with win
+probabilities, method breakdowns, and key feature differentials — all
+served from the database with no ML inference at request time.
+
+## Background & Research
+
+UFCStats.com (/statistics/events/upcoming) lists all booked UFC events
+with full fight cards. The HTML structure is identical to the completed
+events page already scraped by live_scraper.py:
+- Same row class: b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click
+- Same data-link attribute on each row (fight detail URL)
+- Fighter names + UFCStats profile URLs in cell[1] (two <a> tags)
+- Weight class in cell[6]
+- Outcome cells (method, round, time) are empty — fight hasn't happened
+
+Key structural differences vs completed events:
+1. Target URL is /upcoming not /completed?page=all
+2. Do NOT skip first row (live_scraper skips it because completed page puts upcoming event first)
+3. Fighter names are in cell[1] not cell[0]
+4. No W/L flag to parse — no outcome data
+5. Fighter profile URLs available directly in the row (no need to visit individual fight pages for names)
+
+Fighter matching: fighter_details."URL" contains the exact UFCStats profile
+URL (e.g. http://ufcstats.com/fighter-details/fba03cd6cc28dc41).
+The event page exposes the same URLs for each fighter. Direct URL-based
+lookup gives reliable matching without fuzzy name matching.
+
+Scheduling: UFC events are always on Saturdays. Run upcoming scraper every
+Friday at 12:00 UTC (8 AM ET) — predictions are live 34+ hours before
+fight night. Sunday scraper handles post-event result ingestion as before.
+
+## New Database Tables (Supabase)
+
+### upcoming_events
+  id            VARCHAR(6) PRIMARY KEY   -- alphanumeric, same pattern as other tables
+  event_name    TEXT                     -- "UFC 327: Prochazka vs. Ulberg"
+  date_proper   DATE                     -- 2026-04-11
+  location      TEXT                     -- "Miami, Florida, USA"
+  ufcstats_url  TEXT                     -- http://ufcstats.com/event-details/f3eb664db7fb1df3
+  scraped_at    TIMESTAMPTZ DEFAULT now()
+  is_numbered   BOOLEAN                  -- TRUE if name starts with "UFC [number]:"
+
+### upcoming_fights
+  id              VARCHAR(6) PRIMARY KEY
+  event_id        VARCHAR(6) REFERENCES upcoming_events(id)
+  fighter_a_name  TEXT                   -- from UFCStats event page cell[1]
+  fighter_b_name  TEXT
+  fighter_a_id    VARCHAR(6) REFERENCES fighter_details(id)   -- nullable if not in DB
+  fighter_b_id    VARCHAR(6) REFERENCES fighter_details(id)   -- nullable if new fighter
+  fighter_a_url   TEXT                   -- UFCStats profile URL (used for matching)
+  fighter_b_url   TEXT
+  weight_class    TEXT                   -- from cell[6] on event page
+  is_title_fight  BOOLEAN DEFAULT FALSE  -- detect via "Title Bout" text in row
+  ufcstats_url    TEXT                   -- fight details page URL (data-link)
+  scraped_at      TIMESTAMPTZ DEFAULT now()
+
+### upcoming_predictions
+  id             VARCHAR(6) PRIMARY KEY
+  fight_id       VARCHAR(6) REFERENCES upcoming_fights(id)
+  model_version  TEXT DEFAULT 'win_loss_v1'
+  win_prob_a     FLOAT                   -- P(fighter_a wins), e.g. 0.601
+  win_prob_b     FLOAT                   -- P(fighter_b wins), e.g. 0.399
+  method_ko_tko  FLOAT                   -- method model probability
+  method_sub     FLOAT
+  method_dec     FLOAT
+  features_json  JSONB                   -- full differential dict from build_prediction_features()
+  predicted_at   TIMESTAMPTZ DEFAULT now()
+  feature_hash   TEXT                    -- hash of feature vector for staleness detection
+
+## New Backend Files
+
+### backend/scraper/upcoming_scraper.py
+Main scraper for upcoming events. Flow:
+1. GET /statistics/events/upcoming
+2. Parse event rows (same selectors as live_scraper.scrape_events_page)
+3. For each event, GET event-details page, parse fight rows from cell[1]
+4. Upsert upcoming_events (update if already exists, don't duplicate)
+5. Upsert upcoming_fights per fight
+6. For each fight, attempt fighter matching via fighter_details."URL" lookup
+7. If both fighters matched: call build_prediction_features() + model inference
+8. Store predictions in upcoming_predictions
+9. Log unmatched fighters for monitoring
+
+Fighter matching logic (backend/scraper/match_fighters.py or inline):
+  SELECT id FROM fighter_details WHERE "URL" = :ufcstats_url
+  If not found: try fuzzy FIRST+LAST name match as fallback
+  If still not found: fighter_a_id = NULL, prediction skipped
+
+Prediction computation:
+  from features.pipeline import build_prediction_features
+  from ml.train import load_models
+  Use as_of = event date (not today) so features reflect pre-fight state
+  Store full features_json so frontend can show differentials without re-computing
+
+Upsert strategy (idempotent runs):
+  upcoming_events: upsert on ufcstats_url
+  upcoming_fights: upsert on (event_id, fighter_a_url, fighter_b_url)
+  upcoming_predictions: upsert on fight_id (replace if model_version changed or feature_hash differs)
+
+Handle partial cards gracefully: if UFC 327 only has 5 fights listed
+on scrape day, store those 5. Next Friday's run adds any newly announced
+fights. Predictions are only generated when both fighters are in DB.
+
+### backend/scraper/run_upcoming.py
+Entry point: python -m scraper.run_upcoming (or python scraper/run_upcoming.py)
+Mirrors structure of live_scraper.py main() / post_scrape_clean.py
+
+## New GitHub Actions Workflow
+
+### .github/workflows/upcoming-predictions.yml
+Name: Upcoming Event Predictions
+Schedule: cron '0 12 * * 5'  (Friday 12:00 UTC = 8 AM ET)
+Trigger: also workflow_dispatch for manual runs
+Steps:
+  1. Checkout
+  2. Set up Python 3.12
+  3. pip install -r backend/requirements.txt
+  4. python backend/scraper/run_upcoming.py
+  5. On failure: upload logs as artifact
+
+No commit step needed — scraper writes directly to Supabase.
+
+## New FastAPI Endpoints
+
+### GET /api/v1/upcoming/events
+Returns list of upcoming events ordered by date_proper ASC.
+Each item includes: id, event_name, date_proper, location, is_numbered,
+fight_count, predicted_fight_count (count where prediction exists).
+
+### GET /api/v1/upcoming/events/{event_id}
+Full event card. Returns event metadata + array of fights, each with:
+- fighter_a_name, fighter_b_name
+- weight_class, is_title_fight
+- prediction (nullable): win_prob_a, win_prob_b, method probs
+- key_differentials: top 5 features from features_json by abs magnitude
+- matched: bool (whether both fighters found in DB)
+
+### GET /api/v1/upcoming/fights/{fight_id}
+Single fight detail. Returns full features_json differentials (all 31 features),
+full prediction, fighter physical stats (from fighter_tott via fighter_id JOIN).
+
+### POST /api/v1/admin/refresh-upcoming
+Manual trigger for scraping + prediction refresh. Runs upcoming_scraper
+synchronously (or submits background task). Returns job_id and status.
+No auth required (public analytics platform per CLAUDE.md spec).
+
+## New Pydantic Schemas (backend/schemas/upcoming.py)
+
+UpcomingEventSummary, UpcomingEventDetail, UpcomingFightCard,
+UpcomingFightDetail, UpcomingPrediction, KeyDifferential
+
+## Key Implementation Notes
+
+1. build_prediction_features() takes fighter DB IDs, not names.
+   Always use DB IDs obtained from the URL-based fighter match.
+
+2. as_of parameter should be the event date, not scrape date.
+   This ensures career stats are computed as of the fight, not scraped today.
+
+3. Fighters not in DB (debut or very new): store fight with fighter_a_id/b_id = NULL,
+   no prediction row. Frontend shows "Insufficient data" gracefully.
+
+4. Fighters in DB but with sparse fight_stats (pre-2015 history only):
+   build_prediction_features() may return sparse feature vectors.
+   Detect by checking if win_prob_a is None or feature count < 10; skip prediction.
+
+5. Upsert on every Friday run — the same upcoming event may be scraped
+   3-4 times as the card fills out. Must not create duplicate rows.
+
+6. After a Saturday event completes, the upcoming_events row stays in the
+   table until it gets a date_proper < now(). Frontend filters by date >= today.
+   The Sunday scraper handles moving results into the live fight_results table.
+
+## Dependencies
+
+Task 11 depends on: Task 1 (DB Schema), Task 3 (ETL complete), Task 5 (Feature Engineering), Task 6 (ML Models trained)
+Task 12 depends on: Task 4 (FastAPI Backend), Task 11 (Upcoming pipeline complete)
+
+## Testing Strategy
+
+- Run upcoming_scraper.py manually against live UFCStats page
+- Verify upsert idempotency: run twice, confirm no duplicates
+- Verify fighter matching rate (expect 85%+ match for established fighters)
+- Verify prediction coverage (expect predictions for 70%+ of fights given DB coverage)
+- API endpoint tests: mock upcoming_* tables, verify response schemas
+- Test graceful NULL handling for unmatched fighters
