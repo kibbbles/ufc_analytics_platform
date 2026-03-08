@@ -1,68 +1,84 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+/* ─── Dark mode: toggled by .dark class on <html> ─────────────────────────── */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+/* ─── Design tokens ────────────────────────────────────────────────────────── */
+@theme {
+  /* Breakpoints */
+  --breakpoint-sm: 320px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+
+  /* Brand colours */
+  --color-primary:       #e63946;   /* UFC red */
+  --color-primary-hover: #c1121f;
+  --color-secondary:     #f77f00;   /* orange accent */
+  --color-accent:        #4cc9f0;   /* cyan — data highlights */
+
+  /* Semantic colours */
+  --color-success: #2dc653;
+  --color-warning: #f77f00;
+  --color-error:   #e63946;
+
+  /* Dark-mode surface scale */
+  --color-bg:           #0f1117;   /* page background */
+  --color-surface:      #1a1d27;   /* cards */
+  --color-surface-high: #22263a;   /* elevated cards / modals */
+  --color-border:       #334155;   /* subtle dividers */
+
+  /* Light-mode surface scale */
+  --color-bg-light:           #ffffff;
+  --color-surface-light:      #f8fafc;
+  --color-surface-high-light: #f1f5f9;
+  --color-border-light:       #e2e8f0;
+
+  /* Text */
+  --color-text-primary:   #f1f5f9;   /* slate-100 */
+  --color-text-secondary: #94a3b8;   /* slate-400 */
+  --color-text-muted:     #64748b;   /* slate-500 */
+
+  /* Light text */
+  --color-text-primary-light:   #0f172a;   /* slate-900 */
+  --color-text-secondary-light: #475569;   /* slate-600 */
+
+  /* Typography */
+  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-elevated: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
+}
+
+/* ─── Base styles ──────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-family-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
   min-height: 100vh;
+  background-color: var(--color-bg-light);
+  color: var(--color-text-primary-light);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Dark mode body */
+.dark body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* ─── Scrollbar (dark mode) ────────────────────────────────────────────────── */
+.dark ::-webkit-scrollbar { width: 6px; }
+.dark ::-webkit-scrollbar-track { background: var(--color-surface); }
+.dark ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
