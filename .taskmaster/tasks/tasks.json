@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
+        "id": "1",
         "title": "Database Schema Setup",
         "description": "Design and implement the PostgreSQL database schema with core entities (Fighter, Fight, FightStats, Event) as specified in the PRD.",
         "status": "done",
@@ -16,7 +16,7 @@
         "expansionPrompt": "Break down the Database Schema Setup task into 5 subtasks covering schema design, SQLAlchemy model implementation, relationship configuration, index creation, and Alembic migration setup. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 2,
+        "id": "2",
         "title": "Data Scraping Pipeline",
         "description": "Enhance the existing Greko scraper to extract UFC fight data from UFCStats.com, including fighter profiles, event information, fight results, and round-by-round statistics.",
         "status": "done",
@@ -113,7 +113,7 @@
         "expansionPrompt": "Break down the Data Scraping Pipeline task into 6 subtasks covering scraper implementation for different data types (fighters, events, fights, statistics), rate limiting and retry logic, data transformation, validation, incremental scraping, and scheduling. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 3,
+        "id": "3",
         "title": "ETL Pipeline for Historical Data",
         "description": "Transform and clean existing UFC data already in Supabase through 5 phases: FK resolution, quality cleanup, type parsing, new derived columns, and GitHub Actions automation. All work done in backend/scraper/ using raw sqlalchemy.text().",
         "status": "done",
@@ -231,7 +231,7 @@
         "expansionPrompt": "Break down the ETL Pipeline for Historical Data task into 5 subtasks covering data extraction from scraped sources, data transformation and cleaning, data loading with proper error handling, validation framework implementation, and pipeline orchestration with Airflow. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 4,
+        "id": "4",
         "title": "FastAPI Backend Setup",
         "description": "Initialize the FastAPI project structure with middleware, error handling, logging, and basic health check endpoints. Uses raw SQL with sqlalchemy.text() and Pydantic schemas for serialization (no ORM models). Public platform with no authentication required.",
         "status": "done",
@@ -309,7 +309,7 @@
         "expansionPrompt": "Break down the FastAPI Backend Setup task into 6 subtasks covering project structure setup, middleware configuration, database connection management, Redis integration, API documentation, and health check endpoints. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 5,
+        "id": "5",
         "title": "Feature Engineering Pipeline",
         "description": "Develop a feature engineering pipeline to process raw UFC data into ML-ready features, including fighter differentials, rolling performance metrics, and style classifications.",
         "details": "Create a comprehensive feature engineering pipeline using pandas and numpy:\n\n1. Fighter differential features:\n   - Height differential (cm)\n   - Weight differential (lbs)\n   - Reach differential (inches)\n   - Age differential (years)\n   - Experience differential (fights)\n   - Win streak differential\n\n2. Rolling performance metrics:\n   - 3-fight rolling average for strikes landed/minute\n   - 3-fight rolling average for takedown accuracy\n   - 3-fight rolling average for submission attempts\n   - Exponentially weighted averages for recent performance\n\n3. Style classification features:\n   - Striking vs. grappling ratio\n   - Aggression score (forward pressure)\n   - Defensive metrics (strikes absorbed, takedown defense)\n   - Finishing ability (KO/submission percentage)\n\n4. Time-based features:\n   - Days since last fight\n   - Career length in days\n   - Age at fight time\n   - Time in specific weight class\n\n5. Opponent quality metrics:\n   - Opponent win percentage\n   - Strength of schedule\n   - Common opponents analysis\n\nImplement feature selection using mutual information and correlation analysis. Create a pipeline that can be used both for batch processing historical data and real-time feature generation for predictions.",
@@ -445,7 +445,7 @@
         "updatedAt": "2026-03-02T02:04:03.660Z"
       },
       {
-        "id": 6,
+        "id": "6",
         "title": "ML Model Training and Serving",
         "description": "Implement the machine learning pipeline to train fight prediction models (win/loss and method prediction) and create a model serving infrastructure using joblib serialization, loaded at API startup.",
         "status": "done",
@@ -544,10 +544,10 @@
         "updatedAt": "2026-03-04T20:26:47.298Z"
       },
       {
-        "id": 7,
+        "id": "7",
         "title": "React Frontend Foundation",
         "description": "Set up the React frontend application with TypeScript, Vite, Tailwind CSS, routing, and state management according to the technical architecture specified in the PRD. Includes foundation for five frontend views: three ML dashboards (predictions, style evolution, endurance) and two data views (Recent Events, Fighter/Database Lookup).",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "high",
         "details": "Initialize and configure a React 18 frontend application:\n\n1. Project setup:\n   - Initialize with Vite and TypeScript 4.9+\n   - Configure ESLint and Prettier\n   - Set up directory structure\n   ```\n   src/\n     â”œâ”€â”€ assets/\n     â”œâ”€â”€ components/\n     â”‚   â”œâ”€â”€ common/\n     â”‚   â”œâ”€â”€ layout/\n     â”‚   â””â”€â”€ features/\n     â”œâ”€â”€ hooks/\n     â”œâ”€â”€ pages/\n     â”œâ”€â”€ services/\n     â”œâ”€â”€ store/\n     â”œâ”€â”€ types/\n     â”œâ”€â”€ utils/\n     â”œâ”€â”€ App.tsx\n     â””â”€â”€ main.tsx\n   ```\n\n2. Styling setup:\n   - Configure Tailwind CSS 3.0\n   - Create design tokens (colors, spacing, etc.)\n   - Set up dark mode support\n   - Create responsive breakpoints (320px, 768px, 1024px, 1440px)\n\n3. Routing configuration:\n   - Set up React Router v6\n   - Create route definitions\n   - Implement lazy loading for routes\n   - Add route guards/protection\n\n4. State management:\n   - Configure React Context API\n   - Set up useReducer for global state\n   - Create typed actions and reducers\n   - Implement persistence with localStorage\n\n5. API integration:\n   - Set up Axios with interceptors\n   - Create API service classes\n   - Implement request/response types\n   - Add error handling\n\n6. Common components:\n   - Button, Input, Card components\n   - Loading indicators\n   - Error boundaries\n   - Toast notifications\n\n7. Testing setup:\n   - Configure Jest and React Testing Library\n   - Set up test utilities\n   - Create mock providers\n\n8. Additional frontend views (no ML required):\n   a. Recent Events View:\n      - Displays the last ~10 UFC events with card results (winner, method, round)\n      - Queries event_details joined with fight_results ordered by date_proper DESC\n      - Consumes GET /events endpoint\n   b. Fighter/Database Lookup View:\n      - Search bar for fighter name\n      - Shows fighter profile with physical stats from fighter_tott\n      - Full fight history with methods and rounds from fight_results\n      - Consumes GET /fighters and GET /fighters/{id} endpoints\n      - IMPORTANT: Display a prominent note 'Detailed round stats available from 2015+' on fighter profiles, as fight_stats (round-by-round detail) is only reliably available from 2015 onwards\n\nImplement responsive layouts with mobile-first approach and ensure accessibility compliance.",
@@ -557,11 +557,12 @@
             "id": 1,
             "title": "Project Initialization with Vite, TypeScript, and Tooling",
             "description": "Initialize the React 18 frontend project using Vite with TypeScript 4.9+, configure ESLint and Prettier, and establish the complete directory structure as specified in the PRD.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "1. Run `npm create vite@latest` with React + TypeScript template\n2. Configure tsconfig.json with strict mode, path aliases (e.g., @/components, @/hooks, @/services)\n3. Install and configure ESLint with @typescript-eslint, eslint-plugin-react, eslint-plugin-react-hooks\n4. Install and configure Prettier with .prettierrc and .prettierignore\n5. Create the full directory structure: src/assets/, src/components/common/, src/components/layout/, src/components/features/, src/hooks/, src/pages/, src/services/, src/store/, src/types/, src/utils/\n6. Create placeholder index files in each directory\n7. Configure Vite with path aliases matching tsconfig\n8. Set up .env files (.env, .env.development, .env.production) with VITE_ prefixed variables\n9. Configure Jest and React Testing Library: install jest, @testing-library/react, @testing-library/jest-dom, jest-environment-jsdom\n10. Create jest.config.ts, setupTests.ts, and a test utilities file with mock providers\n11. Add npm scripts: dev, build, preview, lint, format, test\n\nAcceptance Criteria:\n- `npm run dev` starts the dev server without errors\n- `npm run build` produces a valid dist/ output\n- `npm run lint` and `npm run format` execute without errors\n- `npm run test` runs successfully with a sample test\n- All directories exist with placeholder files\n- TypeScript strict mode enabled with no type errors",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T00:25:27.054Z"
           },
           {
             "id": 2,
@@ -616,14 +617,95 @@
             "details": "1. Recent Events View (src/pages/RecentEventsPage.tsx):\n   - Fetch data via eventsService.getEvents() (GET /events), ordered by date DESC, limit ~10\n   - Display each event as a card showing: event name, date, location\n   - Within each event card, list fight results: winner name, method (KO/TKO, Submission, Decision, etc.), round\n   - Data sourced from event_details joined with fight_results ordered by date_proper DESC\n   - Show loading skeletons while fetching\n   - Handle empty state and error state gracefully\n   - Responsive layout: stacked cards on mobile, grid on desktop\n\n2. Fighter/Database Lookup View (src/pages/FighterLookupPage.tsx and src/pages/FighterDetailPage.tsx):\n   - Search bar (Input component) for fighter name with debounced query\n   - Fighter list results via fightersService.getFighters(query) (GET /fighters?search=...)\n   - Fighter profile page via fightersService.getFighterById(id) (GET /fighters/{id}):\n     a. Physical stats section: height, weight, reach, stance, date of birth (from fighter_tott)\n     b. Record summary: wins, losses, draws, no contests\n     c. Full fight history table: opponent, event, date, result, method, round\n     d. IMPORTANT: Display a prominent, accessible caveat note â€” 'Detailed round stats available from 2015+' â€” on all fighter profiles. Use the DataCaveatNote component from subtask 5. This is because fight_stats (round-by-round detail) is only reliably available from 2015 onwards; older fights may show results but lack granular stats.\n   - Link fighter search results to individual fighter profile pages (/fighters/:id)\n   - Show loading skeletons during data fetch\n   - Handle no-results and error states\n\n3. Feature components in src/components/features/:\n   - EventCard.tsx (event summary with fight results list)\n   - FightResultRow.tsx (single fight result: winner, method, round)\n   - FighterSearchBar.tsx (debounced search input)\n   - FighterProfileHeader.tsx (name, record, physical stats)\n   - FightHistoryTable.tsx (sortable table of fight history)\n\n4. Write tests:\n   - Unit tests for EventCard, FightResultRow, FighterSearchBar, FighterProfileHeader, FightHistoryTable\n   - Integration tests for RecentEventsPage and FighterLookupPage with mocked API responses\n   - Test that DataCaveatNote renders on all fighter profile pages\n\nAcceptance Criteria:\n- Recent Events page displays last ~10 events with fight results (winner, method, round)\n- Fighter search returns relevant results and links to profile pages\n- Fighter profile shows physical stats, record, and full fight history\n- 'Detailed round stats available from 2015+' caveat note is always visible on fighter profiles\n- Both views are fully responsive (mobile-first)\n- Loading and error states are handled gracefully\n- No ML logic is involved in either view\n- All components pass accessibility checks",
             "testStrategy": "1. Test RecentEventsPage renders event cards with correct winner/method/round data from mocked API\n2. Test FighterLookupPage search bar triggers API call with correct query params\n3. Test FighterDetailPage displays physical stats and fight history correctly\n4. Verify DataCaveatNote ('Detailed round stats available from 2015+') renders on every fighter profile\n5. Test responsive layout at all four breakpoints\n6. Test loading skeleton displays during fetch\n7. Test error state displays when API fails\n8. Test empty state when no fighters match search query\n9. Accessibility audit with axe-core on both pages",
             "parentId": "undefined"
+          },
+          {
+            "id": 7,
+            "title": "Project Setup: Vite, TypeScript, ESLint, and Directory Structure",
+            "description": "Initialize the React 18 frontend application using Vite with TypeScript 4.9+, configure ESLint and Prettier for code quality, and establish the canonical directory structure for the project.",
+            "dependencies": [],
+            "details": "Run `npm create vite@latest` selecting React + TypeScript template. Pin TypeScript to 4.9+ in package.json. Install and configure ESLint with `@typescript-eslint/parser`, `eslint-plugin-react`, `eslint-plugin-react-hooks`, and `eslint-plugin-jsx-a11y`. Set up Prettier with `.prettierrc` and integrate with ESLint via `eslint-config-prettier`. Create the full directory scaffold under `src/`: `assets/`, `components/common/`, `components/layout/`, `components/features/`, `hooks/`, `pages/`, `services/`, `store/`, `types/`, `utils/`. Add placeholder `index.ts` barrel files in each directory. Configure `tsconfig.json` with strict mode, path aliases (`@/` → `src/`), and `vite.config.ts` to resolve those aliases. Add `.editorconfig` for consistent editor settings. Acceptance criteria: `npm run dev` starts without errors, `npm run lint` passes with zero warnings, all directories exist with barrel files, TypeScript strict mode is enabled.",
+            "status": "cancelled",
+            "testStrategy": "Verify `npm run build` produces a valid dist output. Run `tsc --noEmit` to confirm zero type errors. Run ESLint across the entire `src/` directory and assert zero errors. Confirm path alias resolution works by importing a placeholder util via `@/utils`.",
+            "updatedAt": "2026-03-08T00:15:53.681Z",
+            "parentId": "undefined"
+          },
+          {
+            "id": 8,
+            "title": "Styling Configuration: Tailwind CSS, Design Tokens, Dark Mode, and Breakpoints",
+            "description": "Install and configure Tailwind CSS 3.0, define a design token system (colors, spacing, typography), enable dark mode support, and establish responsive breakpoints aligned with the PRD specifications.",
+            "dependencies": [
+              7
+            ],
+            "details": "Install `tailwindcss`, `postcss`, and `autoprefixer`. Run `npx tailwindcss init -p` to generate `tailwind.config.js` and `postcss.config.js`. Configure `content` paths to cover all `src/**/*.{ts,tsx}` files. Extend the Tailwind theme in `tailwind.config.js` to define design tokens: a custom color palette (primary, secondary, accent, neutral, success, warning, error), spacing scale, and typography scale. Set `darkMode: 'class'` to enable class-based dark mode toggling. Define custom `screens` breakpoints: `sm: '320px'`, `md: '768px'`, `lg: '1024px'`, `xl: '1440px'`. Create `src/assets/styles/globals.css` with Tailwind directives (`@tailwind base/components/utilities`) and CSS custom properties for design tokens. Create a `src/utils/theme.ts` utility that toggles the `dark` class on `document.documentElement` and persists preference to `localStorage`. Acceptance criteria: Tailwind classes apply correctly in dev and build, dark mode toggles via utility function, all four breakpoints are usable in components.",
+            "status": "cancelled",
+            "testStrategy": "Render a test component using custom color tokens and dark mode classes; verify styles apply in both light and dark modes using React Testing Library. Confirm `npm run build` CSS output contains the custom tokens. Manually verify responsive layout at each breakpoint using browser DevTools.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T00:15:58.797Z"
+          },
+          {
+            "id": 9,
+            "title": "Routing Setup: React Router v6 with Lazy Loading and Route Guards",
+            "description": "Configure React Router v6 with all application route definitions, implement code-splitting via lazy loading for each route, and add route guard infrastructure for protected views.",
+            "dependencies": [
+              7
+            ],
+            "details": "Install `react-router-dom` v6. Define all application routes in `src/App.tsx` using `<BrowserRouter>` and `<Routes>`. Create route entries for: `/` (home/dashboard), `/predictions` (Fight Predictor), `/style-evolution` (Style Evolution Timeline), `/endurance` (Endurance Analyzer), `/events` (Recent Events), `/fighters` (Fighter/Database Lookup), and a `*` catch-all 404 page. Implement lazy loading for every page component using `React.lazy()` and wrap the router in a `<Suspense>` boundary with a loading spinner fallback. Create a `<RouteGuard>` component in `src/components/common/RouteGuard.tsx` that reads auth/feature-flag state from context and redirects to a fallback route if access is denied. Add `src/pages/NotFound.tsx` as the 404 page. Export a typed `ROUTES` constant from `src/utils/routes.ts` for use throughout the app. Acceptance criteria: All routes render their respective page placeholders, lazy loading is confirmed via network tab (separate chunks), route guard redirects correctly when condition is unmet.",
+            "status": "cancelled",
+            "testStrategy": "Use React Testing Library with `MemoryRouter` to test each route renders the correct page component. Test the `<RouteGuard>` redirects when the guard condition is false. Verify bundle splitting by inspecting Vite build output for separate chunk files per lazy-loaded page.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T00:16:04.276Z"
+          },
+          {
+            "id": 10,
+            "title": "State Management: React Context API with useReducer, Typed Actions, and localStorage Persistence",
+            "description": "Implement global state management using React Context API combined with useReducer, define fully typed actions and reducers, and persist relevant state slices to localStorage.",
+            "dependencies": [
+              7
+            ],
+            "details": "Create `src/store/` with the following structure: `AppContext.tsx` (context definition and provider), `reducer.ts` (root reducer), `actions.ts` (typed action creators and action type constants), and `selectors.ts` (memoized selector helpers). Define the global state shape in `src/types/store.ts` covering: `theme` (light/dark), `selectedFighters` (for predictor), `filterState` (weight class, era filters), `uiState` (loading flags, error messages), and `cacheState` (last-fetched timestamps). Implement `useReducer` inside `AppContext.tsx` and expose state and dispatch via context. Create a `usePersistence` custom hook in `src/hooks/usePersistence.ts` that serializes/deserializes specified state slices to `localStorage` on state change using `useEffect`. Create a `useAppState` and `useAppDispatch` hook pair in `src/hooks/useAppState.ts` for type-safe context consumption. Wrap the app in `<AppProvider>` in `main.tsx`. Acceptance criteria: State updates propagate to all consumers, theme and filter preferences survive page refresh via localStorage, TypeScript enforces action and state types.",
+            "status": "cancelled",
+            "testStrategy": "Unit test the reducer with all defined action types using plain function calls. Test `usePersistence` by mocking `localStorage` and asserting read/write calls. Use React Testing Library to render components inside `<AppProvider>` and verify state changes dispatch and reflect correctly in the UI.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T00:16:09.549Z"
+          },
+          {
+            "id": 11,
+            "title": "API Service Integration: Axios Client, Interceptors, Service Classes, and Error Handling",
+            "description": "Set up a centralized Axios HTTP client with request/response interceptors, create typed API service classes for all backend endpoints, and implement robust error handling and request/response type definitions.",
+            "dependencies": [
+              7,
+              10
+            ],
+            "details": "Install `axios`. Create `src/services/apiClient.ts` that instantiates an Axios instance with `baseURL` from `import.meta.env.VITE_API_BASE_URL`, default headers (`Content-Type: application/json`), and a configurable timeout. Add a request interceptor to attach auth tokens if present. Add a response interceptor to normalize errors into a typed `ApiError` shape (`{ status, message, code }`). Create the following service classes in `src/services/`: `EventsService.ts` (wraps `GET /events`), `FightersService.ts` (wraps `GET /fighters` and `GET /fighters/{id}`), `PredictionsService.ts` (wraps `GET /predictions/upcoming`), `StyleEvolutionService.ts`, and `EnduranceService.ts`. Define all request/response TypeScript interfaces in `src/types/api.ts` including `Fighter`, `Event`, `FightResult`, `Prediction`, `StyleMetrics`, and `EnduranceMetrics`. Create a `useApi` generic custom hook in `src/hooks/useApi.ts` that manages loading, error, and data state for any service call. Add `.env.example` documenting required environment variables. Acceptance criteria: All service methods return typed responses, errors are normalized, the `useApi` hook correctly reflects loading/error/data states.",
+            "status": "cancelled",
+            "testStrategy": "Mock Axios using `axios-mock-adapter` or `msw`. Unit test each service class method for correct URL construction, parameter passing, and response mapping. Test the response error interceptor with 4xx and 5xx responses. Test `useApi` hook with React Testing Library's `renderHook` for loading, success, and error states.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T00:16:14.910Z"
+          },
+          {
+            "id": 12,
+            "title": "Common Components, Testing Setup, and Data View Page Scaffolds",
+            "description": "Build the reusable common component library (Button, Input, Card, Loading, ErrorBoundary, Toast), configure Jest and React Testing Library, and scaffold the Recent Events and Fighter/Database Lookup page views with their data-fetching logic.",
+            "dependencies": [
+              8,
+              9,
+              10,
+              11
+            ],
+            "details": "Common components in `src/components/common/`: `Button.tsx` (variants: primary, secondary, ghost; sizes: sm, md, lg; accessible with `aria-*`), `Input.tsx` (with label, error state, and helper text), `Card.tsx` (with header, body, footer slots), `LoadingSpinner.tsx` and `LoadingSkeleton.tsx`, `ErrorBoundary.tsx` (class component catching render errors with fallback UI), `Toast.tsx` and `ToastContainer.tsx` (using context for imperative `showToast()` API). Configure Jest with `ts-jest`, `jest-environment-jsdom`, and `@testing-library/react`. Add `src/test/setup.ts` importing `@testing-library/jest-dom` matchers. Create `src/test/providers.tsx` with a `renderWithProviders` utility wrapping components in `AppProvider`, `BrowserRouter`, and `ToastProvider`. Scaffold `src/pages/RecentEventsPage.tsx`: fetches from `EventsService`, renders a list of the last ~10 UFC events with winner, method, and round using `Card` components, handles loading and error states. Scaffold `src/pages/FighterLookupPage.tsx`: includes a search `Input` for fighter name, displays fighter profile (physical stats from `fighter_tott`) and full fight history (methods and rounds from `fight_results`), and prominently displays the notice: *'Detailed round stats available from 2015+'*. Acceptance criteria: All common components render and are accessible (axe-core passes), both page scaffolds fetch and display data with loading/error states, test utilities work correctly.",
+            "status": "cancelled",
+            "testStrategy": "Write unit tests for each common component covering all variants and states. Run `jest-axe` accessibility checks on Button, Input, and Card. Test `ErrorBoundary` by rendering a component that throws. Integration-test `RecentEventsPage` and `FighterLookupPage` using `renderWithProviders` with MSW handlers mocking the respective API endpoints; assert event cards render and the '2015+' notice is visible on fighter profiles.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T00:16:20.229Z"
           }
         ],
         "complexity": 7,
         "recommendedSubtasks": 6,
-        "expansionPrompt": "Break down the React Frontend Foundation task into 6 subtasks covering project setup with Vite and TypeScript, styling configuration with Tailwind CSS, routing setup with React Router, state management implementation, API service integration, and common component development. For each subtask, provide a clear title, detailed description, and acceptance criteria."
+        "expansionPrompt": "Break down the React Frontend Foundation task into 6 subtasks covering project setup with Vite and TypeScript, styling configuration with Tailwind CSS, routing setup with React Router, state management implementation, API service integration, and common component development. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
+        "updatedAt": "2026-03-08T00:25:27.054Z"
       },
       {
-        "id": 8,
+        "id": "8",
         "title": "Interactive Fight Predictor UI",
         "description": "Develop the interactive fight predictor interface with fighter selection, parameter sliders, real-time prediction updates, visualization of results, and a Vegas odds / expected value section for betting analysis.",
         "status": "pending",
@@ -642,7 +724,8 @@
             "dependencies": [],
             "details": "Implement a dual fighter selection interface:\n- Searchable dropdown components for Fighter A and Fighter B using a combobox pattern\n- Fighter cards displaying photo, name, record, and key stats (height, weight, reach, stance)\n- Weight class filter to narrow the fighter list\n- Recent/popular fighter quick-select chips or buttons\n- Clear selection and swap fighter controls\n- Integrate with the fighter list endpoint to populate dropdown options\n- Handle loading and empty states gracefully",
             "status": "pending",
-            "testStrategy": "Test search filtering, weight class filter, fighter card rendering, quick-select functionality, and swap control. Verify API data populates correctly and empty/loading states display as expected."
+            "testStrategy": "Test search filtering, weight class filter, fighter card rendering, quick-select functionality, and swap control. Verify API data populates correctly and empty/loading states display as expected.",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -653,7 +736,8 @@
             ],
             "details": "Build a slider panel for each selected fighter:\n- Sliders for physical attributes: height, weight, reach\n- Sliders for performance metrics: striking accuracy, takedown accuracy, defense rates\n- Style attribute sliders: aggression, grappling tendency\n- Display current value labels next to each slider\n- Debounce slider change events (300–500ms) before triggering API calls\n- Show a subtle loading indicator while a new prediction is being fetched\n- Reset-to-defaults button per fighter\n- Ensure touch-friendly sizing for mobile",
             "status": "pending",
-            "testStrategy": "Test slider value changes trigger debounced API calls. Verify visual feedback updates immediately. Test reset functionality. Validate touch interactions on mobile viewports."
+            "testStrategy": "Test slider value changes trigger debounced API calls. Verify visual feedback updates immediately. Test reset functionality. Validate touch interactions on mobile viewports.",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -665,7 +749,8 @@
             ],
             "details": "Implement the following visualization components:\n- Win probability gauge/meter showing Fighter A vs Fighter B probability (e.g. a horizontal bar or radial gauge)\n- Method probability distribution bar or pie chart (KO/TKO, Submission, Decision)\n- Round prediction distribution chart\n- Confidence indicator (e.g. color-coded badge or progress bar)\n- All charts should animate on data update\n- Loading skeleton states while prediction is in flight\n- Use Recharts for standard charts; consider D3.js for the gauge if Recharts is insufficient\n- Responsive sizing for mobile and desktop",
             "status": "pending",
-            "testStrategy": "Verify charts render correctly with mock prediction data. Test animation on data update. Validate responsive layout. Test loading skeleton display during API calls."
+            "testStrategy": "Verify charts render correctly with mock prediction data. Test animation on data update. Validate responsive layout. Test loading skeleton display during API calls.",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -676,7 +761,8 @@
             ],
             "details": "Build a similar fights section below the prediction panel:\n- Table or card list of historical similar matchups returned by the API\n- Columns/fields: fighters, date, outcome, method, round, key stat deltas\n- Outcome summary badges (Win/Loss/Draw, method)\n- Key stat comparison highlights (e.g. reach advantage, striking differential)\n- Video link integration where available (external link icon)\n- Pagination or 'show more' for long lists\n- Empty state when no similar fights are found\n- Collapsible section on mobile",
             "status": "pending",
-            "testStrategy": "Test table renders with mock similar fights data. Verify pagination/show-more works. Test empty state. Validate external video links open correctly. Test collapsible behavior on mobile."
+            "testStrategy": "Test table renders with mock similar fights data. Verify pagination/show-more works. Test empty state. Validate external video links open correctly. Test collapsible behavior on mobile.",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -687,12 +773,16 @@
             ],
             "details": "Implement a dedicated 'Vegas Odds / EV Analysis' section on the prediction page:\n\n**Inputs:**\n- Two numeric text inputs: 'Fighter A Odds' and 'Fighter B Odds' accepting American odds format (e.g. -150, +200)\n- Input validation: must be a non-zero integer; show inline error for invalid values\n\n**Computed outputs (all frontend math, no backend call):**\n1. Vegas Implied Probability for each fighter:\n   - Negative odds: |odds| / (|odds| + 100)\n   - Positive odds: 100 / (odds + 100)\n2. Model Win Probability: sourced from the RF model response at POST /api/v1/predictions/fight-outcome (already available in component state)\n3. Expected Value per $100 bet:\n   - EV = (model_prob × payout) - ((1 - model_prob) × 100)\n   - Payout for negative odds: 10000 / |odds|\n   - Payout for positive odds: the odds value itself\n4. Signal per fighter:\n   - BET (green): EV > +5 (configurable threshold)\n   - MARGINAL (yellow): -5 ≤ EV ≤ +5\n   - SKIP (red): EV < -5\n\n**Disclaimer (always visible when section is active):**\n'Model edge is only meaningful when model confidence significantly exceeds the Vegas implied probability. Sportsbook vig (4–8%) eats into small edges. This is not financial advice.'\n\n**UX:**\n- Section is collapsible/expandable\n- Outputs update reactively as odds are typed and as model probability updates\n- Display implied prob, model prob, EV, and signal in a clean comparison table or card layout\n- Mobile-responsive layout",
             "status": "pending",
-            "testStrategy": "Unit test implied probability formula for negative odds (e.g. -150 → 0.6), positive odds (e.g. +200 → 0.333), and edge cases (e.g. +100). Unit test EV formula with known model_prob and odds values. Test BET/MARGINAL/SKIP threshold boundaries. Test input validation rejects non-numeric and zero values. Verify outputs update reactively when model probability changes. Confirm disclaimer is always rendered when section is open. Test responsive layout on mobile viewports."
+            "testStrategy": "Unit test implied probability formula for negative odds (e.g. -150 → 0.6), positive odds (e.g. +200 → 0.333), and edge cases (e.g. +100). Unit test EV formula with known model_prob and odds values. Test BET/MARGINAL/SKIP threshold boundaries. Test input validation rejects non-numeric and zero values. Verify outputs update reactively when model probability changes. Confirm disclaimer is always rendered when section is open. Test responsive layout on mobile viewports.",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down the Interactive Fight Predictor UI task into 5 subtasks covering fighter selection interface, interactive parameter sliders, prediction visualization components, similar fights comparison feature, and real-time update implementation. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 9,
+        "id": "9",
         "title": "Style Evolution Timeline Analyzer",
         "description": "Implement the style evolution timeline analyzer that visualizes how fighting styles and finish rates have evolved throughout UFC history with filtering and trend analysis.",
         "details": "Create the style evolution timeline feature:\n\n1. Data processing:\n   - Aggregate fight data by era and weight class\n   - Calculate style metrics over time\n   - Identify significant trend changes\n   - Compute finish rate statistics\n\n2. Timeline visualization:\n   - D3.js interactive timeline\n   - Selectable metrics (KO rate, submission rate, etc.)\n   - Weight class filtering\n   - Era demarcation (Pre-Zuffa, Early UFC, Modern era, etc.)\n\n3. Trend analysis:\n   - Moving averages of key metrics\n   - Trend line overlays\n   - Statistical significance indicators\n   - Notable events marking (rule changes, etc.)\n\n4. Interactive elements:\n   - Zoom and pan controls\n   - Tooltips with detailed information\n   - Highlight specific fighters or events\n   - Comparison mode for multiple metrics\n\n5. Filtering capabilities:\n   - Weight class selector\n   - Date range picker\n   - Fighter type filters (champions, contenders, etc.)\n   - Style category filters\n\n6. Export and sharing:\n   - Image export of visualizations\n   - Shareable links with filter state\n   - Embed codes for analysts\n\nImplement responsive design to ensure visualizations work on different screen sizes, with simplified views for mobile devices.",
@@ -709,7 +799,7 @@
         "expansionPrompt": "Break down the Style Evolution Timeline Analyzer task into 5 subtasks covering data aggregation and processing, timeline visualization with D3.js, trend analysis implementation, interactive filtering capabilities, and export/sharing functionality. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 10,
+        "id": "10",
         "title": "Fighter Endurance & Pacing Dashboard",
         "description": "Develop the fighter endurance and pacing dashboard that analyzes round-by-round performance degradation and predicts cardio performance in hypothetical matchups.",
         "details": "Build the fighter endurance analysis dashboard:\n\n1. Round-by-round data analysis:\n   - Process historical round statistics\n   - Calculate performance degradation rates\n   - Identify pacing patterns\n   - Compare early vs. late round performance\n\n2. Endurance profile visualization:\n   - Line charts of key metrics by round\n   - Comparative analysis with division average\n   - Stamina indicators\n   - Historical trend analysis\n\n3. Performance prediction models:\n   - Implement time series models for round prediction\n   - Create hypothetical 5-round projections\n   - Model cardio impact on performance\n   - Predict late-round effectiveness\n\n4. Comparative analysis:\n   - Fighter vs. fighter endurance comparison\n   - Historical matchup analysis\n   - Style matchup impact on cardio\n   - Training camp/preparation effects\n\n5. Interactive elements:\n   - Round selector\n   - Metric toggles (strikes, accuracy, movement)\n   - Scenario adjustments (pace, fighting style)\n   - Fight length selector\n\n6. Mobile optimization:\n   - Simplified visualizations for small screens\n   - Touch-friendly controls\n   - Progressive disclosure of complex data\n\nImplement using a combination of Recharts for standard visualizations and D3.js for custom interactive elements. Ensure all data visualizations have appropriate legends and context.",
@@ -726,7 +816,7 @@
         "expansionPrompt": "Break down the Fighter Endurance & Pacing Dashboard task into 5 subtasks covering round-by-round data analysis, endurance profile visualization, performance prediction model implementation, comparative analysis features, and mobile optimization. For each subtask, provide a clear title, detailed description, and acceptance criteria."
       },
       {
-        "id": 11,
+        "id": "11",
         "title": "Create Upcoming Events & Fights Database Schema",
         "description": "Define and migrate the three new Supabase tables: upcoming_events, upcoming_fights, and upcoming_predictions, with all columns, constraints, foreign keys, and indexes as specified in the PRD.",
         "details": "Create SQL migration scripts for the three new tables:\n\n```sql\n-- upcoming_events\nCREATE TABLE upcoming_events (\n  id            VARCHAR(6) PRIMARY KEY,\n  event_name    TEXT NOT NULL,\n  date_proper   DATE NOT NULL,\n  location      TEXT,\n  ufcstats_url  TEXT UNIQUE NOT NULL,\n  scraped_at    TIMESTAMPTZ DEFAULT now(),\n  is_numbered   BOOLEAN\n);\n\n-- upcoming_fights\nCREATE TABLE upcoming_fights (\n  id              VARCHAR(6) PRIMARY KEY,\n  event_id        VARCHAR(6) REFERENCES upcoming_events(id),\n  fighter_a_name  TEXT,\n  fighter_b_name  TEXT,\n  fighter_a_id    VARCHAR(6) REFERENCES fighter_details(id),\n  fighter_b_id    VARCHAR(6) REFERENCES fighter_details(id),\n  fighter_a_url   TEXT,\n  fighter_b_url   TEXT,\n  weight_class    TEXT,\n  is_title_fight  BOOLEAN DEFAULT FALSE,\n  ufcstats_url    TEXT,\n  scraped_at      TIMESTAMPTZ DEFAULT now(),\n  UNIQUE (event_id, fighter_a_url, fighter_b_url)\n);\n\n-- upcoming_predictions\nCREATE TABLE upcoming_predictions (\n  id             VARCHAR(6) PRIMARY KEY,\n  fight_id       VARCHAR(6) REFERENCES upcoming_fights(id) UNIQUE,\n  model_version  TEXT DEFAULT 'win_loss_v1',\n  win_prob_a     FLOAT,\n  win_prob_b     FLOAT,\n  method_ko_tko  FLOAT,\n  method_sub     FLOAT,\n  method_dec     FLOAT,\n  features_json  JSONB,\n  predicted_at   TIMESTAMPTZ DEFAULT now(),\n  feature_hash   TEXT\n);\n```\n\nApply via Supabase SQL editor or migration tool (e.g., supabase db push). Add indexes on:\n- upcoming_events(date_proper)\n- upcoming_fights(event_id)\n- upcoming_fights(fighter_a_id), upcoming_fights(fighter_b_id)\n- upcoming_predictions(fight_id)\n\nAlso add a helper function or trigger for generating alphanumeric VARCHAR(6) IDs consistent with the existing pattern used in other tables.",
@@ -742,149 +832,153 @@
         "subtasks": []
       },
       {
-        "id": 12,
+        "id": "12",
         "title": "Implement Fighter URL-Based Matching Utility",
         "description": "Create backend/scraper/match_fighters.py with a reliable fighter matching function that looks up fighter DB IDs using UFCStats profile URLs, with fuzzy name-based fallback.",
         "details": "Create `backend/scraper/match_fighters.py`:\n\n```python\nfrom db import get_supabase_client  # existing DB client\nfrom rapidfuzz import fuzz  # or difflib if rapidfuzz not available\nimport logging\n\nlogger = logging.getLogger(__name__)\n\ndef match_fighter_by_url(ufcstats_url: str) -> str | None:\n    \"\"\"Primary: exact URL match against fighter_details.URL\"\"\"\n    client = get_supabase_client()\n    result = client.table('fighter_details') \\\n        .select('id') \\\n        .eq('URL', ufcstats_url) \\\n        .single() \\\n        .execute()\n    if result.data:\n        return result.data['id']\n    return None\n\ndef match_fighter_by_name(first_name: str, last_name: str) -> str | None:\n    \"\"\"Fallback: fuzzy name match\"\"\"\n    client = get_supabase_client()\n    # Fetch all fighters and fuzzy match\n    result = client.table('fighter_details') \\\n        .select('id, first_name, last_name') \\\n        .execute()\n    full_name = f\"{first_name} {last_name}\".lower()\n    best_score, best_id = 0, None\n    for row in result.data:\n        candidate = f\"{row['first_name']} {row['last_name']}\".lower()\n        score = fuzz.ratio(full_name, candidate)\n        if score > best_score:\n            best_score, best_id = score, row['id']\n    if best_score >= 85:\n        return best_id\n    logger.warning(f\"No match found for {first_name} {last_name} (best score: {best_score})\")\n    return None\n\ndef resolve_fighter(ufcstats_url: str, name: str) -> str | None:\n    \"\"\"Try URL match first, then name fallback.\"\"\"\n    fighter_id = match_fighter_by_url(ufcstats_url)\n    if fighter_id:\n        return fighter_id\n    parts = name.strip().split(' ', 1)\n    first = parts[0] if parts else ''\n    last = parts[1] if len(parts) > 1 else ''\n    return match_fighter_by_name(first, last)\n```\n\nLog all unmatched fighters with their UFCStats URLs for monitoring. Return None when no match found — callers must handle None gracefully.",
         "testStrategy": "1. Unit test match_fighter_by_url with a known fighter URL — expect correct DB id returned.\n2. Unit test with an unknown URL — expect None.\n3. Unit test match_fighter_by_name with exact name — expect correct id.\n4. Unit test with a slightly misspelled name (e.g., 'Jon Johnes') — expect correct id if score >= 85.\n5. Unit test with a completely unknown name — expect None.\n6. Mock Supabase client for all unit tests to avoid live DB calls.\n7. Integration test against staging DB with 5 known fighters and 2 unknown fighters.",
         "priority": "high",
         "dependencies": [
-          11
+          "11"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 13,
+        "id": "13",
         "title": "Build Upcoming Events HTML Scraper",
         "description": "Implement backend/scraper/upcoming_scraper.py to scrape UFCStats /statistics/events/upcoming, parse event rows and fight cards, and upsert data into upcoming_events and upcoming_fights tables.",
         "details": "Create `backend/scraper/upcoming_scraper.py`:\n\n```python\nimport requests\nfrom bs4 import BeautifulSoup\nimport hashlib, random, string, logging\nfrom datetime import datetime\nfrom scraper.match_fighters import resolve_fighter\nfrom db import get_supabase_client\n\nBASE_URL = 'http://ufcstats.com'\nUPCOMING_URL = f'{BASE_URL}/statistics/events/upcoming'\nROW_CLASS = 'b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click'\n\ndef generate_id(length=6):\n    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))\n\ndef scrape_upcoming_events():\n    resp = requests.get(UPCOMING_URL, timeout=30)\n    resp.raise_for_status()\n    soup = BeautifulSoup(resp.text, 'html.parser')\n    # Parse event list rows (same structure as completed events page)\n    # Each event row has event name, date, location, and link\n    events = []\n    for row in soup.select('tr.b-statistics__table-row'):\n        link_tag = row.find('a')\n        if not link_tag:\n            continue\n        event_url = link_tag['href']\n        event_name = link_tag.text.strip()\n        cells = row.find_all('td')\n        if len(cells) < 2:\n            continue\n        date_text = cells[1].text.strip() if len(cells) > 1 else ''\n        location = cells[2].text.strip() if len(cells) > 2 else ''\n        try:\n            date_proper = datetime.strptime(date_text, '%B %d, %Y').date()\n        except ValueError:\n            continue\n        is_numbered = bool(event_name.startswith('UFC ') and event_name.split(' ')[1].rstrip(':').isdigit())\n        events.append({\n            'event_name': event_name,\n            'date_proper': str(date_proper),\n            'location': location,\n            'ufcstats_url': event_url,\n            'is_numbered': is_numbered\n        })\n    return events\n\ndef scrape_event_fights(event_url: str):\n    resp = requests.get(event_url, timeout=30)\n    resp.raise_for_status()\n    soup = BeautifulSoup(resp.text, 'html.parser')\n    fights = []\n    rows = soup.find_all('tr', class_=lambda c: c and 'js-fight-details-click' in c)\n    for row in rows:  # Do NOT skip first row (unlike live_scraper)\n        fight_url = row.get('data-link', '')\n        cells = row.find_all('td')\n        if len(cells) < 7:\n            continue\n        # Fighter names + URLs in cell[1]\n        fighter_links = cells[1].find_all('a')\n        if len(fighter_links) < 2:\n            continue\n        fighter_a_name = fighter_links[0].text.strip()\n        fighter_a_url = fighter_links[0]['href']\n        fighter_b_name = fighter_links[1].text.strip()\n        fighter_b_url = fighter_links[1]['href']\n        weight_class = cells[6].text.strip()\n        is_title_fight = 'Title Bout' in row.text\n        fights.append({\n            'fighter_a_name': fighter_a_name,\n            'fighter_b_name': fighter_b_name,\n            'fighter_a_url': fighter_a_url,\n            'fighter_b_url': fighter_b_url,\n            'weight_class': weight_class,\n            'is_title_fight': is_title_fight,\n            'ufcstats_url': fight_url\n        })\n    return fights\n\ndef upsert_event(event_data: dict) -> str:\n    client = get_supabase_client()\n    existing = client.table('upcoming_events').select('id').eq('ufcstats_url', event_data['ufcstats_url']).execute()\n    if existing.data:\n        event_id = existing.data[0]['id']\n        client.table('upcoming_events').update(event_data).eq('id', event_id).execute()\n    else:\n        event_id = generate_id()\n        client.table('upcoming_events').insert({'id': event_id, **event_data}).execute()\n    return event_id\n\ndef upsert_fight(event_id: str, fight_data: dict) -> str:\n    client = get_supabase_client()\n    existing = client.table('upcoming_fights').select('id') \\\n        .eq('event_id', event_id) \\\n        .eq('fighter_a_url', fight_data['fighter_a_url']) \\\n        .eq('fighter_b_url', fight_data['fighter_b_url']) \\\n        .execute()\n    fight_id = existing.data[0]['id'] if existing.data else generate_id()\n    # Resolve fighter IDs\n    fighter_a_id = resolve_fighter(fight_data['fighter_a_url'], fight_data['fighter_a_name'])\n    fighter_b_id = resolve_fighter(fight_data['fighter_b_url'], fight_data['fighter_b_name'])\n    payload = {'event_id': event_id, 'fighter_a_id': fighter_a_id, 'fighter_b_id': fighter_b_id, **fight_data}\n    if existing.data:\n        client.table('upcoming_fights').update(payload).eq('id', fight_id).execute()\n    else:\n        client.table('upcoming_fights').insert({'id': fight_id, **payload}).execute()\n    return fight_id, fighter_a_id, fighter_b_id\n\ndef run_scraper():\n    events = scrape_upcoming_events()\n    for event in events:\n        event_id = upsert_event(event)\n        fights = scrape_event_fights(event['ufcstats_url'])\n        for fight in fights:\n            fight_id, fa_id, fb_id = upsert_fight(event_id, fight)\n            # Return fight_id + matched IDs for prediction step\n            yield event, fight_id, fa_id, fb_id, fight\n```\n\nKey differences from live_scraper.py:\n- Target URL: /statistics/events/upcoming\n- Do NOT skip first row\n- Fighter names from cell[1] (not cell[0])\n- No W/L outcome parsing\n- Upsert on ufcstats_url (events) and (event_id, fighter_a_url, fighter_b_url) (fights)",
         "testStrategy": "1. Run scraper against live UFCStats upcoming page and verify at least one event is returned.\n2. Run scraper twice and verify no duplicate rows in upcoming_events or upcoming_fights (idempotency).\n3. Verify fighter_a_url and fighter_b_url are valid UFCStats profile URLs.\n4. Verify weight_class is populated for all fights.\n5. Verify is_title_fight is TRUE for known title bouts.\n6. Verify is_numbered is TRUE for 'UFC 327:' style events and FALSE for 'UFC Fight Night:' events.\n7. Mock HTTP responses with saved HTML fixtures for unit tests.\n8. Verify that first row is NOT skipped (unlike live_scraper behavior).",
         "priority": "high",
         "dependencies": [
-          11,
-          12
+          "11",
+          "12"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 14,
+        "id": "14",
         "title": "Implement Pre-Computed Prediction Pipeline",
         "description": "Extend upcoming_scraper.py to compute and store ML predictions for each matched fight using build_prediction_features() and existing trained models, storing results in upcoming_predictions with feature hashing for staleness detection.",
         "details": "Add prediction computation to the scraper pipeline:\n\n```python\n# backend/scraper/predict_upcoming.py\nimport hashlib, json, logging\nfrom features.pipeline import build_prediction_features\nfrom ml.train import load_models\nfrom db import get_supabase_client\n\nlogger = logging.getLogger(__name__)\n\ndef compute_feature_hash(features: dict) -> str:\n    serialized = json.dumps(features, sort_keys=True)\n    return hashlib.sha256(serialized.encode()).hexdigest()\n\ndef generate_prediction(fight_id: str, fighter_a_id: str, fighter_b_id: str, event_date: str):\n    \"\"\"Compute and upsert prediction for a matched fight.\"\"\"\n    if not fighter_a_id or not fighter_b_id:\n        logger.info(f\"Skipping prediction for fight {fight_id}: unmatched fighter(s)\")\n        return\n\n    try:\n        features = build_prediction_features(\n            fighter_a_id=fighter_a_id,\n            fighter_b_id=fighter_b_id,\n            as_of=event_date  # Use event date, not today\n        )\n    except Exception as e:\n        logger.error(f\"Feature build failed for fight {fight_id}: {e}\")\n        return\n\n    if features is None or len(features) < 10:\n        logger.warning(f\"Sparse features for fight {fight_id}, skipping prediction\")\n        return\n\n    feature_hash = compute_feature_hash(features)\n\n    # Check if prediction already exists and is fresh\n    client = get_supabase_client()\n    existing = client.table('upcoming_predictions') \\\n        .select('id, feature_hash, model_version') \\\n        .eq('fight_id', fight_id) \\\n        .execute()\n\n    if existing.data:\n        row = existing.data[0]\n        if row['feature_hash'] == feature_hash and row['model_version'] == 'win_loss_v1':\n            logger.info(f\"Prediction for fight {fight_id} is fresh, skipping\")\n            return\n\n    win_model, method_model = load_models()\n\n    # Win probability\n    feature_vector = list(features.values())\n    win_probs = win_model.predict_proba([feature_vector])[0]\n    win_prob_a = float(win_probs[1])\n    win_prob_b = 1.0 - win_prob_a\n\n    # Method probabilities\n    method_probs = method_model.predict_proba([feature_vector])[0]\n    # Assumes classes: [dec, ko_tko, sub] — adjust to actual class order\n    method_dec   = float(method_probs[0])\n    method_ko_tko = float(method_probs[1])\n    method_sub   = float(method_probs[2])\n\n    if win_prob_a is None:\n        logger.warning(f\"Model returned None for fight {fight_id}, skipping\")\n        return\n\n    payload = {\n        'fight_id': fight_id,\n        'model_version': 'win_loss_v1',\n        'win_prob_a': win_prob_a,\n        'win_prob_b': win_prob_b,\n        'method_ko_tko': method_ko_tko,\n        'method_sub': method_sub,\n        'method_dec': method_dec,\n        'features_json': features,\n        'feature_hash': feature_hash\n    }\n\n    if existing.data:\n        client.table('upcoming_predictions').update(payload).eq('fight_id', fight_id).execute()\n    else:\n        from scraper.upcoming_scraper import generate_id\n        client.table('upcoming_predictions').insert({'id': generate_id(), **payload}).execute()\n\n    logger.info(f\"Prediction stored for fight {fight_id}: win_prob_a={win_prob_a:.3f}\")\n```\n\nIntegrate into run_scraper() loop:\n```python\nfor event, fight_id, fa_id, fb_id, fight in run_scraper():\n    generate_prediction(fight_id, fa_id, fb_id, event['date_proper'])\n```\n\nKey notes:\n- as_of = event date (not scrape date)\n- Skip if either fighter_id is None\n- Skip if feature count < 10 (sparse)\n- Upsert on fight_id; replace if feature_hash or model_version changed\n- Store full features_json for frontend differential display",
         "testStrategy": "1. Unit test compute_feature_hash — same input always produces same hash, different input produces different hash.\n2. Unit test generate_prediction with both fighter IDs None — verify no DB write and correct log message.\n3. Unit test with sparse features (< 10 keys) — verify prediction is skipped.\n4. Integration test with two known matched fighters — verify upcoming_predictions row is created with win_prob_a + win_prob_b summing to ~1.0.\n5. Run pipeline twice with same data — verify no duplicate rows and idempotent upsert.\n6. Verify feature_hash changes when features change, triggering a prediction refresh.\n7. Verify as_of date is event date, not today, by inspecting features_json timestamps.",
         "priority": "high",
         "dependencies": [
-          11,
-          12,
-          13
+          "11",
+          "12",
+          "13"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 15,
+        "id": "15",
         "title": "Create run_upcoming.py Entry Point and GitHub Actions Workflow",
         "description": "Implement backend/scraper/run_upcoming.py as the CLI entry point for the full upcoming scraper + prediction pipeline, and create the GitHub Actions workflow scheduled for every Friday at 12:00 UTC.",
         "details": "Create `backend/scraper/run_upcoming.py`:\n\n```python\nimport logging\nimport sys\nfrom scraper.upcoming_scraper import run_scraper\nfrom scraper.predict_upcoming import generate_prediction\n\nlogging.basicConfig(\n    level=logging.INFO,\n    format='%(asctime)s %(levelname)s %(name)s: %(message)s',\n    handlers=[logging.StreamHandler(sys.stdout)]\n)\nlogger = logging.getLogger(__name__)\n\ndef main():\n    logger.info('Starting upcoming event scraper and prediction pipeline')\n    total_fights = 0\n    predicted_fights = 0\n    unmatched_fighters = []\n\n    for event, fight_id, fa_id, fb_id, fight in run_scraper():\n        total_fights += 1\n        if fa_id and fb_id:\n            generate_prediction(fight_id, fa_id, fb_id, event['date_proper'])\n            predicted_fights += 1\n        else:\n            unmatched = []\n            if not fa_id: unmatched.append(fight['fighter_a_name'])\n            if not fb_id: unmatched.append(fight['fighter_b_name'])\n            unmatched_fighters.extend(unmatched)\n            logger.warning(f\"Unmatched fighters: {unmatched}\")\n\n    logger.info(f'Done. Total fights: {total_fights}, Predicted: {predicted_fights}')\n    logger.info(f'Unmatched fighters: {unmatched_fighters}')\n\nif __name__ == '__main__':\n    main()\n```\n\nCreate `.github/workflows/upcoming-predictions.yml`:\n\n```yaml\nname: Upcoming Event Predictions\n\non:\n  schedule:\n    - cron: '0 12 * * 5'  # Every Friday at 12:00 UTC (8 AM ET)\n  workflow_dispatch:       # Allow manual trigger\n\njobs:\n  scrape-and-predict:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n\n      - name: Set up Python 3.12\n        uses: actions/setup-python@v5\n        with:\n          python-version: '3.12'\n\n      - name: Install dependencies\n        run: pip install -r backend/requirements.txt\n\n      - name: Run upcoming scraper\n        env:\n          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}\n          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}\n        run: python backend/scraper/run_upcoming.py\n\n      - name: Upload logs on failure\n        if: failure()\n        uses: actions/upload-artifact@v4\n        with:\n          name: upcoming-scraper-logs\n          path: '*.log'\n          retention-days: 7\n```\n\nNo git commit step needed — all writes go directly to Supabase.",
         "testStrategy": "1. Run `python backend/scraper/run_upcoming.py` locally and verify it completes without errors.\n2. Verify summary log output shows total_fights and predicted_fights counts.\n3. Verify unmatched fighters are logged with their names.\n4. Trigger workflow_dispatch manually in GitHub Actions and verify the workflow runs successfully.\n5. Verify the cron schedule is correct by checking next scheduled run time.\n6. Simulate a failure (e.g., bad SUPABASE_URL) and verify logs artifact is uploaded.\n7. Verify no duplicate DB rows after two consecutive manual runs.",
         "priority": "high",
         "dependencies": [
-          13,
-          14
+          "13",
+          "14"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 16,
+        "id": "16",
         "title": "Define Pydantic Schemas for Upcoming Endpoints",
         "description": "Create backend/schemas/upcoming.py with all Pydantic v2 response models: UpcomingEventSummary, UpcomingEventDetail, UpcomingFightCard, UpcomingFightDetail, UpcomingPrediction, and KeyDifferential.",
         "details": "Create `backend/schemas/upcoming.py`:\n\n```python\nfrom pydantic import BaseModel, Field\nfrom typing import Optional\nfrom datetime import date, datetime\n\nclass KeyDifferential(BaseModel):\n    feature_name: str\n    value: float  # differential value (fighter_a - fighter_b)\n    abs_magnitude: float\n\nclass UpcomingPrediction(BaseModel):\n    win_prob_a: float\n    win_prob_b: float\n    method_ko_tko: float\n    method_sub: float\n    method_dec: float\n    model_version: str\n    predicted_at: datetime\n\nclass UpcomingFightCard(BaseModel):\n    id: str\n    fighter_a_name: str\n    fighter_b_name: str\n    weight_class: Optional[str]\n    is_title_fight: bool\n    matched: bool  # True if both fighters found in DB\n    prediction: Optional[UpcomingPrediction] = None\n    key_differentials: list[KeyDifferential] = Field(default_factory=list)\n\nclass UpcomingEventSummary(BaseModel):\n    id: str\n    event_name: str\n    date_proper: date\n    location: Optional[str]\n    is_numbered: bool\n    fight_count: int\n    predicted_fight_count: int\n\nclass UpcomingEventDetail(BaseModel):\n    id: str\n    event_name: str\n    date_proper: date\n    location: Optional[str]\n    is_numbered: bool\n    ufcstats_url: Optional[str]\n    fights: list[UpcomingFightCard]\n\nclass FighterPhysicalStats(BaseModel):\n    height: Optional[str]\n    weight: Optional[str]\n    reach: Optional[str]\n    stance: Optional[str]\n    dob: Optional[str]\n\nclass UpcomingFightDetail(BaseModel):\n    id: str\n    event_id: str\n    fighter_a_name: str\n    fighter_b_name: str\n    fighter_a_stats: Optional[FighterPhysicalStats] = None\n    fighter_b_stats: Optional[FighterPhysicalStats] = None\n    weight_class: Optional[str]\n    is_title_fight: bool\n    matched: bool\n    prediction: Optional[UpcomingPrediction] = None\n    all_differentials: list[KeyDifferential] = Field(default_factory=list)  # all 31 features\n\nclass RefreshJobStatus(BaseModel):\n    job_id: str\n    status: str  # 'running' | 'completed' | 'failed'\n    message: Optional[str] = None\n```\n\nUse Pydantic v2 syntax (model_config, field validators as needed). Ensure all Optional fields default to None. The key_differentials list in UpcomingFightCard contains top 5 features by abs_magnitude; all_differentials in UpcomingFightDetail contains all 31.",
         "testStrategy": "1. Unit test each schema by instantiating with valid data and verifying field types.\n2. Test UpcomingFightCard with prediction=None (unmatched fighter) — expect valid model.\n3. Test UpcomingEventSummary with fight_count=0 — expect valid model.\n4. Test KeyDifferential with negative value — expect valid (differentials can be negative).\n5. Verify Pydantic validation errors are raised for missing required fields (e.g., missing fighter_a_name).\n6. Test JSON serialization of all schemas via model.model_dump_json().",
         "priority": "medium",
         "dependencies": [
-          11,
+          "11",
           "4"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 17,
+        "id": "17",
         "title": "Implement GET /api/v1/upcoming/events Endpoint",
         "description": "Create the FastAPI endpoint that returns a list of all upcoming UFC events ordered by date, with fight counts and prediction coverage statistics.",
         "details": "Add to `backend/routers/upcoming.py` (create file):\n\n```python\nfrom fastapi import APIRouter, HTTPException\nfrom schemas.upcoming import UpcomingEventSummary\nfrom db import get_supabase_client\nfrom datetime import date\n\nrouter = APIRouter(prefix='/api/v1/upcoming', tags=['upcoming'])\n\n@router.get('/events', response_model=list[UpcomingEventSummary])\ndef list_upcoming_events():\n    client = get_supabase_client()\n    today = date.today().isoformat()\n\n    # Fetch upcoming events with date >= today\n    events_resp = client.table('upcoming_events') \\\n        .select('id, event_name, date_proper, location, is_numbered, ufcstats_url') \\\n        .gte('date_proper', today) \\\n        .order('date_proper', desc=False) \\\n        .execute()\n\n    events = events_resp.data or []\n    result = []\n\n    for event in events:\n        event_id = event['id']\n\n        # Count total fights for this event\n        fights_resp = client.table('upcoming_fights') \\\n            .select('id') \\\n            .eq('event_id', event_id) \\\n            .execute()\n        fight_ids = [f['id'] for f in (fights_resp.data or [])]\n        fight_count = len(fight_ids)\n\n        # Count fights with predictions\n        predicted_count = 0\n        if fight_ids:\n            preds_resp = client.table('upcoming_predictions') \\\n                .select('fight_id') \\\n                .in_('fight_id', fight_ids) \\\n                .execute()\n            predicted_count = len(preds_resp.data or [])\n\n        result.append(UpcomingEventSummary(\n            id=event_id,\n            event_name=event['event_name'],\n            date_proper=event['date_proper'],\n            location=event.get('location'),\n            is_numbered=event.get('is_numbered', False),\n            fight_count=fight_count,\n            predicted_fight_count=predicted_count\n        ))\n\n    return result\n```\n\nRegister router in main FastAPI app:\n```python\nfrom routers import upcoming\napp.include_router(upcoming.router)\n```\n\nFilter by date_proper >= today so past events don't appear (per PRD note 6).",
         "testStrategy": "1. Mock Supabase client and verify endpoint returns correct list structure.\n2. Verify events are ordered by date_proper ASC.\n3. Verify events with date_proper < today are excluded.\n4. Verify fight_count and predicted_fight_count are accurate.\n5. Test with empty upcoming_events table — expect empty list [].\n6. Integration test against staging DB with at least one upcoming event.\n7. Verify response matches UpcomingEventSummary schema via FastAPI TestClient.",
         "priority": "medium",
         "dependencies": [
-          11,
-          16,
+          "11",
+          "16",
           "4"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 18,
+        "id": "18",
         "title": "Implement GET /api/v1/upcoming/events/{event_id} Endpoint",
         "description": "Create the FastAPI endpoint that returns full event card details including all fights, predictions, and top-5 key feature differentials for each fight.",
         "details": "Add to `backend/routers/upcoming.py`:\n\n```python\n@router.get('/events/{event_id}', response_model=UpcomingEventDetail)\ndef get_upcoming_event(event_id: str):\n    client = get_supabase_client()\n\n    # Fetch event\n    event_resp = client.table('upcoming_events') \\\n        .select('*') \\\n        .eq('id', event_id) \\\n        .single() \\\n        .execute()\n    if not event_resp.data:\n        raise HTTPException(status_code=404, detail='Event not found')\n    event = event_resp.data\n\n    # Fetch fights for event\n    fights_resp = client.table('upcoming_fights') \\\n        .select('*') \\\n        .eq('event_id', event_id) \\\n        .execute()\n    fights = fights_resp.data or []\n\n    fight_cards = []\n    for fight in fights:\n        fight_id = fight['id']\n        matched = bool(fight.get('fighter_a_id') and fight.get('fighter_b_id'))\n\n        # Fetch prediction\n        pred_resp = client.table('upcoming_predictions') \\\n            .select('*') \\\n            .eq('fight_id', fight_id) \\\n            .execute()\n        prediction = None\n        key_differentials = []\n\n        if pred_resp.data:\n            p = pred_resp.data[0]\n            prediction = UpcomingPrediction(\n                win_prob_a=p['win_prob_a'],\n                win_prob_b=p['win_prob_b'],\n                method_ko_tko=p['method_ko_tko'],\n                method_sub=p['method_sub'],\n                method_dec=p['method_dec'],\n                model_version=p['model_version'],\n                predicted_at=p['predicted_at']\n            )\n            # Compute top 5 differentials by abs magnitude\n            features = p.get('features_json', {}) or {}\n            sorted_features = sorted(\n                features.items(),\n                key=lambda x: abs(x[1]) if isinstance(x[1], (int, float)) else 0,\n                reverse=True\n            )[:5]\n            key_differentials = [\n                KeyDifferential(\n                    feature_name=k,\n                    value=v,\n                    abs_magnitude=abs(v)\n                ) for k, v in sorted_features if isinstance(v, (int, float))\n            ]\n\n        fight_cards.append(UpcomingFightCard(\n            id=fight_id,\n            fighter_a_name=fight['fighter_a_name'],\n            fighter_b_name=fight['fighter_b_name'],\n            weight_class=fight.get('weight_class'),\n            is_title_fight=fight.get('is_title_fight', False),\n            matched=matched,\n            prediction=prediction,\n            key_differentials=key_differentials\n        ))\n\n    return UpcomingEventDetail(\n        id=event['id'],\n        event_name=event['event_name'],\n        date_proper=event['date_proper'],\n        location=event.get('location'),\n        is_numbered=event.get('is_numbered', False),\n        ufcstats_url=event.get('ufcstats_url'),\n        fights=fight_cards\n    )\n```",
         "testStrategy": "1. Test with valid event_id — verify full event detail returned with fights array.\n2. Test with invalid event_id — expect 404 HTTPException.\n3. Verify fights with no prediction have prediction=None and key_differentials=[].\n4. Verify key_differentials contains exactly top 5 features by abs magnitude.\n5. Verify matched=False for fights with NULL fighter_a_id or fighter_b_id.\n6. Verify matched=True for fights with both fighter IDs present.\n7. Test with event that has 0 fights — expect empty fights array.\n8. Use FastAPI TestClient with mocked Supabase for all tests.",
         "priority": "medium",
         "dependencies": [
-          11,
-          16,
-          17,
+          "11",
+          "16",
+          "17",
           "4"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 19,
+        "id": "19",
         "title": "Implement GET /api/v1/upcoming/fights/{fight_id} and POST /api/v1/admin/refresh-upcoming Endpoints",
         "description": "Create the single fight detail endpoint (with all 31 feature differentials and fighter physical stats) and the admin manual refresh endpoint that triggers the scraper pipeline.",
         "details": "Add to `backend/routers/upcoming.py`:\n\n```python\nimport uuid\nfrom fastapi import BackgroundTasks\n\n@router.get('/fights/{fight_id}', response_model=UpcomingFightDetail)\ndef get_upcoming_fight(fight_id: str):\n    client = get_supabase_client()\n\n    fight_resp = client.table('upcoming_fights').select('*').eq('id', fight_id).single().execute()\n    if not fight_resp.data:\n        raise HTTPException(status_code=404, detail='Fight not found')\n    fight = fight_resp.data\n\n    matched = bool(fight.get('fighter_a_id') and fight.get('fighter_b_id'))\n\n    # Fetch fighter physical stats from fighter_tott via fighter_id JOIN\n    def get_fighter_stats(fighter_id: str | None):\n        if not fighter_id:\n            return None\n        stats_resp = client.table('fighter_tott') \\\n            .select('height, weight, reach, stance, dob') \\\n            .eq('fighter_id', fighter_id) \\\n            .single() \\\n            .execute()\n        if stats_resp.data:\n            return FighterPhysicalStats(**stats_resp.data)\n        return None\n\n    fighter_a_stats = get_fighter_stats(fight.get('fighter_a_id'))\n    fighter_b_stats = get_fighter_stats(fight.get('fighter_b_id'))\n\n    # Fetch prediction\n    pred_resp = client.table('upcoming_predictions').select('*').eq('fight_id', fight_id).execute()\n    prediction = None\n    all_differentials = []\n\n    if pred_resp.data:\n        p = pred_resp.data[0]\n        prediction = UpcomingPrediction(\n            win_prob_a=p['win_prob_a'], win_prob_b=p['win_prob_b'],\n            method_ko_tko=p['method_ko_tko'], method_sub=p['method_sub'],\n            method_dec=p['method_dec'], model_version=p['model_version'],\n            predicted_at=p['predicted_at']\n        )\n        features = p.get('features_json', {}) or {}\n        sorted_features = sorted(\n            features.items(),\n            key=lambda x: abs(x[1]) if isinstance(x[1], (int, float)) else 0,\n            reverse=True\n        )\n        all_differentials = [\n            KeyDifferential(feature_name=k, value=v, abs_magnitude=abs(v))\n            for k, v in sorted_features if isinstance(v, (int, float))\n        ]\n\n    return UpcomingFightDetail(\n        id=fight_id, event_id=fight['event_id'],\n        fighter_a_name=fight['fighter_a_name'], fighter_b_name=fight['fighter_b_name'],\n        fighter_a_stats=fighter_a_stats, fighter_b_stats=fighter_b_stats,\n        weight_class=fight.get('weight_class'), is_title_fight=fight.get('is_title_fight', False),\n        matched=matched, prediction=prediction, all_differentials=all_differentials\n    )\n\n# Admin refresh endpoint\nadmin_router = APIRouter(prefix='/api/v1/admin', tags=['admin'])\n\n@admin_router.post('/refresh-upcoming', response_model=RefreshJobStatus)\ndef refresh_upcoming(background_tasks: BackgroundTasks):\n    job_id = str(uuid.uuid4())\n    def run_pipeline():\n        from scraper.run_upcoming import main\n        main()\n    background_tasks.add_task(run_pipeline)\n    return RefreshJobStatus(job_id=job_id, status='running', message='Scraper started in background')\n```\n\nRegister admin_router in main app as well. No auth required per CLAUDE.md spec.",
         "testStrategy": "1. Test GET /fights/{fight_id} with valid ID — verify full UpcomingFightDetail returned.\n2. Test with invalid fight_id — expect 404.\n3. Verify all_differentials contains all features from features_json (up to 31), sorted by abs_magnitude.\n4. Verify fighter_a_stats and fighter_b_stats are populated when fighter IDs exist.\n5. Verify fighter stats are None when fighter_id is NULL.\n6. Test POST /admin/refresh-upcoming — verify 200 response with job_id and status='running'.\n7. Verify background task is queued (mock background_tasks.add_task).\n8. Verify no auth is required for the admin endpoint.",
         "priority": "medium",
         "dependencies": [
-          11,
-          16,
-          17,
-          18,
+          "11",
+          "16",
+          "17",
+          "18",
           "4"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 20,
+        "id": "20",
         "title": "Integration Testing, Monitoring, and End-to-End Validation",
         "description": "Write comprehensive integration tests for the full upcoming events pipeline, validate fighter matching rates, prediction coverage, upsert idempotency, and graceful NULL handling for unmatched fighters.",
         "details": "Create `backend/tests/test_upcoming_integration.py`:\n\n```python\nimport pytest\nfrom fastapi.testclient import TestClient\nfrom unittest.mock import patch, MagicMock\nfrom main import app\n\nclient = TestClient(app)\n\n# --- Schema validation tests ---\ndef test_list_upcoming_events_schema():\n    with patch('routers.upcoming.get_supabase_client') as mock_client:\n        # Setup mock returns\n        mock = MagicMock()\n        mock_client.return_value = mock\n        mock.table.return_value.select.return_value.gte.return_value.order.return_value.execute.return_value.data = [\n            {'id': 'abc123', 'event_name': 'UFC 327', 'date_proper': '2026-04-11',\n             'location': 'Miami, FL', 'is_numbered': True, 'ufcstats_url': 'http://...'}\n        ]\n        # ... setup fight count mocks\n        resp = client.get('/api/v1/upcoming/events')\n        assert resp.status_code == 200\n        data = resp.json()\n        assert isinstance(data, list)\n        assert 'fight_count' in data[0]\n        assert 'predicted_fight_count' in data[0]\n\ndef test_event_detail_null_prediction():\n    # Fight with unmatched fighter should have prediction=None\n    resp = client.get('/api/v1/upcoming/events/abc123')\n    # ... mock setup\n    # Verify prediction is None and matched=False\n\ndef test_fight_detail_all_differentials():\n    # Verify all 31 features returned and sorted by abs_magnitude\n    pass\n\ndef test_admin_refresh_no_auth_required():\n    resp = client.post('/api/v1/admin/refresh-upcoming')\n    assert resp.status_code == 200\n    assert 'job_id' in resp.json()\n\n# --- Idempotency tests ---\ndef test_upsert_idempotency():\n    \"\"\"Run scraper twice, verify no duplicate rows.\"\"\"\n    # Use staging DB or mock\n    from scraper.upcoming_scraper import upsert_event\n    event_data = {'event_name': 'UFC 327', 'date_proper': '2026-04-11',\n                  'location': 'Miami', 'ufcstats_url': 'http://test-url', 'is_numbered': True}\n    id1 = upsert_event(event_data)\n    id2 = upsert_event(event_data)\n    assert id1 == id2  # Same ID returned on second upsert\n\n# --- Fighter matching rate test ---\ndef test_fighter_matching_rate():\n    \"\"\"Expect 85%+ match rate for established fighters.\"\"\"\n    from scraper.match_fighters import resolve_fighter\n    known_fighters = [\n        ('http://ufcstats.com/fighter-details/fba03cd6cc28dc41', 'Jon Jones'),\n        # Add more known fighters\n    ]\n    matched = sum(1 for url, name in known_fighters if resolve_fighter(url, name))\n    rate = matched / len(known_fighters)\n    assert rate >= 0.85\n\n# --- Graceful NULL handling ---\ndef test_graceful_null_fighter():\n    \"\"\"Endpoint returns fight with matched=False and prediction=None for unmatched fighters.\"\"\"\n    resp = client.get('/api/v1/upcoming/fights/unmatched_fight_id')\n    if resp.status_code == 200:\n        data = resp.json()\n        assert data['matched'] == False\n        assert data['prediction'] is None\n```\n\nAlso add a monitoring script `backend/scraper/monitor_upcoming.py` that:\n- Queries upcoming_predictions count vs upcoming_fights count\n- Logs prediction coverage percentage\n- Alerts if coverage < 70% (log WARNING)\n- Lists all fights with NULL fighter IDs",
         "testStrategy": "1. Run full test suite with pytest and verify all tests pass.\n2. Run upcoming_scraper.py manually against live UFCStats and verify 85%+ fighter match rate.\n3. Verify prediction coverage >= 70% of fights.\n4. Run scraper twice and verify zero duplicate rows in all three tables.\n5. Verify API endpoints return correct HTTP status codes (200, 404).\n6. Verify all response bodies conform to Pydantic schemas.\n7. Test workflow_dispatch trigger in GitHub Actions and verify successful run.\n8. Verify unmatched fighters are logged with names and UFCStats URLs for monitoring.",
         "priority": "low",
         "dependencies": [
-          11,
-          12,
-          13,
-          14,
-          15,
-          16,
-          17,
-          18,
-          19
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19"
         ],
         "status": "pending",
         "subtasks": []
       }
     ],
     "metadata": {
-      "created": "2026-03-07T04:47:06.086Z",
-      "updated": "2026-03-07T23:13:49.586Z",
-      "description": "Tasks for master context"
+      "version": "1.0.0",
+      "lastModified": "2026-03-08T00:25:27.055Z",
+      "taskCount": 20,
+      "completedCount": 6,
+      "tags": [
+        "master"
+      ]
     }
   }
 }
