@@ -1,1 +1,10 @@
-export {}
+export { default as HomePage }           from './HomePage'
+export { default as PredictionsPage }    from './PredictionsPage'
+export { default as FightersPage }       from './FightersPage'
+export { default as FighterDetailPage }  from './FighterDetailPage'
+export { default as EventsPage }         from './EventsPage'
+export { default as EventDetailPage }    from './EventDetailPage'
+export { default as UpcomingPage }       from './UpcomingPage'
+export { default as StyleEvolutionPage } from './StyleEvolutionPage'
+export { default as EndurancePage }      from './EndurancePage'
+export { default as NotFoundPage }       from './NotFoundPage'

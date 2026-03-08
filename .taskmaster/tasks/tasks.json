@@ -579,11 +579,12 @@
             "id": 3,
             "title": "React Router v6 Configuration with Lazy Loading and Route Guards",
             "description": "Set up React Router v6 with all application route definitions including Recent Events and Fighter Lookup views, lazy loading for code splitting, and route guard components for protected routes.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "1. Install react-router-dom v6\n2. Create src/router/index.tsx with centralized route definitions using createBrowserRouter\n3. Define routes for all planned pages:\n   - / (Home/Dashboard)\n   - /fighters (Fighter/Database Lookup view â€” search bar + fighter profiles)\n   - /fighters/:id (Fighter detail with profile, physical stats, fight history)\n   - /events (Recent Events view â€” last ~10 UFC events with card results)\n   - /events/:id (Event detail)\n   - /analytics (Analytics dashboard)\n   - /analytics/style-evolution (Style Evolution Timeline - Task 9)\n   - /analytics/endurance (Fighter Endurance Dashboard - Task 10)\n   - /predictions (Predictions page)\n   - /* (404 Not Found)\n4. Implement lazy loading for all page components using React.lazy() and Suspense with a loading fallback\n5. Create a RouteGuard component in src/components/common/ for future protected routes\n6. Create a Layout component in src/components/layout/ with Header, Sidebar/Nav, and Footer slots\n7. Create placeholder page components in src/pages/ for each route, including RecentEventsPage and FighterLookupPage\n8. Add a NotFound (404) page component\n9. Create a LoadingSpinner component used as Suspense fallback\n10. Configure RouterProvider in App.tsx\n11. Write tests for routing behavior and lazy loading\n\nAcceptance Criteria:\n- All defined routes render their respective page components\n- Lazy loading splits code into separate chunks (verify in build output)\n- Suspense fallback displays during chunk loading\n- 404 page renders for unknown routes\n- Navigation between routes works without full page reload\n- RouteGuard component correctly handles access control logic\n- /events and /fighters routes have placeholder pages ready for implementation in subtask 6",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T16:17:46.212Z"
           },
           {
             "id": 4,
@@ -703,7 +704,7 @@
         "complexity": 7,
         "recommendedSubtasks": 6,
         "expansionPrompt": "Break down the React Frontend Foundation task into 6 subtasks covering project setup with Vite and TypeScript, styling configuration with Tailwind CSS, routing setup with React Router, state management implementation, API service integration, and common component development. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
-        "updatedAt": "2026-03-08T01:06:07.807Z"
+        "updatedAt": "2026-03-08T16:17:46.212Z"
       },
       {
         "id": "8",
@@ -974,7 +975,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-08T01:06:07.808Z",
+      "lastModified": "2026-03-08T16:17:46.213Z",
       "taskCount": 20,
       "completedCount": 6,
       "tags": [
