@@ -64,11 +64,48 @@ UFC fans and analysts lack sophisticated tools to:
 - **Server:** Uvicorn (dev, `run_dev.py`) / Gunicorn + UvicornWorker (prod, `gunicorn.conf.py`)
 
 ### Frontend Stack
-- **Framework:** React 18 with TypeScript
+- **Framework:** React 19 with TypeScript 5.9 (Vite scaffold)
 - **Visualization:** Recharts for standard charts, D3.js for custom visualizations
-- **State Management:** React Context API
-- **Styling:** Tailwind CSS
+- **State Management:** React Context API + useReducer
+- **Styling:** Tailwind CSS v4 (CSS-first — `@import "tailwindcss"` + `@theme` block; no `tailwind.config.js`)
 - **HTTP Client:** Axios for API communication
+- **Routing:** React Router v6 (`createBrowserRouter`, all pages lazy-loaded)
+
+**Dev commands:**
+```bash
+cd frontend && npm run dev        # start dev server (port 3000, proxies /api → :8000)
+cd frontend && npm run build      # production build
+cd frontend && npm run type-check # TypeScript check (no emit)
+cd frontend && npm run lint       # ESLint
+cd frontend && npm run format     # Prettier
+```
+
+**Task status (Task 7 — React Frontend Foundation):**
+- ✅ 7.1 Vite scaffold, path aliases, dev proxy, ESLint + Prettier — done 2026-03-07
+- ✅ 7.2 Tailwind v4 design tokens, dark mode (localStorage + prefers-color-scheme) — done 2026-03-07
+- ✅ 7.3 React Router v6, lazy-loaded routes, Layout + Header + LoadingSpinner — done 2026-03-07
+- ⏳ 7.4 State management (Context API, useReducer, typed actions)
+- ⏳ 7.5 Axios API client, service classes, shared UI components
+- ⏳ 7.6 First data-connected pages (Events list, Fighter lookup)
+
+**Frontend file structure:**
+```
+frontend/src/
+├── components/
+│   ├── common/          # LoadingSpinner, RouteGuard
+│   ├── layout/          # ThemeProvider, Layout, Header
+│   └── features/        # (Task 7.5+) feature-specific components
+├── hooks/               # useDarkMode (+ future custom hooks)
+├── pages/               # One file per route (lazy-loaded)
+├── router/              # index.tsx — createBrowserRouter
+├── services/            # (Task 7.5) Axios instances + API service classes
+├── store/               # (Task 7.4) Context + reducers
+├── types/               # Shared TypeScript interfaces
+└── utils/               # Pure helpers
+```
+
+**Path aliases** (configured in `tsconfig.app.json` + `vite.config.ts`):
+`@/` → `src/`, `@components/` → `src/components/`, `@pages/`, `@hooks/`, `@services/`, `@store/`, `@types/`, `@utils/`
 
 ### Data Pipeline
 - **Source:** UFCStats.com via enhanced Greco scraper (744 events, 8287 fights, 4429 fighters available)
@@ -120,7 +157,7 @@ GET  /api/v1/fights                           paginated list (filters: event_id,
 GET  /api/v1/fights/{id}                      fight detail + round-by-round stats
 GET  /api/v1/events                           paginated list (?year=)
 GET  /api/v1/events/{id}                      event + fight card
-POST /api/v1/predictions/fight-outcome        win probability (stub until Task 6 ML)
+POST /api/v1/predictions/fight-outcome        win probability (XGBoost + RF ensemble — Task 6 complete)
 GET  /api/v1/analytics/style-evolution        finish rates by year (?weight_class=)
 GET  /api/v1/analytics/fighter-endurance/{id} round-by-round performance profile
 
@@ -161,7 +198,7 @@ python backend/scraper/validate_etl.py                # standalone validation
 ```
 
 **Workflows**:
-- `.github/workflows/scraper.yml` — weekly scrape (live_scraper.py)
+- `.github/workflows/weekly-ufc-scraper.yml` — weekly scrape (live_scraper.py)
 - `.github/workflows/post-scrape-clean.yml` — ETL + validation, triggered after scrape succeeds
 
 ### Available Scrapers
@@ -386,6 +423,45 @@ ORDER BY e.date_proper
 `get_fights_long_df()` in `backend/features/extractors.py` handles this correctly
 via UNION ALL — training pipeline is unaffected. The OR pattern is only needed
 for ad-hoc queries and API endpoints that return fighter history.
+
+## Frontend Design Philosophy
+
+**Aesthetic direction: Dark Luxury Sports Analytics (Option C)**
+
+This is a premium data product for MMA analytics — not a generic dashboard. The aesthetic should feel like a high-end sports broadcast meets editorial data journalism.
+
+**Core visual principles:**
+- **Background**: `#0f1117` — near-black with a blue-grey tint, not pure black
+- **Accent**: `#e63946` UFC red — used sparingly for high-signal elements (active nav, primary CTAs, key stats)
+- **Secondary**: `#f77f00` warm amber — for complementary highlights and data series
+- **Surface hierarchy**: `#1a1d27` cards, `#22263a` elevated panels — enough depth to feel dimensional
+- **Typography**: Distinctive display fonts for headings (not Inter/Roboto/Arial). Use a bold condensed or editorial serif for fight names and stat callouts. Body text stays legible sans-serif
+- **Data visualization**: Data-ink ratio over decoration; color used for meaning not aesthetics; animate with purpose (transitions between time ranges, not idle motion)
+- **Atmospheric depth**: Subtle texture/grain on hero sections, dramatic shadows on cards — the data floats off the surface
+- **No generic AI aesthetics**: No glassmorphism for its own sake, no gradient mesh backgrounds, no rounded-everything
+
+**Design token source of truth:** `frontend/src/index.css` `@theme` block
+All colors, shadows, and fonts are defined as CSS custom properties — never hardcode values in components.
+
+## Frontend Architecture & Scalability
+
+**Routing approach: page-based navigation (already implemented)**
+
+Each feature is a separate route with its own lazy-loaded JS chunk. This is the right pattern for a data analytics platform — each tool is a complete independent experience, not a scroll section.
+
+**Adding new features:** two steps, no architectural changes needed:
+1. Create `frontend/src/pages/YourNewPage.tsx`
+2. Add the route to `frontend/src/router/index.tsx`
+
+**Sub-tabs within a page:** For related views (e.g., an `/analytics` page with style-evolution and endurance as tabs), use a tab component rendered inside the page, keeping the parent route at `/analytics` and the tab state in URL params (`?tab=style-evolution`). Do not nest routes unless the sub-pages are truly independent experiences.
+
+**Component organization:**
+- `components/common/` — reusable primitives (Button, Card, Badge, Modal)
+- `components/layout/` — page shell (Header, Layout, ThemeProvider)
+- `components/features/` — feature-specific components (FighterCard, FightCard, PredictionSlider, etc.)
+- Each feature page imports from `components/features/` — not from other pages
+
+**State philosophy:** Local state first (useState), Context for truly cross-cutting state (theme, auth if added). Avoid global stores for page-specific data — use fetch-on-mount with loading/error states per page.
 
 ## Documentation Guidelines
 - All .md files should be placed in the `docs/` directory
