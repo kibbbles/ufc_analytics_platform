@@ -14,7 +14,7 @@ export default defineConfig({
       '@pages': resolve(__dirname, 'src/pages'),
       '@services': resolve(__dirname, 'src/services'),
       '@store': resolve(__dirname, 'src/store'),
-      '@types': resolve(__dirname, 'src/types'),
+      '@t': resolve(__dirname, 'src/types'),
       '@utils': resolve(__dirname, 'src/utils'),
     },
   },
