@@ -9,7 +9,7 @@
 # DEPLOY COMMAND (from repo root):
 #   fly deploy
 
-app            = "ufc-analytics-api"   # ← change to your unique name
+app            = "kabes-maybes-api"
 primary_region = "iad"                 # Washington DC — closest to Supabase default
 
 [build]
