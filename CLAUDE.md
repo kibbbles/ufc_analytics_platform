@@ -430,53 +430,38 @@ for ad-hoc queries and API endpoints that return fighter history.
 ```
 User's browser → Vercel (frontend, free)
                       ↓ API calls
-                 Fly.io (FastAPI backend, free tier)
+                 Render (FastAPI backend, free tier — 512MB)
                       ↓ SQL
                  Supabase (PostgreSQL, already live ✅)
 ```
 
 ### Frontend — Vercel (free)
 - Connect GitHub repo at vercel.com → auto-deploys on every `git push`
-- Set one env var in Vercel dashboard: `VITE_API_BASE_URL=https://your-app.fly.dev/api/v1`
-- Free subdomain: `your-project.vercel.app` (customisable)
+- Set Root Directory to `frontend` in Vercel project settings
+- Set one env var in Vercel dashboard: `VITE_API_BASE_URL=https://kabes-maybes-api.onrender.com/api/v1`
+- Project name: `kabes-maybes` → URL: `kabes-maybes.vercel.app`
 
-### Backend — Fly.io (free tier, always-on)
-Deployment files already created:
+### Backend — Render (free tier, 512MB RAM)
+Deployment files:
 - `Dockerfile` — builds the FastAPI container (Python 3.12-slim, 1 gunicorn worker)
 - `.dockerignore` — excludes frontend, tests, logs, .env from container
-- `fly.toml` — Fly.io config: 256 MB shared VM, port 8000, auto_stop=false (no cold starts)
+- `render.yaml` — Render IaC config: service name, Dockerfile path, health check, env vars
 
-**One-time setup steps (do these when ready to deploy):**
-```bash
-# 1. Install flyctl (Windows)
-winget install flyctl            # or download from fly.io/docs/flyctl/install/
+**Tradeoff:** Render's free tier spins down after 15 minutes of inactivity (cold start ~30s on next request). Acceptable for a portfolio project; upgrade to $7/month paid tier to eliminate cold starts when actively job hunting.
 
-# 2. Login
-fly auth login
+**One-time setup (in browser at render.com):**
+1. Sign in with GitHub at render.com
+2. New → Web Service → connect `ufc_analytics_platform` repo
+3. Render auto-detects `render.yaml` — confirm settings
+4. Add environment variables in Render dashboard:
+   - `DATABASE_URL` = `postgresql://postgres:p2GrvZEea/XEY%d@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres`
+   - `ALLOWED_ORIGINS` = `["https://kabes-maybes.vercel.app","http://localhost:3000"]`
+5. Click Deploy
 
-# 3. Edit fly.toml: change app name to something unique, e.g. "yourname-ufc-api"
+**URL:** `https://kabes-maybes-api.onrender.com`
+**Verify:** `/health` → `{"status":"ok"}` | `/docs` → Swagger UI
 
-# 4. Create the app on Fly.io (first time only — registers the name)
-fly launch --no-deploy
-
-# 5. Set secrets (env vars — never committed to git)
-fly secrets set DATABASE_URL="postgresql://postgres:..."
-fly secrets set ALLOWED_ORIGINS='["https://your-app.vercel.app","http://localhost:3000"]'
-
-# 6. Deploy
-fly deploy
-
-# 7. Test
-fly open        # opens https://your-app.fly.dev
-# Then visit /docs and /health to confirm it's running
-```
-
-**Subsequent deploys:** just `fly deploy` from the repo root (or it auto-deploys if you set up GitHub integration in the Fly.io dashboard).
-
-**CORS:** `ALLOWED_ORIGINS` must include your Vercel URL. Update with:
-```bash
-fly secrets set ALLOWED_ORIGINS='["https://your-app.vercel.app","http://localhost:3000"]'
-```
+**Subsequent deploys:** automatic on every `git push` to `main`
 
 ## Frontend Design Philosophy
 
