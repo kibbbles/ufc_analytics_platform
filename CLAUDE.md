@@ -438,7 +438,7 @@ User's browser → Vercel (frontend, free)
 ### Frontend — Vercel (free)
 - Connect GitHub repo at vercel.com → auto-deploys on every `git push`
 - Set Root Directory to `frontend` in Vercel project settings
-- Set one env var in Vercel dashboard: `VITE_API_BASE_URL=https://kabes-maybes-api.onrender.com/api/v1`
+- Set one env var in Vercel dashboard: `VITE_API_BASE_URL=https://ufc-analytics-platform.onrender.com/api/v1`
 - Project name: `kabes-maybes` → URL: `kabes-maybes.vercel.app`
 
 ### Backend — Render (free tier, 512MB RAM)
@@ -456,9 +456,10 @@ Deployment files:
 4. Add environment variables in Render dashboard:
    - `DATABASE_URL` = `postgresql://postgres:p2GrvZEea/XEY%d@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres`
    - `ALLOWED_ORIGINS` = `["https://kabes-maybes.vercel.app","http://localhost:3000"]`
+   - `ENVIRONMENT` = `production`
 5. Click Deploy
 
-**URL:** `https://kabes-maybes-api.onrender.com`
+**URL:** `https://ufc-analytics-platform.onrender.com`
 **Verify:** `/health` → `{"status":"ok"}` | `/docs` → Swagger UI
 
 **Subsequent deploys:** automatic on every `git push` to `main`
