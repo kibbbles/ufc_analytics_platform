@@ -36,33 +36,31 @@ function ThemeToggle() {
       aria-checked={isDark}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       onClick={toggle}
-      className="flex items-center gap-1.5 group"
+      className={[
+        'relative inline-flex h-7 w-14 shrink-0 rounded-full border',
+        'transition-colors duration-200',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2',
+        isDark
+          ? 'bg-slate-700 border-slate-600'
+          : 'bg-amber-100 border-amber-300',
+      ].join(' ')}
     >
-      <SunIcon
-        className={`size-3.5 transition-colors duration-200 ${
-          isDark ? 'text-slate-500' : 'text-amber-500'
-        }`}
-      />
-      {/* Track */}
+      {/* Thumb — slides left (light) ↔ right (dark), icon inside */}
       <span
-        className={`relative inline-flex h-[22px] w-[40px] shrink-0 rounded-full border transition-colors duration-200 ${
+        aria-hidden="true"
+        className={[
+          'absolute top-[2px] left-[2px] size-6 rounded-full shadow',
+          'flex items-center justify-center',
+          'transition-transform duration-200',
           isDark
-            ? 'bg-[var(--color-primary)]/20 border-[var(--color-primary)]/40'
-            : 'bg-slate-200 border-slate-300'
-        }`}
+            ? 'translate-x-7 bg-slate-900'
+            : 'translate-x-0 bg-white',
+        ].join(' ')}
       >
-        {/* Thumb */}
-        <span
-          className={`absolute top-[2px] left-[2px] size-[16px] rounded-full shadow-md transition-transform duration-200 ${
-            isDark ? 'translate-x-[18px] bg-[var(--color-primary)]' : 'translate-x-0 bg-white'
-          }`}
-        />
+        {isDark
+          ? <MoonIcon className="size-3.5 text-slate-300" />
+          : <SunIcon className="size-3.5 text-amber-500" />}
       </span>
-      <MoonIcon
-        className={`size-3.5 transition-colors duration-200 ${
-          isDark ? 'text-[var(--color-primary)]' : 'text-slate-400'
-        }`}
-      />
     </button>
   )
 }
