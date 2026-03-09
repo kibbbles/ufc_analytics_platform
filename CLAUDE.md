@@ -428,18 +428,18 @@ for ad-hoc queries and API endpoints that return fighter history.
 
 ### Architecture
 ```
-User's browser → Vercel (frontend, free)
+User's browser → Vercel — kabes-maybes.vercel.app (frontend, free) ✅ LIVE
                       ↓ API calls
-                 Render (FastAPI backend, free tier — 512MB)
+                 Render — ufc-analytics-platform.onrender.com (FastAPI, free 512MB) ✅ LIVE
                       ↓ SQL
-                 Supabase (PostgreSQL, already live ✅)
+                 Supabase (PostgreSQL) ✅ LIVE
 ```
 
 ### Frontend — Vercel (free)
 - Connect GitHub repo at vercel.com → auto-deploys on every `git push`
 - Set Root Directory to `frontend` in Vercel project settings
 - Set one env var in Vercel dashboard: `VITE_API_BASE_URL=https://ufc-analytics-platform.onrender.com/api/v1`
-- Project name: `kabes-maybes` → URL: `kabes-maybes.vercel.app`
+- Project name: `kabes-maybes` → URL: `https://kabes-maybes.vercel.app` ✅ LIVE
 
 ### Backend — Render (free tier, 512MB RAM)
 Deployment files:
