@@ -424,6 +424,60 @@ ORDER BY e.date_proper
 via UNION ALL — training pipeline is unaffected. The OR pattern is only needed
 for ad-hoc queries and API endpoints that return fighter history.
 
+## Hosting & Deployment
+
+### Architecture
+```
+User's browser → Vercel (frontend, free)
+                      ↓ API calls
+                 Fly.io (FastAPI backend, free tier)
+                      ↓ SQL
+                 Supabase (PostgreSQL, already live ✅)
+```
+
+### Frontend — Vercel (free)
+- Connect GitHub repo at vercel.com → auto-deploys on every `git push`
+- Set one env var in Vercel dashboard: `VITE_API_BASE_URL=https://your-app.fly.dev/api/v1`
+- Free subdomain: `your-project.vercel.app` (customisable)
+
+### Backend — Fly.io (free tier, always-on)
+Deployment files already created:
+- `Dockerfile` — builds the FastAPI container (Python 3.12-slim, 1 gunicorn worker)
+- `.dockerignore` — excludes frontend, tests, logs, .env from container
+- `fly.toml` — Fly.io config: 256 MB shared VM, port 8000, auto_stop=false (no cold starts)
+
+**One-time setup steps (do these when ready to deploy):**
+```bash
+# 1. Install flyctl (Windows)
+winget install flyctl            # or download from fly.io/docs/flyctl/install/
+
+# 2. Login
+fly auth login
+
+# 3. Edit fly.toml: change app name to something unique, e.g. "yourname-ufc-api"
+
+# 4. Create the app on Fly.io (first time only — registers the name)
+fly launch --no-deploy
+
+# 5. Set secrets (env vars — never committed to git)
+fly secrets set DATABASE_URL="postgresql://postgres:..."
+fly secrets set ALLOWED_ORIGINS='["https://your-app.vercel.app","http://localhost:3000"]'
+
+# 6. Deploy
+fly deploy
+
+# 7. Test
+fly open        # opens https://your-app.fly.dev
+# Then visit /docs and /health to confirm it's running
+```
+
+**Subsequent deploys:** just `fly deploy` from the repo root (or it auto-deploys if you set up GitHub integration in the Fly.io dashboard).
+
+**CORS:** `ALLOWED_ORIGINS` must include your Vercel URL. Update with:
+```bash
+fly secrets set ALLOWED_ORIGINS='["https://your-app.vercel.app","http://localhost:3000"]'
+```
+
 ## Frontend Design Philosophy
 
 **Aesthetic direction: Analytics Showcase / Learning Tool**

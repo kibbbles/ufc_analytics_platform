@@ -1,0 +1,34 @@
+# Frontend — not needed in the backend container
+frontend/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Dev / test files
+backend/tests/
+backend/scraper/reports/
+backend/scraper/physical_stats_output.txt
+
+# Logs
+**/logs/
+**/*.log
+
+# Environment files (secrets are injected at runtime via fly secrets)
+.env
+.env.*
+backend/.env
+
+# Version control / CI
+.git/
+.gitignore
+.github/
+
+# Project tooling (not needed in container)
+.taskmaster/
+.claude/
+docs/
+CLAUDE.md
+README.md
+*.md
