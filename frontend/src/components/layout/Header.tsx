@@ -3,12 +3,11 @@ import { NavLink } from 'react-router-dom'
 import { useTheme } from './ThemeProvider'
 
 const navLinks = [
-  { to: '/',                           label: 'Home',       end: true },
-  { to: '/predictions',                label: 'Predictions' },
-  { to: '/upcoming',                   label: 'Upcoming' },
-  { to: '/fighters',                   label: 'Fighters' },
-  { to: '/events',                     label: 'Events' },
-  { to: '/analytics/style-evolution',  label: 'Analytics' },
+  { to: '/',           label: 'Home',           end: true },
+  { to: '/upcoming',   label: 'Upcoming' },
+  { to: '/events',     label: 'Events' },
+  { to: '/fighters',   label: 'Fighter Lookup' },
+  { to: '/about',      label: 'About' },
 ]
 
 function SunIcon({ className }: { className?: string }) {
@@ -82,10 +81,16 @@ export default function Header() {
         {/* Logo */}
         <NavLink
           to="/"
-          className="flex items-center gap-2 font-bold text-lg tracking-tight text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]"
+          className="flex flex-col leading-tight text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]"
         >
-          <span className="text-[var(--color-primary)]">UFC</span>
-          <span>Analytics</span>
+          <span className="font-bold text-base tracking-tight">
+            <span className="text-[var(--color-primary)]">Kabe's</span>
+            {' '}Maybes
+            <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] font-normal"> — UFC odds, our way</span>
+          </span>
+          <span className="text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] font-normal tracking-wide">
+            Fight predictions, by the numbers
+          </span>
         </NavLink>
 
         {/* Desktop nav */}

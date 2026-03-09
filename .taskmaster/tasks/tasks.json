@@ -547,7 +547,7 @@
         "id": "7",
         "title": "React Frontend Foundation",
         "description": "Set up the React frontend application with TypeScript, Vite, Tailwind CSS, routing, and state management according to the technical architecture specified in the PRD. Includes foundation for five frontend views: three ML dashboards (predictions, style evolution, endurance) and two data views (Recent Events, Fighter/Database Lookup).",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "details": "Initialize and configure a React 18 frontend application:\n\n1. Project setup:\n   - Initialize with Vite and TypeScript 4.9+\n   - Configure ESLint and Prettier\n   - Set up directory structure\n   ```\n   src/\n     â”œâ”€â”€ assets/\n     â”œâ”€â”€ components/\n     â”‚   â”œâ”€â”€ common/\n     â”‚   â”œâ”€â”€ layout/\n     â”‚   â””â”€â”€ features/\n     â”œâ”€â”€ hooks/\n     â”œâ”€â”€ pages/\n     â”œâ”€â”€ services/\n     â”œâ”€â”€ store/\n     â”œâ”€â”€ types/\n     â”œâ”€â”€ utils/\n     â”œâ”€â”€ App.tsx\n     â””â”€â”€ main.tsx\n   ```\n\n2. Styling setup:\n   - Configure Tailwind CSS 3.0\n   - Create design tokens (colors, spacing, etc.)\n   - Set up dark mode support\n   - Create responsive breakpoints (320px, 768px, 1024px, 1440px)\n\n3. Routing configuration:\n   - Set up React Router v6\n   - Create route definitions\n   - Implement lazy loading for routes\n   - Add route guards/protection\n\n4. State management:\n   - Configure React Context API\n   - Set up useReducer for global state\n   - Create typed actions and reducers\n   - Implement persistence with localStorage\n\n5. API integration:\n   - Set up Axios with interceptors\n   - Create API service classes\n   - Implement request/response types\n   - Add error handling\n\n6. Common components:\n   - Button, Input, Card components\n   - Loading indicators\n   - Error boundaries\n   - Toast notifications\n\n7. Testing setup:\n   - Configure Jest and React Testing Library\n   - Set up test utilities\n   - Create mock providers\n\n8. Additional frontend views (no ML required):\n   a. Recent Events View:\n      - Displays the last ~10 UFC events with card results (winner, method, round)\n      - Queries event_details joined with fight_results ordered by date_proper DESC\n      - Consumes GET /events endpoint\n   b. Fighter/Database Lookup View:\n      - Search bar for fighter name\n      - Shows fighter profile with physical stats from fighter_tott\n      - Full fight history with methods and rounds from fight_results\n      - Consumes GET /fighters and GET /fighters/{id} endpoints\n      - IMPORTANT: Display a prominent note 'Detailed round stats available from 2015+' on fighter profiles, as fight_stats (round-by-round detail) is only reliably available from 2015 onwards\n\nImplement responsive layouts with mobile-first approach and ensure accessibility compliance.",
@@ -590,27 +590,29 @@
             "id": 4,
             "title": "State Management with Context API, useReducer, and Persistence",
             "description": "Implement global state management using React Context API with useReducer, typed actions and reducers, and localStorage persistence for relevant state slices.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "1. Create src/store/index.ts as the main store entry point\n2. Define TypeScript interfaces for global state in src/types/store.ts:\n   - AppState (theme, notifications, ui state)\n   - FilterState (active filters for fighters/events/analytics)\n   - UserPreferencesState (dark mode, layout preferences)\n3. Create typed action types and action creators in src/store/actions.ts\n4. Implement reducers in src/store/reducers/:\n   - appReducer.ts\n   - filterReducer.ts\n   - userPreferencesReducer.ts\n5. Create a root reducer combining all reducers\n6. Create AppContext and AppProvider in src/store/AppContext.tsx using useReducer\n7. Implement localStorage persistence middleware pattern:\n   - Create src/utils/localStorage.ts with typed get/set/remove helpers\n   - Persist userPreferences and filterState to localStorage\n   - Rehydrate state from localStorage on app initialization\n8. Create custom hooks for consuming store slices: useAppState, useAppDispatch, useUserPreferences, useFilters in src/hooks/\n9. Wrap the app with AppProvider in main.tsx\n10. Write unit tests for reducers and custom hooks using mock providers\n\nAcceptance Criteria:\n- Global state is accessible from any component via custom hooks\n- State updates via dispatch trigger re-renders correctly\n- User preferences persist across browser sessions via localStorage\n- TypeScript provides full type safety for actions and state\n- Reducer tests cover all action types\n- No prop drilling required for global state access",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T17:02:22.968Z"
           },
           {
             "id": 5,
             "title": "API Service Layer, Common Components, and Error Handling",
             "description": "Set up Axios with interceptors for API communication, create typed API service classes for all backend endpoints, implement common reusable UI components, and add error boundaries and toast notifications.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "1. Install axios\n2. Create src/services/api.ts with Axios instance configured with:\n   - Base URL from environment variable (VITE_API_BASE_URL)\n   - Request interceptor for headers (Content-Type, correlation IDs)\n   - Response interceptor for error normalization\n   - Timeout configuration\n3. Create typed API service classes in src/services/:\n   - fightersService.ts (getFighters, getFighterById, getFighterStats)\n   - eventsService.ts (getEvents, getEventById)\n   - fightsService.ts (getFights, getFightById)\n   - analyticsService.ts (getStyleEvolution, getEnduranceData)\n   - predictionsService.ts (getPredictions)\n4. Create src/types/api.ts with request/response TypeScript interfaces matching backend Pydantic schemas, including:\n   - Fighter profile types (physical stats from fighter_tott)\n   - Fight result types (winner, method, round from fight_results)\n   - Event listing types (event_details joined with fight_results)\n5. Implement a custom useApi hook in src/hooks/useApi.ts for data fetching with loading/error/data states\n6. Create common components in src/components/common/:\n   - Button.tsx (variants: primary, secondary, ghost, danger; sizes: sm, md, lg)\n   - Input.tsx (with label, error state, helper text)\n   - Card.tsx (with header, body, footer slots)\n   - LoadingSpinner.tsx and LoadingSkeleton.tsx\n   - ErrorBoundary.tsx (class component with fallback UI)\n   - Toast.tsx and ToastContainer.tsx (integrated with app state)\n   - Badge.tsx, Modal.tsx, Tooltip.tsx\n   - DataCaveatNote.tsx (reusable banner/note component for displaying data availability caveats)\n7. Integrate ToastContainer in App.tsx layout\n8. Add toast dispatch actions to the store (subtask 4)\n9. Write component tests for all common components\n10. Ensure all components meet WCAG 2.1 AA accessibility standards (aria labels, keyboard navigation, focus management)\n\nAcceptance Criteria:\n- Axios instance correctly sends requests to the configured API base URL\n- All service methods return properly typed responses\n- Error interceptor normalizes API errors and triggers toast notifications\n- All common components render correctly across responsive breakpoints\n- ErrorBoundary catches and displays errors gracefully without crashing the app\n- Toast notifications appear and auto-dismiss correctly\n- DataCaveatNote component renders correctly and is reusable\n- Components pass accessibility checks with axe-core\n- Component unit tests achieve >80% coverage",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T17:13:14.858Z"
           },
           {
             "id": 6,
             "title": "Recent Events View and Fighter/Database Lookup View",
             "description": "Implement the two non-ML data views: a Recent Events view showing the last ~10 UFC events with card results, and a Fighter/Database Lookup view with search and full fighter profiles including a data availability caveat for pre-2015 fight stats.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               3,
               4,
@@ -618,7 +620,8 @@
             ],
             "details": "1. Recent Events View (src/pages/RecentEventsPage.tsx):\n   - Fetch data via eventsService.getEvents() (GET /events), ordered by date DESC, limit ~10\n   - Display each event as a card showing: event name, date, location\n   - Within each event card, list fight results: winner name, method (KO/TKO, Submission, Decision, etc.), round\n   - Data sourced from event_details joined with fight_results ordered by date_proper DESC\n   - Show loading skeletons while fetching\n   - Handle empty state and error state gracefully\n   - Responsive layout: stacked cards on mobile, grid on desktop\n\n2. Fighter/Database Lookup View (src/pages/FighterLookupPage.tsx and src/pages/FighterDetailPage.tsx):\n   - Search bar (Input component) for fighter name with debounced query\n   - Fighter list results via fightersService.getFighters(query) (GET /fighters?search=...)\n   - Fighter profile page via fightersService.getFighterById(id) (GET /fighters/{id}):\n     a. Physical stats section: height, weight, reach, stance, date of birth (from fighter_tott)\n     b. Record summary: wins, losses, draws, no contests\n     c. Full fight history table: opponent, event, date, result, method, round\n     d. IMPORTANT: Display a prominent, accessible caveat note â€” 'Detailed round stats available from 2015+' â€” on all fighter profiles. Use the DataCaveatNote component from subtask 5. This is because fight_stats (round-by-round detail) is only reliably available from 2015 onwards; older fights may show results but lack granular stats.\n   - Link fighter search results to individual fighter profile pages (/fighters/:id)\n   - Show loading skeletons during data fetch\n   - Handle no-results and error states\n\n3. Feature components in src/components/features/:\n   - EventCard.tsx (event summary with fight results list)\n   - FightResultRow.tsx (single fight result: winner, method, round)\n   - FighterSearchBar.tsx (debounced search input)\n   - FighterProfileHeader.tsx (name, record, physical stats)\n   - FightHistoryTable.tsx (sortable table of fight history)\n\n4. Write tests:\n   - Unit tests for EventCard, FightResultRow, FighterSearchBar, FighterProfileHeader, FightHistoryTable\n   - Integration tests for RecentEventsPage and FighterLookupPage with mocked API responses\n   - Test that DataCaveatNote renders on all fighter profile pages\n\nAcceptance Criteria:\n- Recent Events page displays last ~10 events with fight results (winner, method, round)\n- Fighter search returns relevant results and links to profile pages\n- Fighter profile shows physical stats, record, and full fight history\n- 'Detailed round stats available from 2015+' caveat note is always visible on fighter profiles\n- Both views are fully responsive (mobile-first)\n- Loading and error states are handled gracefully\n- No ML logic is involved in either view\n- All components pass accessibility checks",
             "testStrategy": "1. Test RecentEventsPage renders event cards with correct winner/method/round data from mocked API\n2. Test FighterLookupPage search bar triggers API call with correct query params\n3. Test FighterDetailPage displays physical stats and fight history correctly\n4. Verify DataCaveatNote ('Detailed round stats available from 2015+') renders on every fighter profile\n5. Test responsive layout at all four breakpoints\n6. Test loading skeleton displays during fetch\n7. Test error state displays when API fails\n8. Test empty state when no fighters match search query\n9. Accessibility audit with axe-core on both pages",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-08T17:25:16.815Z"
           },
           {
             "id": 7,
@@ -704,7 +707,7 @@
         "complexity": 7,
         "recommendedSubtasks": 6,
         "expansionPrompt": "Break down the React Frontend Foundation task into 6 subtasks covering project setup with Vite and TypeScript, styling configuration with Tailwind CSS, routing setup with React Router, state management implementation, API service integration, and common component development. For each subtask, provide a clear title, detailed description, and acceptance criteria.",
-        "updatedAt": "2026-03-08T16:17:46.212Z"
+        "updatedAt": "2026-03-08T17:25:22.204Z"
       },
       {
         "id": "8",
@@ -830,8 +833,9 @@
           "5",
           "6"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [],
+        "updatedAt": "2026-03-09T15:49:30.100Z"
       },
       {
         "id": "12",
@@ -975,9 +979,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-08T16:17:46.213Z",
+      "lastModified": "2026-03-09T15:49:30.100Z",
       "taskCount": 20,
-      "completedCount": 6,
+      "completedCount": 7,
       "tags": [
         "master"
       ]
