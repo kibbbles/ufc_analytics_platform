@@ -80,13 +80,13 @@ cd frontend && npm run lint       # ESLint
 cd frontend && npm run format     # Prettier
 ```
 
-**Task status (Task 7 — React Frontend Foundation):**
-- ✅ 7.1 Vite scaffold, path aliases, dev proxy, ESLint + Prettier — done 2026-03-07
-- ✅ 7.2 Tailwind v4 design tokens, dark mode (localStorage + prefers-color-scheme) — done 2026-03-07
-- ✅ 7.3 React Router v6, lazy-loaded routes, Layout + Header + LoadingSpinner — done 2026-03-07
-- ⏳ 7.4 State management (Context API, useReducer, typed actions)
-- ⏳ 7.5 Axios API client, service classes, shared UI components
-- ⏳ 7.6 First data-connected pages (Events list, Fighter lookup)
+**Task status (Task 7 — React Frontend Foundation — ✅ COMPLETE 2026-03-08):**
+- ✅ 7.1 Vite scaffold, path aliases, dev proxy, ESLint + Prettier
+- ✅ 7.2 Tailwind v4 design tokens, dark mode (localStorage + prefers-color-scheme)
+- ✅ 7.3 React Router v6, lazy-loaded routes, Layout + Header + LoadingSpinner
+- ✅ 7.4 State management (Context API, useReducer, typed actions, localStorage persistence)
+- ✅ 7.5 Axios API client, service classes, common UI components (Button, Card, Badge, Toast, etc.)
+- ✅ 7.6 Data-connected pages: EventsPage, EventDetailPage, FightersPage, FighterDetailPage
 
 **Frontend file structure:**
 ```
@@ -426,19 +426,19 @@ for ad-hoc queries and API endpoints that return fighter history.
 
 ## Frontend Design Philosophy
 
-**Aesthetic direction: Dark Luxury Sports Analytics (Option C)**
+**Aesthetic direction: Analytics Showcase / Learning Tool**
 
-This is a premium data product for MMA analytics — not a generic dashboard. The aesthetic should feel like a high-end sports broadcast meets editorial data journalism.
+This is a portfolio project that demonstrates data science and engineering skill — not a commercial product for sale. It should feel like high-quality editorial data journalism (FiveThirtyEight, The Pudding, NYT data desk) with a UFC subject matter.
 
 **Core visual principles:**
-- **Background**: `#0f1117` — near-black with a blue-grey tint, not pure black
-- **Accent**: `#e63946` UFC red — used sparingly for high-signal elements (active nav, primary CTAs, key stats)
-- **Secondary**: `#f77f00` warm amber — for complementary highlights and data series
-- **Surface hierarchy**: `#1a1d27` cards, `#22263a` elevated panels — enough depth to feel dimensional
-- **Typography**: Distinctive display fonts for headings (not Inter/Roboto/Arial). Use a bold condensed or editorial serif for fight names and stat callouts. Body text stays legible sans-serif
-- **Data visualization**: Data-ink ratio over decoration; color used for meaning not aesthetics; animate with purpose (transitions between time ranges, not idle motion)
-- **Atmospheric depth**: Subtle texture/grain on hero sections, dramatic shadows on cards — the data floats off the surface
-- **No generic AI aesthetics**: No glassmorphism for its own sake, no gradient mesh backgrounds, no rounded-everything
+- **Purpose over polish**: Content and data legibility come first. Every design decision should make the data easier to read and understand, not impress with visual effects
+- **Mobile-first**: All layouts must be fully usable on a phone screen. Design at 375px, enhance upward
+- **Background**: `#0f1117` dark base (dark mode) / `#ffffff` clean white (light mode) — both equally polished
+- **Accent**: `#e63946` UFC red — used for active state indicators, key stats, primary actions only. Not decorative
+- **Typography**: Clear hierarchy — bold heading for section titles, readable body size (14-16px), monospace for stats/numbers (`font-mono tabular-nums` for all numerical data)
+- **Data visualization**: Data-ink ratio over decoration. No chart junk. Color used to encode meaning only, not to fill space. Animation should communicate change, not entertain
+- **Avoid**: Dramatic shadows for their own sake, glassmorphism, gradient meshes, premium-product marketing patterns (hero sections with taglines, "Get started" CTAs, pricing-table layouts)
+- **Look like**: A well-crafted data analysis that someone built because they love MMA and data — approachable, credible, technically impressive
 
 **Design token source of truth:** `frontend/src/index.css` `@theme` block
 All colors, shadows, and fonts are defined as CSS custom properties — never hardcode values in components.
@@ -462,6 +462,12 @@ Each feature is a separate route with its own lazy-loaded JS chunk. This is the 
 - Each feature page imports from `components/features/` — not from other pages
 
 **State philosophy:** Local state first (useState), Context for truly cross-cutting state (theme, auth if added). Avoid global stores for page-specific data — use fetch-on-mount with loading/error states per page.
+
+**Mobile patterns:**
+- Header: logo + toggle visible always; hamburger on < md; full nav on md+
+- Pages: single-column on mobile, 2-col on sm, multi-col on lg
+- Touch targets: minimum 44×44px for all interactive elements
+- No horizontal scroll at any breakpoint
 
 ## Documentation Guidelines
 - All .md files should be placed in the `docs/` directory
