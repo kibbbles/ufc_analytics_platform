@@ -14,6 +14,7 @@ const EventDetailPage     = lazy(() => import('@pages/EventDetailPage'))
 const UpcomingPage        = lazy(() => import('@pages/UpcomingPage'))
 const StyleEvolutionPage  = lazy(() => import('@pages/StyleEvolutionPage'))
 const EndurancePage       = lazy(() => import('@pages/EndurancePage'))
+const AboutPage           = lazy(() => import('@pages/AboutPage'))
 
 const fallback = <LoadingSpinner fullScreen />
 
@@ -31,6 +32,7 @@ const routes: RouteObject[] = [
       { path: 'upcoming',               element: <Suspense fallback={fallback}><UpcomingPage /></Suspense> },
       { path: 'analytics/style-evolution', element: <Suspense fallback={fallback}><StyleEvolutionPage /></Suspense> },
       { path: 'analytics/endurance',    element: <Suspense fallback={fallback}><EndurancePage /></Suspense> },
+      { path: 'about',                  element: <Suspense fallback={fallback}><AboutPage /></Suspense> },
       { path: '*',                      element: <NotFoundPage /> },
     ],
   },

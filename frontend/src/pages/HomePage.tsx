@@ -2,10 +2,7 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">UFC Analytics</h1>
-        <p className="mt-2 text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-          ML-powered fight predictions and historical analysis
-        </p>
+        <h1 className="text-3xl font-bold">Fight predictions, by the numbers</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
