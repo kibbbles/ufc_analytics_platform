@@ -86,10 +86,7 @@ export default function Header() {
           <span className="font-bold text-base tracking-tight">
             <span className="text-[var(--color-primary)]">Kabe's</span>
             {' '}Maybes
-            <span className="hidden md:inline text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] font-normal"> — UFC odds, our way</span>
-          </span>
-          <span className="hidden md:block text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] font-normal tracking-wide">
-            Fight predictions, by the numbers
+            <span className="hidden md:inline text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] font-normal"> — UFC odds, my way</span>
           </span>
         </NavLink>
 
