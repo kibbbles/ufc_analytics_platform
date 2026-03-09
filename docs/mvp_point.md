@@ -26,12 +26,6 @@ A publicly shareable, visually polished portfolio piece that demonstrates:
 #### Task 8 — Fight Outcome Predictor UI
 The interactive prediction tool. Users select two fighters, adjust physical attributes via sliders, and see win probability update in real time. Method prediction (KO/TKO, Submission, Decision) shown with confidence scores. This is the centrepiece feature of the site.
 
-#### Task 9 — Style Evolution Timeline UI
-Recharts/D3 visualization of how fighting styles have shifted across UFC history. Finish rates by method over time, filterable by weight class. Demonstrates time series analysis and data viz skills.
-
-#### Task 10 — Fighter Endurance Dashboard UI
-Round-by-round performance profiles for individual fighters. Shows cardio degradation patterns, fight pacing classification (early finisher vs marathon fighter). Uses the `/analytics/fighter-endurance/{id}` endpoint.
-
 #### Tasks 11–15 — Upcoming Events (Phase 2 scraper + API + UI)
 - Task 11: Create upcoming_events, upcoming_fights, upcoming_predictions tables in Supabase
 - Task 12: Build upcoming_scraper.py — scrapes UFCStats /upcoming page
@@ -44,9 +38,10 @@ Round-by-round performance profiles for individual fighters. Shows cardio degrad
 ## UI Changes Required Before MVP
 
 ### Navigation (Header)
-- Logo text: change "UFC Analytics" → **"Kabe's Maybes"**
+- Top line (site name/tagline): **"Kabe's Maybes — UFC odds, our way"**
+- Below logo / sub-tagline: **"Fight predictions, by the numbers"**
 - Keep these nav links: **Home, Predictions, Upcoming, Events, Fighter Lookup**
-- Remove: **Analytics** (style evolution and endurance are accessed from within the site, not top nav)
+- Remove: **Analytics** (style evolution and endurance are post-MVP, not in top nav)
 - Add: **About**
 
 ### Pages
@@ -116,7 +111,7 @@ The MVP is complete when:
 ---
 
 ## Post-MVP (not blocking)
-- Style Evolution Timeline (Task 9) — may move into MVP if time allows
-- Fighter Endurance Dashboard (Task 10) — same
+- Style Evolution Timeline (Task 9)
+- Fighter Endurance Dashboard (Task 10)
 - Custom domain (e.g. kabesmaybes.com)
 - Firebase migration
