@@ -277,17 +277,17 @@ class UpcomingScraper:
                 if not fighter_a_name or not fighter_b_name:
                     continue
 
-                # Weight class — cell[~10] or rightmost non-empty text
+                # Weight class — cell[6] on upcoming event pages (10-col layout)
+                # Fallback: scan all cells for weight/championship keywords
                 weight_class   = ''
                 is_title_fight = False
 
-                # Try known column index first (index 10 = weight class on completed pages)
-                for idx in [10, 9, 8, len(cells) - 1]:
+                for idx in [6, 7, 8, 9, 10, len(cells) - 1]:
                     if idx < len(cells):
                         raw = cells[idx].get_text(separator=' ', strip=True)
                         if raw and any(
                             kw in raw.lower()
-                            for kw in ['weight', 'championship', 'title', 'pound', 'catch']
+                            for kw in ['weight', 'championship', 'title', 'pound', 'catch', 'women']
                         ):
                             weight_class   = raw
                             is_title_fight = any(
@@ -450,7 +450,7 @@ class UpcomingScraper:
             total_fights = 0
 
             for event in events:
-                print(f'\n→ {event["event_name"]}  |  {event["date_proper"]}  |  {event["location"]}')
+                print(f'\n>> {event["event_name"]}  |  {event["date_proper"]}  |  {event["location"]}')
 
                 fights = self.scrape_event_fights(event['ufcstats_url'])
 
@@ -462,13 +462,13 @@ class UpcomingScraper:
                     fight['fighter_b_id'] = self.resolve_fighter(
                         fight['fighter_b_url'], fight['fighter_b_name']
                     )
-                    matched_a = '✓' if fight['fighter_a_id'] else '✗'
-                    matched_b = '✓' if fight['fighter_b_id'] else '✗'
+                    matched_a = 'OK' if fight['fighter_a_id'] else '--'
+                    matched_b = 'OK' if fight['fighter_b_id'] else '--'
                     print(
                         f'  [{matched_a}] {fight["fighter_a_name"]} vs '
                         f'[{matched_b}] {fight["fighter_b_name"]}'
                         + (f'  ({fight["weight_class"]})' if fight['weight_class'] else '')
-                        + (' 🏆' if fight['is_title_fight'] else '')
+                        + (' [TITLE]' if fight['is_title_fight'] else '')
                     )
 
                 if dry_run:

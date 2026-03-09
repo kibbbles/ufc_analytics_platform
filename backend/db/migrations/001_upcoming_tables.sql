@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS upcoming_fights (
     event_id       VARCHAR(6) NOT NULL REFERENCES upcoming_events(id),
     fighter_a_name TEXT,
     fighter_b_name TEXT,
-    fighter_a_id   VARCHAR(6) REFERENCES fighter_details(id),  -- nullable: new fighters
-    fighter_b_id   VARCHAR(6) REFERENCES fighter_details(id),  -- nullable: new fighters
+    fighter_a_id   TEXT REFERENCES fighter_details(id),  -- nullable: new fighters; TEXT because fighter_details.id is 8-char hex
+    fighter_b_id   TEXT REFERENCES fighter_details(id),  -- nullable: new fighters
     fighter_a_url  TEXT,
     fighter_b_url  TEXT,
     weight_class   TEXT,
