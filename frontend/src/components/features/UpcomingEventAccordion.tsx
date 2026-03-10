@@ -65,18 +65,22 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
         aria-expanded={isOpen}
       >
         <div className="min-w-0 flex-1 text-center">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {/* NEXT badge */}
-            {isNext && (
-              <span className="rounded-sm bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                Next
-              </span>
-            )}
-            {highlighted && (
-              <span className="hidden sm:inline rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                Numbered
-              </span>
-            )}
+          {/* Badges — always on own line above event name */}
+          {(isNext || highlighted) && (
+            <div className="mb-1 flex justify-center gap-2">
+              {isNext && (
+                <span className="rounded-sm bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  Next
+                </span>
+              )}
+              {highlighted && (
+                <span className="hidden sm:inline rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                  Numbered
+                </span>
+              )}
+            </div>
+          )}
+          <div>
             <span
               className={`font-semibold leading-tight ${
                 highlighted

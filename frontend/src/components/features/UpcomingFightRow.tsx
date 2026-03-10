@@ -6,7 +6,7 @@ interface Props {
 
 function pct(value: number | null): string {
   if (value == null) return '—'
-  return `${Math.round(value * 100)}%`
+  return `${(value * 100).toFixed(1)}%`
 }
 
 type Method = { label: string; value: number | null }
@@ -66,13 +66,6 @@ export default function UpcomingFightRow({ fight }: Props) {
           >
             {fighter_a_name ?? '—'}
           </span>
-          {hasPrediction && aWins && (
-            <div className="hidden md:flex justify-end pr-6">
-              <svg className="h-2.5 w-2.5 fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]" viewBox="0 0 10 10">
-                <polygon points="10,0 0,5 10,10" />
-              </svg>
-            </div>
-          )}
           {hasPrediction && (
             <span
               className={`font-mono text-lg tabular-nums ${
@@ -102,13 +95,6 @@ export default function UpcomingFightRow({ fight }: Props) {
           >
             {fighter_b_name ?? '—'}
           </span>
-          {hasPrediction && !aWins && (
-            <div className="hidden md:flex w-full justify-start pl-6">
-              <svg className="h-2.5 w-2.5 fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]" viewBox="0 0 10 10">
-                <polygon points="0,0 10,5 0,10" />
-              </svg>
-            </div>
-          )}
           {hasPrediction && (
             <span
               className={`font-mono text-lg tabular-nums ${
