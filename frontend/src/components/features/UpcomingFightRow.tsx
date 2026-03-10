@@ -55,24 +55,24 @@ export default function UpcomingFightRow({ fight }: Props) {
       <div className="flex items-center justify-between gap-2">
         {/* Fighter A */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`truncate text-sm ${
-                hasPrediction && aWins
-                  ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
-                  : hasPrediction
-                  ? 'font-medium text-[var(--color-text-muted)]'
-                  : 'font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
-              }`}
-            >
-              {fighter_a_name ?? '—'}
-            </span>
-            {hasPrediction && aWins && (
-              <svg className="hidden md:block h-2.5 w-2.5 shrink-0 fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]" viewBox="0 0 10 10">
+          <span
+            className={`truncate text-sm ${
+              hasPrediction && aWins
+                ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                : hasPrediction
+                ? 'font-medium text-[var(--color-text-muted)]'
+                : 'font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+            }`}
+          >
+            {fighter_a_name ?? '—'}
+          </span>
+          {hasPrediction && aWins && (
+            <div className="hidden md:flex justify-end pr-6">
+              <svg className="h-2.5 w-2.5 fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]" viewBox="0 0 10 10">
                 <polygon points="10,0 0,5 10,10" />
               </svg>
-            )}
-          </div>
+            </div>
+          )}
           {hasPrediction && (
             <span
               className={`font-mono text-lg tabular-nums ${
@@ -91,24 +91,24 @@ export default function UpcomingFightRow({ fight }: Props) {
 
         {/* Fighter B */}
         <div className="flex min-w-0 flex-1 flex-col items-end">
-          <div className="flex items-center gap-1.5">
-            {hasPrediction && !aWins && (
-              <svg className="hidden md:block h-2.5 w-2.5 shrink-0 fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]" viewBox="0 0 10 10">
+          <span
+            className={`truncate text-sm ${
+              hasPrediction && !aWins
+                ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                : hasPrediction
+                ? 'font-medium text-[var(--color-text-muted)]'
+                : 'font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+            }`}
+          >
+            {fighter_b_name ?? '—'}
+          </span>
+          {hasPrediction && !aWins && (
+            <div className="hidden md:flex w-full justify-start pl-6">
+              <svg className="h-2.5 w-2.5 fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]" viewBox="0 0 10 10">
                 <polygon points="0,0 10,5 0,10" />
               </svg>
-            )}
-            <span
-              className={`truncate text-sm ${
-                hasPrediction && !aWins
-                  ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
-                  : hasPrediction
-                  ? 'font-medium text-[var(--color-text-muted)]'
-                  : 'font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
-              }`}
-            >
-              {fighter_b_name ?? '—'}
-            </span>
-          </div>
+            </div>
+          )}
           {hasPrediction && (
             <span
               className={`font-mono text-lg tabular-nums ${
