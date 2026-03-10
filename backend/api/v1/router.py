@@ -10,7 +10,7 @@ Included in api/main.py under the prefix /api/v1, so final paths are:
 
 from fastapi import APIRouter
 
-from api.v1.endpoints import analytics, events, fighters, fights, predictions
+from api.v1.endpoints import analytics, events, fighters, fights, predictions, upcoming
 
 v1_router = APIRouter()
 
@@ -19,3 +19,4 @@ v1_router.include_router(fights.router,     prefix="/fights",     tags=["fights"
 v1_router.include_router(events.router,     prefix="/events",     tags=["events"])
 v1_router.include_router(predictions.router, prefix="/predictions", tags=["predictions"])
 v1_router.include_router(analytics.router,  prefix="/analytics",  tags=["analytics"])
+v1_router.include_router(upcoming.router,   prefix="/upcoming",   tags=["upcoming"])
