@@ -10,9 +10,10 @@ export default function HomePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { title: 'Upcoming Card', desc: 'Pre-computed predictions for this Saturday\'s event', to: '/upcoming' },
+          { title: 'Completed Events', desc: 'Browse historical UFC events and full fight cards', to: '/events' },
           { title: 'Fight Predictor', desc: 'Win probability + method breakdown for any matchup', to: '/predictions' },
           { title: 'Fighter Lookup', desc: 'Search any fighter — record, stats, fight history', to: '/fighters' },
         ].map(card => (

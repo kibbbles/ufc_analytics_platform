@@ -7,13 +7,10 @@ import LoadingSkeleton from '@components/common/LoadingSkeleton'
 export default function UpcomingPage() {
   const { data, loading, error } = useApi(() => upcomingService.getEvents(), [])
 
-  // Track which event is open; null = use first event as default
-  const [openId, setOpenId] = useState<string | null>(null)
+  // All collapsed by default — user opens what they want
+  const [openId, setOpenId] = useState<string>('')
 
   const events = data?.data ?? []
-  const firstId = events[0]?.id ?? null
-  // Auto-open first event until user explicitly toggles
-  const resolvedOpenId = openId === null && firstId ? firstId : openId
 
   function handleToggle(id: string) {
     setOpenId((prev) => (prev === id ? '' : id))
@@ -55,11 +52,12 @@ export default function UpcomingPage() {
 
       {!loading && !error && events.length > 0 && (
         <div className="space-y-3">
-          {events.map((event) => (
+          {events.map((event, index) => (
             <UpcomingEventAccordion
               key={event.id}
               event={event}
-              isOpen={resolvedOpenId === event.id}
+              isOpen={openId === event.id}
+              isNext={index === 0}
               onToggle={() => handleToggle(event.id)}
             />
           ))}

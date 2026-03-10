@@ -7,6 +7,7 @@ import LoadingSpinner from '@components/common/LoadingSpinner'
 interface Props {
   event: UpcomingEventListItem
   isOpen: boolean
+  isNext: boolean
   onToggle: () => void
 }
 
@@ -26,7 +27,7 @@ function isHighlighted(name: string | null): boolean {
   return /^UFC \d+/.test(name) || name.toLowerCase().includes('freedom')
 }
 
-export default function UpcomingEventAccordion({ event, isOpen, onToggle }: Props) {
+export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle }: Props) {
   const [fightCard, setFightCard] = useState<UpcomingEventWithFights | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +66,15 @@ export default function UpcomingEventAccordion({ event, isOpen, onToggle }: Prop
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            {/* NEXT badge */}
+            {isNext && (
+              <span className="flex items-center gap-1 rounded-sm bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                <svg className="h-2.5 w-2.5 fill-white" viewBox="0 0 10 10">
+                  <polygon points="0,0 7,5 0,10" />
+                </svg>
+                Next
+              </span>
+            )}
             <span
               className={`font-semibold leading-tight ${
                 highlighted
