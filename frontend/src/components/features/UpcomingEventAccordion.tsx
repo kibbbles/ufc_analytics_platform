@@ -87,12 +87,14 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
               {event.event_name ?? 'Unnamed Event'}
             </span>
           </div>
-          <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-            <span>{formatDate(event.event_date)}</span>
-            {event.location && <span>{event.location}</span>}
-            <span>
+          <div className="mt-0.5 text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+            <div className="flex gap-x-3">
+              <span>{formatDate(event.event_date)}</span>
+              {event.location && <span className="truncate">{event.location}</span>}
+            </div>
+            <div>
               {event.fight_count} {event.fight_count === 1 ? 'bout' : 'bouts'}
-            </span>
+            </div>
           </div>
         </div>
 

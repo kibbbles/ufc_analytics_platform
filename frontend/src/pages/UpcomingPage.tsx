@@ -17,7 +17,7 @@ export default function UpcomingPage() {
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Upcoming Events</h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
@@ -51,7 +51,7 @@ export default function UpcomingPage() {
       )}
 
       {!loading && !error && events.length > 0 && (
-        <div className="mx-auto max-w-2xl space-y-3">
+        <div className="space-y-3">
           {events.map((event, index) => (
             <UpcomingEventAccordion
               key={event.id}

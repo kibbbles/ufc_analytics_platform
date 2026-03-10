@@ -80,7 +80,20 @@ export default function UpcomingFightRow({ fight }: Props) {
         </div>
 
         {/* Centre separator */}
-        <span className="shrink-0 text-xs text-[var(--color-text-muted)]">vs</span>
+        <div className="flex shrink-0 flex-col items-center gap-0.5">
+          <span className="text-xs text-[var(--color-text-muted)]">vs</span>
+          {hasPrediction && (
+            <svg
+              className="h-3 w-3 fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]"
+              viewBox="0 0 10 10"
+            >
+              {aWins
+                ? <polygon points="10,0 0,5 10,10" />
+                : <polygon points="0,0 10,5 0,10" />
+              }
+            </svg>
+          )}
+        </div>
 
         {/* Fighter B */}
         <div className="flex min-w-0 flex-1 flex-col items-end">
