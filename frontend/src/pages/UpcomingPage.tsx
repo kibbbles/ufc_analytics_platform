@@ -51,7 +51,7 @@ export default function UpcomingPage() {
       )}
 
       {!loading && !error && events.length > 0 && (
-        <div className="space-y-3">
+        <div className="mx-auto max-w-2xl space-y-3">
           {events.map((event, index) => (
             <UpcomingEventAccordion
               key={event.id}

@@ -56,20 +56,22 @@ export default function UpcomingFightRow({ fight }: Props) {
         {/* Fighter A */}
         <div className="flex min-w-0 flex-1 flex-col">
           <span
-            className={`truncate text-sm font-medium ${
+            className={`truncate text-sm ${
               hasPrediction && aWins
-                ? 'text-[var(--color-primary)]'
-                : 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                : hasPrediction
+                ? 'font-medium text-[var(--color-text-muted)]'
+                : 'font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
             }`}
           >
             {fighter_a_name ?? '—'}
           </span>
           {hasPrediction && (
             <span
-              className={`font-mono text-lg font-bold tabular-nums ${
+              className={`font-mono text-lg tabular-nums ${
                 aWins
-                  ? 'text-[var(--color-primary)]'
-                  : 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]'
+                  ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                  : 'font-medium text-[var(--color-text-muted)]'
               }`}
             >
               {pct(prediction!.win_prob_a)}
@@ -83,20 +85,22 @@ export default function UpcomingFightRow({ fight }: Props) {
         {/* Fighter B */}
         <div className="flex min-w-0 flex-1 flex-col items-end">
           <span
-            className={`truncate text-sm font-medium ${
+            className={`truncate text-sm ${
               hasPrediction && !aWins
-                ? 'text-[var(--color-primary)]'
-                : 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                : hasPrediction
+                ? 'font-medium text-[var(--color-text-muted)]'
+                : 'font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
             }`}
           >
             {fighter_b_name ?? '—'}
           </span>
           {hasPrediction && (
             <span
-              className={`font-mono text-lg font-bold tabular-nums ${
+              className={`font-mono text-lg tabular-nums ${
                 !aWins
-                  ? 'text-[var(--color-primary)]'
-                  : 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]'
+                  ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                  : 'font-medium text-[var(--color-text-muted)]'
               }`}
             >
               {pct(prediction!.win_prob_b)}
@@ -113,8 +117,8 @@ export default function UpcomingFightRow({ fight }: Props) {
               key={label}
               className={
                 label === topLabel
-                  ? 'font-bold text-[var(--color-primary)]'
-                  : 'text-[var(--color-text-muted)]'
+                  ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                  : 'text-[var(--color-text-muted)] opacity-50'
               }
             >
               {label} {pct(value)}

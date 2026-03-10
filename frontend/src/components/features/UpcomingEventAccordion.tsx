@@ -68,11 +68,13 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
           <div className="flex flex-wrap items-center gap-2">
             {/* NEXT badge */}
             {isNext && (
-              <span className="flex items-center gap-1 rounded-sm bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                <svg className="h-2.5 w-2.5 fill-white" viewBox="0 0 10 10">
-                  <polygon points="0,0 7,5 0,10" />
-                </svg>
+              <span className="rounded-sm bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                 Next
+              </span>
+            )}
+            {highlighted && (
+              <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                Numbered
               </span>
             )}
             <span
@@ -84,11 +86,6 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
             >
               {event.event_name ?? 'Unnamed Event'}
             </span>
-            {highlighted && (
-              <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                Numbered
-              </span>
-            )}
           </div>
           <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
             <span>{formatDate(event.event_date)}</span>
