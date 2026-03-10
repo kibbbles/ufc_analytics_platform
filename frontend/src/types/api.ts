@@ -167,6 +167,46 @@ export interface FighterEnduranceResponse {
   note: string | null
 }
 
+// ── Upcoming Events ──────────────────────────────────────────────────────────
+
+export interface UpcomingEventListItem {
+  id: string
+  event_name: string | null
+  event_date: string | null
+  location: string | null
+  is_numbered: boolean | null
+  fight_count: number
+}
+
+export interface UpcomingEventListResponse {
+  data: UpcomingEventListItem[]
+}
+
+export interface UpcomingFightPrediction {
+  win_prob_a: number | null
+  win_prob_b: number | null
+  method_ko_tko: number | null
+  method_sub: number | null
+  method_dec: number | null
+  model_version: string | null
+}
+
+export interface UpcomingFight {
+  id: string
+  event_id: string
+  fighter_a_name: string | null
+  fighter_b_name: string | null
+  fighter_a_id: string | null
+  fighter_b_id: string | null
+  weight_class: string | null
+  is_title_fight: boolean
+  prediction: UpcomingFightPrediction | null
+}
+
+export interface UpcomingEventWithFights extends UpcomingEventListItem {
+  fights: UpcomingFight[]
+}
+
 // ── Predictions ──────────────────────────────────────────────────────────────
 
 export interface PredictionRequest {
