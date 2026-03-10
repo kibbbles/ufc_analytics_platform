@@ -73,7 +73,7 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
               </span>
             )}
             {highlighted && (
-              <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              <span className="hidden sm:inline rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
                 Numbered
               </span>
             )}

@@ -38,7 +38,7 @@ export default function UpcomingFightRow({ fight }: Props) {
   return (
     <div className="border-t border-[var(--color-border)] py-3 px-1">
       {/* Weight class + title badge */}
-      <div className="mb-1.5 flex items-center gap-2">
+      <div className="mb-1.5 flex items-center justify-center gap-2">
         {weight_class && (
           <span className="text-xs text-[var(--color-text-muted)]">
             {weight_class}
@@ -79,8 +79,22 @@ export default function UpcomingFightRow({ fight }: Props) {
           )}
         </div>
 
+        {/* Desktop-only arrow: points toward winner, sits beside their column */}
+        {hasPrediction && aWins && (
+          <svg className="hidden sm:block h-3 w-3 shrink-0 self-center fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]" viewBox="0 0 10 10">
+            <polygon points="0,0 10,5 0,10" />
+          </svg>
+        )}
+
         {/* Centre separator */}
         <span className="shrink-0 text-xs text-[var(--color-text-muted)]">vs</span>
+
+        {/* Desktop-only arrow: B side */}
+        {hasPrediction && !aWins && (
+          <svg className="hidden sm:block h-3 w-3 shrink-0 self-center fill-[var(--color-text-primary-light)] dark:fill-[var(--color-text-primary)]" viewBox="0 0 10 10">
+            <polygon points="10,0 0,5 10,10" />
+          </svg>
+        )}
 
         {/* Fighter B */}
         <div className="flex min-w-0 flex-1 flex-col items-end">
