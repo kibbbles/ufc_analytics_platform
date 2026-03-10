@@ -21,7 +21,7 @@ export default function UpcomingPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Upcoming Events</h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-          ML win probabilities and method predictions for every announced bout.
+          ML win probabilities and method predictions for every announced bout. Updated every Friday via automated pipeline — predictions refresh as new fights are added and fighter stats update.
         </p>
       </div>
 
