@@ -64,8 +64,8 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
         className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
         aria-expanded={isOpen}
       >
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 flex-1 text-center">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {/* NEXT badge */}
             {isNext && (
               <span className="rounded-sm bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
@@ -88,8 +88,8 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
             </span>
           </div>
           <div className="mt-0.5 text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-            <div className="flex gap-x-3">
-              <span>{formatDate(event.event_date)}</span>
+            <div className="flex min-w-0 justify-center gap-x-3">
+              <span className="whitespace-nowrap">{formatDate(event.event_date)}</span>
               {event.location && <span className="truncate">{event.location}</span>}
             </div>
             <div>
