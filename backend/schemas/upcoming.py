@@ -6,7 +6,7 @@ DB sources: upcoming_events, upcoming_fights, upcoming_predictions
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -20,6 +20,7 @@ class UpcomingFightPrediction(BaseModel):
     method_sub:    Optional[float] = None
     method_dec:    Optional[float] = None
     model_version: Optional[str]  = None
+    features_json: Optional[dict[str, Any]] = None
 
 
 class UpcomingFightResponse(BaseModel):

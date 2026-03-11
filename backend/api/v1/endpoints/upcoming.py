@@ -117,7 +117,8 @@ def get_upcoming_event(event_id: str, db: Session = Depends(get_db)):
             up.method_ko_tko,
             up.method_sub,
             up.method_dec,
-            up.model_version
+            up.model_version,
+            up.features_json
         FROM upcoming_fights uf
         LEFT JOIN upcoming_predictions up ON up.fight_id = uf.id
         WHERE uf.event_id = :event_id

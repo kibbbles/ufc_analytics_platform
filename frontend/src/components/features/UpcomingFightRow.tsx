@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { UpcomingFight } from '@t/api'
+import FightDetailModal from './FightDetailModal'
 
 interface Props {
   fight: UpcomingFight
@@ -24,6 +26,7 @@ function topMethodLabel(methods: Method[]): string {
 }
 
 export default function UpcomingFightRow({ fight }: Props) {
+  const [modalOpen, setModalOpen] = useState(false)
   const { fighter_a_name, fighter_b_name, weight_class, is_title_fight, prediction } = fight
 
   const hasPrediction =
@@ -36,7 +39,12 @@ export default function UpcomingFightRow({ fight }: Props) {
   const topLabel = hasPrediction ? topMethodLabel(methods) : ''
 
   return (
-    <div className="border-t border-[var(--color-border)] py-3 px-1">
+    <>
+    {modalOpen && <FightDetailModal fight={fight} onClose={() => setModalOpen(false)} />}
+    <div
+      className="border-t border-[var(--color-border)] py-3 px-1 cursor-pointer hover:bg-[var(--color-border)]/20 transition-colors rounded-sm"
+      onClick={() => setModalOpen(true)}
+    >
       {/* Weight class + title badge */}
       <div className="mb-1.5 flex items-center justify-center gap-2">
         {weight_class && (
@@ -129,5 +137,6 @@ export default function UpcomingFightRow({ fight }: Props) {
         <p className="mt-1 text-center text-xs text-[var(--color-text-muted)]">No prediction available</p>
       )}
     </div>
+    </>
   )
 }

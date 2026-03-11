@@ -189,6 +189,7 @@ export interface UpcomingFightPrediction {
   method_sub: number | null
   method_dec: number | null
   model_version: string | null
+  features_json: Record<string, number | null> | null
 }
 
 export interface UpcomingFight {
