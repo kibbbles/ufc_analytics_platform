@@ -43,6 +43,7 @@ def _prediction_from_row(row) -> UpcomingFightPrediction | None:
         method_sub=row["method_sub"],
         method_dec=row["method_dec"],
         model_version=row["model_version"],
+        features_json=row["features_json"],
     )
 
 
