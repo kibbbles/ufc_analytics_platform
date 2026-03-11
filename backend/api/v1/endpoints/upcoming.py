@@ -121,7 +121,7 @@ def get_upcoming_event(event_id: str, db: Session = Depends(get_db)):
         FROM upcoming_fights uf
         LEFT JOIN upcoming_predictions up ON up.fight_id = uf.id
         WHERE uf.event_id = :event_id
-        ORDER BY uf.is_title_fight DESC, uf.id ASC
+        ORDER BY uf.position ASC NULLS LAST, uf.id ASC
     """), {"event_id": event_id}).mappings().all()
 
     fights = [

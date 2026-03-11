@@ -365,7 +365,7 @@ class UpcomingScraper:
         logger.info(f'Inserted event: {event["event_name"]} ({event_id})')
         return event_id
 
-    def _upsert_fight(self, conn, event_id: str, fight: dict) -> str | None:
+    def _upsert_fight(self, conn, event_id: str, fight: dict, position: int = 0) -> str | None:
         """
         Upsert upcoming_fight row by (event_id, fighter_a_url, fighter_b_url).
         Returns the row's id.
@@ -389,6 +389,7 @@ class UpcomingScraper:
                     fighter_a_id   = :fa_id,
                     fighter_b_id   = :fb_id,
                     ufcstats_url   = :url,
+                    position       = :pos,
                     scraped_at     = now()
                 WHERE id = :id
             """), {
@@ -397,6 +398,7 @@ class UpcomingScraper:
                 'fa_id': fight.get('fighter_a_id'),
                 'fb_id': fight.get('fighter_b_id'),
                 'url':   fight['ufcstats_url'],
+                'pos':   position,
                 'id':    row[0],
             })
             return row[0]
@@ -407,12 +409,12 @@ class UpcomingScraper:
                 (id, event_id, fighter_a_name, fighter_b_name,
                  fighter_a_id, fighter_b_id,
                  fighter_a_url, fighter_b_url,
-                 weight_class, is_title_fight, ufcstats_url)
+                 weight_class, is_title_fight, ufcstats_url, position)
             VALUES
                 (:id, :eid, :fa_name, :fb_name,
                  :fa_id, :fb_id,
                  :fa_url, :fb_url,
-                 :wc, :title, :url)
+                 :wc, :title, :url, :pos)
         """), {
             'id':      fight_id,
             'eid':     event_id,
@@ -425,6 +427,7 @@ class UpcomingScraper:
             'wc':      fight['weight_class'],
             'title':   fight['is_title_fight'],
             'url':     fight['ufcstats_url'],
+            'pos':     position,
         })
         logger.info(f'  Fight: {fight["fighter_a_name"]} vs {fight["fighter_b_name"]} ({fight_id})')
         return fight_id
@@ -477,8 +480,8 @@ class UpcomingScraper:
 
                 with engine.connect() as conn:
                     event_id = self._upsert_event(conn, event)
-                    for fight in fights:
-                        self._upsert_fight(conn, event_id, fight)
+                    for position, fight in enumerate(fights):
+                        self._upsert_fight(conn, event_id, fight, position)
                     conn.commit()
 
                 total_fights += len(fights)
