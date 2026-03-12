@@ -148,6 +148,52 @@ class BulkPhysicalStatsScraper:
             logging.error(f"Error updating fighter {fighter_id}: {e}")
             return False, []
 
+    def get_orphan_fighters(self):
+        """Get fighters in fighter_details who have NO fighter_tott row at all."""
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text('''
+                    SELECT fd.id, fd."FIRST" || ' ' || fd."LAST" AS name, fd."URL"
+                    FROM fighter_details fd
+                    WHERE fd."URL" IS NOT NULL
+                    AND NOT EXISTS (
+                        SELECT 1 FROM fighter_tott ft WHERE ft.fighter_id = fd.id
+                    )
+                    ORDER BY fd.id
+                '''))
+                return [{'id': row[0], 'name': row[1], 'url': row[2]} for row in result]
+        except Exception as e:
+            logging.error(f"Error getting orphan fighters: {e}")
+            return []
+
+    def insert_fighter_tott(self, fighter_id, fighter_name, fighter_url, stats):
+        """INSERT a new fighter_tott row for a fighter who had none."""
+        try:
+            import string, random as _random
+            tott_id = ''.join(_random.choices(string.ascii_uppercase + string.digits, k=6))
+            with engine.connect() as conn:
+                conn.execute(text('''
+                    INSERT INTO fighter_tott
+                        (id, "FIGHTER", "HEIGHT", "WEIGHT", "REACH", "STANCE", "DOB", "URL", fighter_id)
+                    VALUES
+                        (:id, :fighter, :height, :weight, :reach, :stance, :dob, :url, :fighter_id)
+                '''), {
+                    'id':         tott_id,
+                    'fighter':    fighter_name,
+                    'height':     stats.get('height') or '',
+                    'weight':     stats.get('weight') or '',
+                    'reach':      stats.get('reach')  or '',
+                    'stance':     stats.get('stance') or '',
+                    'dob':        stats.get('dob')    or '',
+                    'url':        fighter_url,
+                    'fighter_id': fighter_id,
+                })
+                conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"Error inserting tott for fighter {fighter_id}: {e}")
+            return False
+
     def get_fighters_needing_stats(self, resume_from_id=None):
         """Get fighters that have missing physical stats"""
         try:
@@ -213,6 +259,20 @@ class BulkPhysicalStatsScraper:
         print("BULK PHYSICAL STATS SCRAPER")
         print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("="*80)
+
+        # Phase 0 — INSERT tott rows for fighters with none at all
+        orphans = self.get_orphan_fighters()
+        if orphans:
+            print(f"\nPhase 0: {len(orphans)} fighters have no tott row — inserting now...")
+            for i, fighter in enumerate(orphans, 1):
+                print(f"  [{i}/{len(orphans)}] {fighter['name']:30s} ", end='')
+                stats = self.scrape_fighter_physical_stats(fighter['url'])
+                if stats:
+                    ok = self.insert_fighter_tott(fighter['id'], fighter['name'], fighter['url'], stats)
+                    print("[OK] Inserted" if ok else "[FAILED] Insert error")
+                else:
+                    print("[FAILED] No stats scraped")
+            print(f"Phase 0 complete.\n")
 
         fighters = self.get_fighters_needing_stats(resume_from_id)
 

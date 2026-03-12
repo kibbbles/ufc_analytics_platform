@@ -804,6 +804,76 @@ class LiveUFCScraper:
         except Exception as e:
             logging.error(f"Error storing fighter tott for '{fighter_name}': {e}")
 
+    def scrape_fighter_physical_stats(self, fighter_url):
+        """Scrape height/weight/reach/stance/DOB from a fighter profile page."""
+        try:
+            time.sleep(random.uniform(2, 4))
+            response = self.session.get(fighter_url, timeout=30)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            items = soup.find_all('li', class_='b-list__box-list-item')
+            stats = {}
+            for item in items:
+                label_elem = item.find('i', class_='b-list__box-item-title')
+                if label_elem:
+                    label = label_elem.text.strip().rstrip(':')
+                    value = item.get_text().replace(label_elem.text, '').strip()
+                    if value and value != '--':
+                        stats[label] = value
+            return {
+                'height': stats.get('Height'),
+                'weight': stats.get('Weight'),
+                'reach':  stats.get('Reach'),
+                'stance': stats.get('STANCE'),
+                'dob':    stats.get('DOB'),
+            }
+        except Exception as e:
+            logging.error(f"Error scraping physical stats from {fighter_url}: {e}")
+            return None
+
+    def backfill_missing_tott(self):
+        """Insert fighter_tott rows for any fighters in fighter_details that have none.
+
+        This catches fighters added by the upcoming_scraper (URL-matched but never
+        had a fight scraped through live_scraper, so store_fighter_tott was never called).
+        Called at the end of every weekly run regardless of whether new events were found.
+        """
+        try:
+            with engine.connect() as conn:
+                orphans = conn.execute(text('''
+                    SELECT fd.id,
+                           fd."FIRST" || ' ' || fd."LAST" AS name,
+                           fd."URL"
+                    FROM fighter_details fd
+                    WHERE fd."URL" IS NOT NULL
+                    AND NOT EXISTS (
+                        SELECT 1 FROM fighter_tott ft WHERE ft.fighter_id = fd.id
+                    )
+                    ORDER BY fd.id
+                ''')).mappings().all()
+
+            if not orphans:
+                logging.info("backfill_missing_tott: no orphan fighters found")
+                return
+
+            logging.info(f"backfill_missing_tott: found {len(orphans)} fighters without tott row")
+            for fighter in orphans:
+                fighter_id  = fighter['id']
+                name        = fighter['name']
+                fighter_url = fighter['URL']
+                logging.info(f"  Backfilling tott for {name} ({fighter_id})")
+                stats = self.scrape_fighter_physical_stats(fighter_url)
+                if stats:
+                    tott_data = {**stats, 'url': fighter_url}
+                    self.store_fighter_tott(name, tott_data)
+                else:
+                    logging.warning(f"  Could not scrape stats for {name}")
+
+            logging.info("backfill_missing_tott: complete")
+
+        except Exception as e:
+            logging.error(f"backfill_missing_tott failed: {e}")
+
     def run_live_scraping(self):
         """Main method to run live scraping for new events"""
         print("=" * 60)
@@ -830,6 +900,7 @@ class LiveUFCScraper:
                 print("SUCCESS: No new UFC events found - database is up to date!")
                 print(f"INFO: Current database contains 744+ events through 2025")
                 logging.info("No new events found - database is up to date!")
+                self.backfill_missing_tott()
                 return True
             
             # Store new events
@@ -900,12 +971,14 @@ class LiveUFCScraper:
 
                 print(f"   SUCCESS: {event['name']} fully scraped")
 
+            self.backfill_missing_tott()
+
             print("=" * 60)
             print("*** SUCCESS! NEW UFC DATA ADDED TO DATABASE ***")
             print(f"SUMMARY: Added {len(new_events)} events, {total_fights} fights")
             print(f"Completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             print("=" * 60)
-            
+
             logging.info(f"Live scraping completed successfully! Added {len(new_events)} new events.")
             return True
             
