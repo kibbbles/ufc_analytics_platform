@@ -12,6 +12,7 @@ const FighterDetailPage   = lazy(() => import('@pages/FighterDetailPage'))
 const EventsPage          = lazy(() => import('@pages/EventsPage'))
 const EventDetailPage     = lazy(() => import('@pages/EventDetailPage'))
 const UpcomingPage        = lazy(() => import('@pages/UpcomingPage'))
+const UpcomingFightPage   = lazy(() => import('@pages/UpcomingFightPage'))
 const StyleEvolutionPage  = lazy(() => import('@pages/StyleEvolutionPage'))
 const EndurancePage       = lazy(() => import('@pages/EndurancePage'))
 const AboutPage           = lazy(() => import('@pages/AboutPage'))
@@ -30,6 +31,7 @@ const routes: RouteObject[] = [
       { path: 'events',                 element: <Suspense fallback={fallback}><EventsPage /></Suspense> },
       { path: 'events/:id',             element: <Suspense fallback={fallback}><EventDetailPage /></Suspense> },
       { path: 'upcoming',               element: <Suspense fallback={fallback}><UpcomingPage /></Suspense> },
+      { path: 'upcoming/fights/:id',    element: <Suspense fallback={fallback}><UpcomingFightPage /></Suspense> },
       { path: 'analytics/style-evolution', element: <Suspense fallback={fallback}><StyleEvolutionPage /></Suspense> },
       { path: 'analytics/endurance',    element: <Suspense fallback={fallback}><EndurancePage /></Suspense> },
       { path: 'about',                  element: <Suspense fallback={fallback}><AboutPage /></Suspense> },

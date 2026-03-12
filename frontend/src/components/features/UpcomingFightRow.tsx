@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { UpcomingFight } from '@t/api'
-import FightDetailModal from './FightDetailModal'
 
 interface Props {
   fight: UpcomingFight
@@ -26,7 +25,7 @@ function topMethodLabel(methods: Method[]): string {
 }
 
 export default function UpcomingFightRow({ fight }: Props) {
-  const [modalOpen, setModalOpen] = useState(false)
+  const navigate = useNavigate()
   const { fighter_a_name, fighter_b_name, weight_class, is_title_fight, prediction } = fight
 
   const hasPrediction =
@@ -39,11 +38,12 @@ export default function UpcomingFightRow({ fight }: Props) {
   const topLabel = hasPrediction ? topMethodLabel(methods) : ''
 
   return (
-    <>
-    {modalOpen && <FightDetailModal fight={fight} onClose={() => setModalOpen(false)} />}
     <div
       className="border-t border-[var(--color-border)] py-3 px-1 cursor-pointer hover:bg-[var(--color-border)]/20 transition-colors rounded-sm"
-      onClick={() => setModalOpen(true)}
+      onClick={() => navigate(`/upcoming/fights/${fight.id}`)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/upcoming/fights/${fight.id}`) }}
     >
       {/* Weight class + title badge */}
       <div className="mb-1.5 flex items-center justify-center gap-2">
@@ -117,7 +117,7 @@ export default function UpcomingFightRow({ fight }: Props) {
         </div>
       </div>
 
-      {/* Method breakdown — centered, top method bolded in red */}
+      {/* Method breakdown */}
       {hasPrediction ? (
         <div className="mt-1.5 flex justify-center gap-4 font-mono text-xs tabular-nums">
           {methods.map(({ label, value }) => (
@@ -137,6 +137,5 @@ export default function UpcomingFightRow({ fight }: Props) {
         <p className="mt-1 text-center text-xs text-[var(--color-text-muted)]">No prediction available</p>
       )}
     </div>
-    </>
   )
 }

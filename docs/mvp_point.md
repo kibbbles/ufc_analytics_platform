@@ -39,16 +39,28 @@ What's in:
 - Predictions show 1 decimal place (e.g. 57.1%)
 - Subtitle notes Friday automated refresh
 
-Pending (not blocking MVP):
-- **Fight detail modal**: click into a fight to see an ESPN-style stat comparison (fighter A vs B bars for sig strikes, takedown %, ctrl time, etc.). Requires storing raw per-fighter stats alongside the differential in `upcoming_predictions`. Planned but scoped for after MVP.
-- **Fight ordering**: fights within an event show in random ID order rather than main-event-first. Fix requires adding a `position` column to `upcoming_fights` and re-running the scraper. Planned post-MVP.
+Also included in Task 21 (already done, keep):
+- Age and all days-based features now display as years (e.g. "29.4 yrs" instead of raw days)
+- Rolling window features surfaced in the feature breakdown
 
-#### Task 22 — Events Page Enhancements — pending
-Enhance the `/events` (completed events) page with:
+#### ✅ Task 22 — Fight Matchup Page + Events Page Enhancements — DONE
+
+**Fight matchup page** (`/upcoming/fights/:id` or `/fights/:id`):
+- Clicking a fight row navigates to a dedicated matchup page — no modal, no popup
+- Modelled on UFCStats event-detail → fight-detail flow: click a fight row on the upcoming page, land directly on the full matchup view
+- Page shows everything in one place (no "view matchup" intermediate step):
+  - **Tale of the Tape**: height, weight, reach, age, stance side-by-side
+  - **Win probability bar** (the dominant visual, same as the accordion row)
+  - **Method breakdown**: KO/TKO / Sub / Decision probabilities
+  - **Striking differentials**: sig strikes, accuracy, head/body/leg breakdown
+  - **Grappling differentials**: takedown %, submission attempts, control time
+  - **Key model features**: the top drivers behind the prediction
+- Fighter names are **links** to `/fighters/:id` — same fighter detail page used by the Fighter Lookup section (shows past fight history, tale of the tape, etc.)
+- Mobile-first layout: single column, stats as labeled rows with A vs B values
+
+**Events page enhancements** (`/events`):
 - A **Completed / Upcoming toggle** at the top — switches between historical events list and the upcoming events list (reuses `/upcoming` data)
 - A **search/filter input** that filters the visible event list client-side as the user types
-
-This is separate from Task 21 — Task 21 is the standalone `/upcoming` page, Task 22 is adding toggle/search navigation to the existing `/events` page so users can move between completed and upcoming without using the nav.
 
 #### Task 23 — Past Predictions (Model Transparency) — pending (stretch)
 Show the model's test-set results on completed fights. FiveThirtyEight honesty play — don't just show predictions, show the track record.
@@ -141,7 +153,7 @@ End-to-end verification: upcoming scraper → predictions → API → UI all wor
 
 The MVP is complete when:
 - [x] Upcoming page shows next UFC event(s) with accordion fight card — per-fight win probability, method breakdown (Task 21 ✅)
-- [ ] Fight detail modal — per-fight stat comparison bars (post-MVP stretch)
+- [x] Fight matchup page — dedicated route per fight with tale of the tape, method breakdown, model feature breakdown, fighter name links (Task 22 ✅)
 - [ ] Completed / Upcoming toggle and event name search on Events page (Task 22)
 - [x] All non-functional nav items show a "currently under development" placeholder
 - [x] About page is live
