@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-08T18:32:53.865115+00:00",
+  "generated_at": "2026-03-13T19:46:11.419269+00:00",
   "n_training_rows": 6239,
   "n_features_before": 71,
   "n_features_removed_collinear": 32,
@@ -38,7 +38,7 @@
     "diff_td_def_rate"
   ],
   "mi_scores": {
-    "diff_age_at_fight": 0.026184,
+    "diff_age_at_fight": 0.024671,
     "win_rate_diff": 0.017377,
     "diff_grappling_ratio": 0.015236,
     "diff_career_length_days": 0.01313,
@@ -66,7 +66,7 @@
     "diff_ewa_kd": 0.001439,
     "loss_streak_diff": 0.001218,
     "diff_defense_score": 0.000928,
-    "reach_diff_inches": 0.000317,
+    "reach_diff_inches": 0.000724,
     "diff_td_def_rate": 0.0
   },
   "categorical_features": [
@@ -77,8 +77,8 @@
       "feature": "age_diff_days",
       "correlated_with": "diff_age_at_fight",
       "r": 1.0,
-      "mi_score_dropped": 0.025562,
-      "mi_score_kept": 0.026184
+      "mi_score_dropped": 0.023498,
+      "mi_score_kept": 0.024671
     },
     {
       "feature": "diff_career_avg_sig_str_pct",
