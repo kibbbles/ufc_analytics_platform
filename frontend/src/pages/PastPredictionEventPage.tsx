@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import LoadingSkeleton from '@components/common/LoadingSkeleton'
@@ -22,10 +22,12 @@ function winnerName(item: PastPredictionItem, id: string | null | undefined): st
 }
 
 // ---------------------------------------------------------------------------
-// Fight row — centered layout, links to fight detail
+// Fight row — centered layout, links to fight detail page
+// Note: outer container uses div+onClick to avoid nested <a> tags
 // ---------------------------------------------------------------------------
 
 function FightRow({ item }: { item: PastPredictionItem }) {
+  const navigate  = useNavigate()
   const isUpset   = item.is_upset
   const isCorrect = item.is_correct
 
@@ -39,9 +41,12 @@ function FightRow({ item }: { item: PastPredictionItem }) {
   const actualWinner = winnerName(item, item.actual_winner_id)
 
   return (
-    <Link
-      to={`/past-predictions/fights/${item.fight_id}`}
-      className="block py-4 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border-light)]/30 dark:hover:bg-[var(--color-border)]/20 -mx-4 px-4 transition-colors"
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate(`/past-predictions/fights/${item.fight_id}`)}
+      onKeyDown={(e) => e.key === 'Enter' && navigate(`/past-predictions/fights/${item.fight_id}`)}
+      className="py-4 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border-light)]/30 dark:hover:bg-[var(--color-border)]/20 cursor-pointer transition-colors"
     >
       {/* Indicator + matchup — centered */}
       <div className="flex flex-col items-center text-center gap-1 mb-2">
@@ -77,7 +82,7 @@ function FightRow({ item }: { item: PastPredictionItem }) {
         )}
       </div>
 
-      {/* Predicted vs actual — centered two-row */}
+      {/* Predicted vs actual — centered */}
       <div className="flex flex-col items-center gap-0.5">
         <p className="text-xs text-center">
           <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
@@ -101,9 +106,7 @@ function FightRow({ item }: { item: PastPredictionItem }) {
           <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
             Actual{' '}
           </span>
-          <span className="font-medium">
-            {actualWinner}
-          </span>
+          <span className="font-medium">{actualWinner}</span>
           {item.actual_method && (
             <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
               {' '}via {item.actual_method}
@@ -111,7 +114,7 @@ function FightRow({ item }: { item: PastPredictionItem }) {
           )}
         </p>
       </div>
-    </Link>
+    </div>
   )
 }
 
