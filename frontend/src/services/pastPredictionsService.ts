@@ -3,6 +3,8 @@ import type {
   PastPredictionsResponse,
   PastPredictionEventsResponse,
   PastPredictionEventDetail,
+  PastPredictionFightsResponse,
+  PastPredictionItem,
 } from '@t/api'
 
 export const pastPredictionsService = {
@@ -19,5 +21,15 @@ export const pastPredictionsService = {
   getEvent: (eventId: string) =>
     apiClient
       .get<PastPredictionEventDetail>(`/past-predictions/events/${eventId}`)
+      .then((r) => r.data),
+
+  searchFights: (params: { search: string; page?: number; page_size?: number }) =>
+    apiClient
+      .get<PastPredictionFightsResponse>('/past-predictions/fights', { params })
+      .then((r) => r.data),
+
+  getFight: (fightId: string) =>
+    apiClient
+      .get<PastPredictionItem>(`/past-predictions/fights/${fightId}`)
       .then((r) => r.data),
 }

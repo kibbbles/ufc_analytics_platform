@@ -17,6 +17,7 @@ const StyleEvolutionPage  = lazy(() => import('@pages/StyleEvolutionPage'))
 const EndurancePage       = lazy(() => import('@pages/EndurancePage'))
 const AboutPage                  = lazy(() => import('@pages/AboutPage'))
 const PastPredictionEventPage    = lazy(() => import('@pages/PastPredictionEventPage'))
+const PastPredictionFightPage    = lazy(() => import('@pages/PastPredictionFightPage'))
 
 const fallback = <LoadingSpinner fullScreen />
 
@@ -37,6 +38,7 @@ const routes: RouteObject[] = [
       { path: 'analytics/endurance',    element: <Suspense fallback={fallback}><EndurancePage /></Suspense> },
       { path: 'about',                  element: <Suspense fallback={fallback}><AboutPage /></Suspense> },
       { path: 'past-predictions/events/:event_id', element: <Suspense fallback={fallback}><PastPredictionEventPage /></Suspense> },
+      { path: 'past-predictions/fights/:fight_id', element: <Suspense fallback={fallback}><PastPredictionFightPage /></Suspense> },
       { path: '*',                      element: <NotFoundPage /> },
     ],
   },

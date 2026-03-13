@@ -23,6 +23,7 @@ from schemas.past_prediction import (
     PastPredictionEventItem,
     PastPredictionEventsResponse,
     PastPredictionEventDetail,
+    PastPredictionFightsResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -225,3 +226,76 @@ def get_past_prediction_event(
         accuracy=correct_count / len(fights) if fights else 0.0,
         fights=fights,
     )
+
+
+_FIGHT_COLS = """
+    fight_id, event_id, event_name, event_date,
+    fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
+    weight_class, win_prob_a, win_prob_b,
+    pred_method_ko_tko, pred_method_sub, pred_method_dec,
+    predicted_winner_id, predicted_method,
+    actual_winner_id, actual_method,
+    is_correct, confidence, is_upset
+"""
+
+
+@router.get(
+    "/fights",
+    response_model=PastPredictionFightsResponse,
+    summary="Search past predictions by fighter name",
+)
+def search_past_prediction_fights(
+    search: str = Query(..., min_length=1, description="Fighter name search term"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+) -> PastPredictionFightsResponse:
+    params: dict = {"search": f"%{search}%"}
+
+    total: int = db.execute(text("""
+        SELECT COUNT(*)
+        FROM past_predictions
+        WHERE LOWER(fighter_a_name) LIKE LOWER(:search)
+           OR LOWER(fighter_b_name) LIKE LOWER(:search)
+    """), params).scalar() or 0
+
+    params["limit"]  = page_size
+    params["offset"] = (page - 1) * page_size
+
+    rows = db.execute(text(f"""
+        SELECT {_FIGHT_COLS}
+        FROM past_predictions
+        WHERE LOWER(fighter_a_name) LIKE LOWER(:search)
+           OR LOWER(fighter_b_name) LIKE LOWER(:search)
+        ORDER BY event_date DESC, fight_id
+        LIMIT :limit OFFSET :offset
+    """), params).mappings().all()
+
+    return PastPredictionFightsResponse(
+        data=[PastPredictionItem(**dict(r)) for r in rows],
+        total=total,
+        total_pages=math.ceil(total / page_size) if total else 0,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get(
+    "/fights/{fight_id}",
+    response_model=PastPredictionItem,
+    summary="Single past prediction by fight ID",
+)
+def get_past_prediction_fight(
+    fight_id: str,
+    db: Session = Depends(get_db),
+) -> PastPredictionItem:
+    row = db.execute(text(f"""
+        SELECT {_FIGHT_COLS}
+        FROM past_predictions
+        WHERE fight_id = :fight_id
+    """), {"fight_id": fight_id}).mappings().first()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"No prediction found for fight '{fight_id}'")
+
+    return PastPredictionItem(**dict(row))

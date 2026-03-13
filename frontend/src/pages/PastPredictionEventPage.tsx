@@ -22,7 +22,7 @@ function winnerName(item: PastPredictionItem, id: string | null | undefined): st
 }
 
 // ---------------------------------------------------------------------------
-// Fight prediction row
+// Fight row — centered layout, links to fight detail
 // ---------------------------------------------------------------------------
 
 function FightRow({ item }: { item: PastPredictionItem }) {
@@ -31,61 +31,57 @@ function FightRow({ item }: { item: PastPredictionItem }) {
 
   let indicator: string
   let indicatorColor: string
-  if (isUpset) {
-    indicator      = '~'
-    indicatorColor = 'text-amber-500'
-  } else if (isCorrect) {
-    indicator      = '✓'
-    indicatorColor = 'text-green-500'
-  } else {
-    indicator      = '✗'
-    indicatorColor = 'text-[var(--color-primary)]'
-  }
+  if (isUpset)        { indicator = '~'; indicatorColor = 'text-amber-500' }
+  else if (isCorrect) { indicator = '✓'; indicatorColor = 'text-green-500' }
+  else                { indicator = '✗'; indicatorColor = 'text-[var(--color-primary)]' }
 
   const predWinner   = winnerName(item, item.predicted_winner_id)
   const actualWinner = winnerName(item, item.actual_winner_id)
 
   return (
-    <div className="py-4 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0">
-      {/* Matchup header */}
-      <div className="flex items-start gap-2 mb-2">
+    <Link
+      to={`/past-predictions/fights/${item.fight_id}`}
+      className="block py-4 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border-light)]/30 dark:hover:bg-[var(--color-border)]/20 -mx-4 px-4 transition-colors"
+    >
+      {/* Indicator + matchup — centered */}
+      <div className="flex flex-col items-center text-center gap-1 mb-2">
         <span
-          className={`font-mono font-bold text-base mt-0.5 w-5 shrink-0 ${indicatorColor}`}
+          className={`font-mono font-bold text-lg ${indicatorColor}`}
           aria-label={isUpset ? 'upset' : isCorrect ? 'correct' : 'incorrect'}
         >
           {indicator}
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-tight">
-            <Link
-              to={`/fighters/${item.fighter_a_id}`}
-              className="hover:text-[var(--color-primary)] transition-colors"
-            >
-              {item.fighter_a_name ?? '?'}
-            </Link>
-            <span className="font-normal text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {' vs '}
-            </span>
-            <Link
-              to={`/fighters/${item.fighter_b_id}`}
-              className="hover:text-[var(--color-primary)] transition-colors"
-            >
-              {item.fighter_b_name ?? '?'}
-            </Link>
+        <p className="text-sm font-semibold leading-tight">
+          <Link
+            to={`/fighters/${item.fighter_a_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hover:text-[var(--color-primary)] transition-colors"
+          >
+            {item.fighter_a_name ?? '?'}
+          </Link>
+          <span className="font-normal text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            {' vs '}
+          </span>
+          <Link
+            to={`/fighters/${item.fighter_b_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hover:text-[var(--color-primary)] transition-colors"
+          >
+            {item.fighter_b_name ?? '?'}
+          </Link>
+        </p>
+        {item.weight_class && (
+          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            {item.weight_class}
           </p>
-          {item.weight_class && (
-            <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {item.weight_class}
-            </p>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Predicted vs Actual — two-row compact layout */}
-      <div className="ml-7 space-y-1">
-        <p className="text-xs">
-          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] w-16 inline-block">
-            Predicted
+      {/* Predicted vs actual — centered two-row */}
+      <div className="flex flex-col items-center gap-0.5">
+        <p className="text-xs text-center">
+          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            Predicted{' '}
           </span>
           <span className={isCorrect ? 'font-medium text-[var(--color-primary)]' : ''}>
             {predWinner}
@@ -101,9 +97,9 @@ function FightRow({ item }: { item: PastPredictionItem }) {
             </span>
           )}
         </p>
-        <p className="text-xs">
-          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] w-16 inline-block">
-            Actual
+        <p className="text-xs text-center">
+          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            Actual{' '}
           </span>
           <span className="font-medium">
             {actualWinner}
@@ -115,7 +111,7 @@ function FightRow({ item }: { item: PastPredictionItem }) {
           )}
         </p>
       </div>
-    </div>
+    </Link>
   )
 }
 
@@ -131,7 +127,7 @@ export default function PastPredictionEventPage() {
   )
 
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       {/* Back link */}
       <Link
         to="/"
@@ -151,15 +147,15 @@ export default function PastPredictionEventPage() {
       {data && (
         <>
           {/* Event header */}
-          <div className="mb-6">
+          <div className="mb-4 text-center">
             <h1 className="text-2xl font-bold leading-tight">{data.event_name ?? 'UFC Event'}</h1>
             <p className="mt-1 text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
               {data.event_date ? formatDate(data.event_date) : '—'}
             </p>
           </div>
 
-          {/* Accuracy summary bar */}
-          <div className="mb-6 rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-surface-light)] dark:bg-[var(--color-surface)] px-4 py-3">
+          {/* Accuracy summary */}
+          <div className="mb-6 rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-surface-light)] dark:bg-[var(--color-surface)] px-4 py-3 text-center">
             <p className="text-sm font-mono tabular-nums">
               <span className="font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
                 {(data.accuracy * 100).toFixed(1)}% accurate

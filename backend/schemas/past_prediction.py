@@ -80,3 +80,11 @@ class PastPredictionEventDetail(BaseModel):
     correct_count: int
     accuracy: float
     fights: list[PastPredictionItem]
+
+
+class PastPredictionFightsResponse(BaseModel):
+    data: list[PastPredictionItem]
+    total: int
+    total_pages: int
+    page: int
+    page_size: int

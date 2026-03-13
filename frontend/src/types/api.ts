@@ -279,6 +279,14 @@ export interface PastPredictionEventDetail extends PastPredictionEventItem {
   fights: PastPredictionItem[]
 }
 
+export interface PastPredictionFightsResponse {
+  data: PastPredictionItem[]
+  total: number
+  total_pages: number
+  page: number
+  page_size: number
+}
+
 // ── Predictions ──────────────────────────────────────────────────────────────
 
 export interface PredictionRequest {
