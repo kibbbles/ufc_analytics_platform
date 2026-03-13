@@ -31,8 +31,7 @@ function WinProbBar({ item }: { item: PastPredictionItem }) {
   const pctA  = (probA * 100).toFixed(1)
   const pctB  = (probB * 100).toFixed(1)
 
-  const predWinsA   = item.predicted_winner_id === item.fighter_a_id
-  const actualWinsA = item.actual_winner_id     === item.fighter_a_id
+  const actualWinsA = item.actual_winner_id === item.fighter_a_id
 
   return (
     <div className="my-6">
