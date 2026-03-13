@@ -5,7 +5,7 @@ import { fightersService } from '@services/fightersService'
 import { fightsService } from '@services/fightsService'
 import { Card, LoadingSkeleton } from '@components/common'
 import { FightRow } from '@components/features'
-import type { FighterResponse, UpcomingFight, UpcomingFightPrediction } from '@t/api'
+import type { FighterResponse, UpcomingFight } from '@t/api'
 import { inchesToFeet, ageFromDob } from '@utils/format'
 
 // ── Feature metadata (keeps labels + sign convention) ────────────────────────
