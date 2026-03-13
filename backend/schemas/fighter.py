@@ -43,11 +43,14 @@ class FighterResponse(FighterBase):
     td_def: Optional[str] = None       # takedown defence %
     sub_avg: Optional[float] = None    # submission attempts per 15 min
 
-    # Record (computed from fight_results)
+    # Record (computed from fight_results — UFC bouts only)
     wins: Optional[int] = None
     losses: Optional[int] = None
     draws: Optional[int] = None
     no_contests: Optional[int] = None
+
+    # Career stats (computed from fight_results)
+    avg_fight_time_seconds: Optional[int] = None
 
 
 class FighterListItem(BaseModel):

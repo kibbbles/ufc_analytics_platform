@@ -4,9 +4,8 @@ import { upcomingService } from '@services/upcomingService'
 import { fightersService } from '@services/fightersService'
 import { fightsService } from '@services/fightsService'
 import { Card, LoadingSkeleton } from '@components/common'
-import { FightRow } from '@components/features'
-import type { FighterResponse, UpcomingFight } from '@t/api'
-import { inchesToFeet, ageFromDob } from '@utils/format'
+import type { FighterResponse, FightListItem, UpcomingFight } from '@t/api'
+import { inchesToFeet, ageFromDob, formatDate } from '@utils/format'
 
 // ── Feature metadata (keeps labels + sign convention) ────────────────────────
 
@@ -67,6 +66,13 @@ function ageDisplay(dob: string | null): string {
   return dob ? `${ageFromDob(dob)} yrs` : '—'
 }
 
+function fmtTime(seconds: number | null): string {
+  if (seconds == null) return '—'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function TaleOfTape({
@@ -80,12 +86,17 @@ function TaleOfTape({
   nameA: string
   nameB: string
 }) {
+  const record = (f: FighterResponse | null) =>
+    f ? `${f.wins ?? 0}-${f.losses ?? 0}-${f.draws ?? 0}` : '—'
+
   const rows: { label: string; valA: string; valB: string }[] = [
-    { label: 'Height', valA: heightDisplay(a?.height_inches ?? null), valB: heightDisplay(b?.height_inches ?? null) },
-    { label: 'Weight', valA: a?.weight_lbs != null ? `${a.weight_lbs} lbs` : '—', valB: b?.weight_lbs != null ? `${b.weight_lbs} lbs` : '—' },
-    { label: 'Reach',  valA: a?.reach_inches != null ? `${a.reach_inches}"` : '—', valB: b?.reach_inches != null ? `${b.reach_inches}"` : '—' },
-    { label: 'Age',    valA: ageDisplay(a?.dob_date ?? null), valB: ageDisplay(b?.dob_date ?? null) },
-    { label: 'Stance', valA: a?.stance ?? '—', valB: b?.stance ?? '—' },
+    { label: 'Record (UFC)',  valA: record(a),                                                          valB: record(b)                                                          },
+    { label: 'Avg. Fight',   valA: fmtTime(a?.avg_fight_time_seconds ?? null),                         valB: fmtTime(b?.avg_fight_time_seconds ?? null)                         },
+    { label: 'Height',       valA: heightDisplay(a?.height_inches ?? null),                             valB: heightDisplay(b?.height_inches ?? null)                             },
+    { label: 'Weight',       valA: a?.weight_lbs != null ? `${a.weight_lbs} lbs` : '—',               valB: b?.weight_lbs != null ? `${b.weight_lbs} lbs` : '—'               },
+    { label: 'Reach',        valA: a?.reach_inches != null ? `${a.reach_inches}"` : '—',               valB: b?.reach_inches != null ? `${b.reach_inches}"` : '—'               },
+    { label: 'Stance',       valA: a?.stance ?? '—',                                                   valB: b?.stance ?? '—'                                                   },
+    { label: 'DOB',          valA: a?.dob_date ? formatDate(String(a.dob_date)) : '—',                 valB: b?.dob_date ? formatDate(String(b.dob_date)) : '—'                 },
   ]
 
   return (
@@ -107,6 +118,53 @@ function TaleOfTape({
         ))}
       </tbody>
     </table>
+  )
+}
+
+function RecentFightMini({
+  fights,
+  viewingFighterId,
+}: {
+  fights: FightListItem[]
+  viewingFighterId: string
+}) {
+  return (
+    <div className="space-y-2">
+      {fights.map((f) => {
+        const parts = (f.bout ?? '').split(' vs. ')
+        const isA = f.fighter_a_id === viewingFighterId
+        const opponentRaw = (isA ? parts[1] : parts[0] ?? '').trim()
+        const opponentLastName = opponentRaw.split(' ').at(-1) ?? '—'
+        const opponentId = isA ? f.fighter_b_id : f.fighter_a_id
+        const isWin = f.winner_id === viewingFighterId
+        const isLoss = f.winner_id !== null && f.winner_id !== viewingFighterId
+        return (
+          <div key={f.id} className="flex items-center gap-2 text-sm">
+            <span
+              className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold tabular-nums ${
+                isWin
+                  ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+                  : isLoss
+                  ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                  : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'
+              }`}
+            >
+              {isWin ? 'W' : isLoss ? 'L' : '—'}
+            </span>
+            {opponentId ? (
+              <Link
+                to={`/fighters/${opponentId}`}
+                className="font-medium hover:text-[var(--color-primary)] transition-colors"
+              >
+                {opponentLastName}
+              </Link>
+            ) : (
+              <span className="font-medium text-[var(--color-text-muted)]">{opponentLastName}</span>
+            )}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -417,9 +475,9 @@ export default function UpcomingFightPage() {
           {/* Recent fights */}
           {(fight.fighter_a_id || fight.fighter_b_id) && (
             <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Recent Fights</span>}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="mb-2 text-xs font-semibold text-[var(--color-text-muted)]">{nameA}</p>
+                  <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameA}</p>
                   {!fight.fighter_a_id ? (
                     <p className="text-xs text-[var(--color-text-muted)]">No history</p>
                   ) : !fightsA ? (
@@ -427,15 +485,11 @@ export default function UpcomingFightPage() {
                   ) : fightsA.data.length === 0 ? (
                     <p className="text-xs text-[var(--color-text-muted)]">No history</p>
                   ) : (
-                    <div className="-my-1">
-                      {fightsA.data.map((f) => (
-                        <FightRow key={f.id} fight={f} viewingFighterId={fight.fighter_a_id ?? undefined} />
-                      ))}
-                    </div>
+                    <RecentFightMini fights={fightsA.data} viewingFighterId={fight.fighter_a_id} />
                   )}
                 </div>
                 <div>
-                  <p className="mb-2 text-xs font-semibold text-[var(--color-text-muted)]">{nameB}</p>
+                  <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameB}</p>
                   {!fight.fighter_b_id ? (
                     <p className="text-xs text-[var(--color-text-muted)]">No history</p>
                   ) : !fightsB ? (
@@ -443,11 +497,7 @@ export default function UpcomingFightPage() {
                   ) : fightsB.data.length === 0 ? (
                     <p className="text-xs text-[var(--color-text-muted)]">No history</p>
                   ) : (
-                    <div className="-my-1">
-                      {fightsB.data.map((f) => (
-                        <FightRow key={f.id} fight={f} viewingFighterId={fight.fighter_b_id ?? undefined} />
-                      ))}
-                    </div>
+                    <RecentFightMini fights={fightsB.data} viewingFighterId={fight.fighter_b_id} />
                   )}
                 </div>
               </div>

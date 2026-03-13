@@ -164,7 +164,13 @@ def get_fighter(fighter_id: str, db: Session = Depends(get_db)):
                 FROM fight_results
                 WHERE (fighter_id = fd.id OR opponent_id = fd.id)
                   AND "OUTCOME" = 'NC/NC'
-            ) AS no_contests
+            ) AS no_contests,
+            (
+                SELECT AVG(total_fight_time_seconds)::int
+                FROM fight_results
+                WHERE (fighter_id = fd.id OR opponent_id = fd.id)
+                  AND total_fight_time_seconds IS NOT NULL
+            ) AS avg_fight_time_seconds
         FROM fighter_details fd
         LEFT JOIN fighter_tott ft ON ft.fighter_id = fd.id
         WHERE fd.id = :fighter_id

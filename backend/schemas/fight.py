@@ -72,6 +72,8 @@ class FightListItem(BaseModel):
     id: str
     event_id: Optional[str] = None
     bout: Optional[str] = None
+    fighter_a_id: Optional[str] = None
+    fighter_b_id: Optional[str] = None
     weight_class: Optional[str] = None
     method: Optional[str] = None
     round: Optional[int] = None

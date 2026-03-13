@@ -47,11 +47,12 @@ export interface FighterResponse {
   td_acc: string | null
   td_def: string | null
   sub_avg: number | null
-  // Record
+  // Record (UFC bouts only)
   wins: number | null
   losses: number | null
   draws: number | null
   no_contests: number | null
+  avg_fight_time_seconds: number | null
 }
 
 // ── Events ───────────────────────────────────────────────────────────────────
@@ -105,6 +106,8 @@ export interface FightListItem {
   id: string
   event_id: string | null
   bout: string | null
+  fighter_a_id: string | null
+  fighter_b_id: string | null
   weight_class: string | null
   method: string | null
   round: number | null
