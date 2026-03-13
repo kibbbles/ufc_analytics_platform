@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
@@ -14,27 +14,26 @@ function formatPct(value: number): string {
 }
 
 const PAGE_SIZE = 10
-const CURRENT_YEAR = new Date().getFullYear()
-const YEARS = Array.from({ length: CURRENT_YEAR - 2021 }, (_, i) => CURRENT_YEAR - i)
 
 // ---------------------------------------------------------------------------
 // Model Scorecard section
 // ---------------------------------------------------------------------------
 
 function ModelScorecard() {
-  const [page, setPage]         = useState(1)
-  const [search, setSearch]     = useState('')
+  const [page, setPage]             = useState(1)
+  const [search, setSearch]         = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [year, setYear]         = useState<number | undefined>(undefined)
+  const [year, setYear]             = useState<number | undefined>(undefined)
+  const debounceTimer               = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Summary stats (fetched once)
-  const { data: summaryData, loading: summaryLoading } = useApi(
+  // Summary stats (fetched once — includes available_years)
+  const { data: summaryData, loading: summaryLoading, error: summaryError } = useApi(
     () => pastPredictionsService.get(1),
     [],
   )
 
-  // Event list (paginated, filtered)
-  const { data: eventsData, loading: eventsLoading } = useApi(
+  // Event list (paginated + filtered)
+  const { data: eventsData, loading: eventsLoading, error: eventsError } = useApi(
     () =>
       pastPredictionsService.getEvents({
         page,
@@ -45,7 +44,8 @@ function ModelScorecard() {
     [page, debouncedSearch, year],
   )
 
-  const summary = summaryData?.summary
+  const summary      = summaryData?.summary
+  const availYears   = summary?.available_years ?? []
 
   // Derive date range label
   let dateLabel = 'Test set'
@@ -59,16 +59,26 @@ function ModelScorecard() {
     const val = e.target.value
     setSearch(val)
     setPage(1)
-    // Simple debounce via timeout
-    clearTimeout((handleSearchChange as unknown as { _t?: ReturnType<typeof setTimeout> })._t)
-    const t = setTimeout(() => setDebouncedSearch(val), 300)
-    ;(handleSearchChange as unknown as { _t?: ReturnType<typeof setTimeout> })._t = t
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => setDebouncedSearch(val), 300)
+  }
+
+  function clearSearch() {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    setSearch('')
+    setDebouncedSearch('')
+    setPage(1)
   }
 
   function handleYearChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setYear(e.target.value ? Number(e.target.value) : undefined)
     setPage(1)
   }
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current) }
+  }, [])
 
   return (
     <section>
@@ -80,9 +90,11 @@ function ModelScorecard() {
         </span>
       </div>
 
-      {/* Summary stats — compact single-line */}
+      {/* Summary stats */}
       {summaryLoading ? (
         <LoadingSkeleton lines={2} />
+      ) : summaryError ? (
+        <p className="text-sm text-red-500">Failed to load scorecard: {summaryError}</p>
       ) : summary && summary.total_fights > 0 ? (
         <div className="mb-1">
           <p className="text-sm font-mono tabular-nums">
@@ -102,11 +114,7 @@ function ModelScorecard() {
             Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history.
           </p>
         </div>
-      ) : (
-        <p className="mb-5 text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          No predictions yet.
-        </p>
-      )}
+      ) : null}
 
       {/* Search + year filter */}
       <div className="mt-4 mb-3 flex flex-wrap gap-2">
@@ -121,7 +129,7 @@ function ModelScorecard() {
           />
           {search && (
             <button
-              onClick={() => { setSearch(''); setDebouncedSearch(''); setPage(1) }}
+              onClick={clearSearch}
               aria-label="Clear search"
               className="absolute right-2 top-1/2 -translate-y-1/2 text-lg leading-none text-[var(--color-text-muted)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)]"
             >
@@ -129,17 +137,19 @@ function ModelScorecard() {
             </button>
           )}
         </div>
-        <select
-          value={year ?? ''}
-          onChange={handleYearChange}
-          aria-label="Filter by year"
-          className="rounded-md border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-        >
-          <option value="">All years</option>
-          {YEARS.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
+        {availYears.length > 0 && (
+          <select
+            value={year ?? ''}
+            onChange={handleYearChange}
+            aria-label="Filter by year"
+            className="rounded-md border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+          >
+            <option value="">All years</option>
+            {availYears.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Event list */}
@@ -150,6 +160,10 @@ function ModelScorecard() {
               <LoadingSkeleton lines={2} />
             </div>
           ))}
+        </div>
+      ) : eventsError ? (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400">
+          Failed to load events: {eventsError}
         </div>
       ) : eventsData && eventsData.data.length > 0 ? (
         <>
@@ -181,18 +195,16 @@ function ModelScorecard() {
             ))}
           </div>
 
-          {!debouncedSearch && !year && (
-            <Pagination
-              page={page}
-              totalPages={eventsData.total_pages}
-              onPrev={() => setPage((p) => p - 1)}
-              onNext={() => setPage((p) => p + 1)}
-            />
-          )}
+          <Pagination
+            page={page}
+            totalPages={eventsData.total_pages}
+            onPrev={() => setPage((p) => p - 1)}
+            onNext={() => setPage((p) => p + 1)}
+          />
         </>
       ) : (
         <p className="py-8 text-center text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          {debouncedSearch || year ? 'No events match your search.' : 'No past predictions yet.'}
+          {debouncedSearch || year ? 'No events match your filter.' : 'No past predictions yet.'}
         </p>
       )}
     </section>

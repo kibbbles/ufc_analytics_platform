@@ -250,6 +250,7 @@ export interface PastPredictionSummary {
   high_conf_accuracy: number
   date_from: string
   date_to: string
+  available_years: number[]
 }
 
 export interface PastPredictionsResponse {

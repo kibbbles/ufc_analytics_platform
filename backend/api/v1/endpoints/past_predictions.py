@@ -62,6 +62,13 @@ def get_past_predictions(
     date_from_val = summary_row["date_from"]
     date_to_val   = summary_row["date_to"]
 
+    years_rows = db.execute(text("""
+        SELECT DISTINCT EXTRACT(YEAR FROM event_date)::int AS yr
+        FROM past_predictions
+        WHERE event_date IS NOT NULL
+        ORDER BY yr DESC
+    """)).scalars().all()
+
     summary = PastPredictionSummary(
         total_fights=total_fights,
         correct=correct,
@@ -71,6 +78,7 @@ def get_past_predictions(
         high_conf_accuracy=high_conf_accuracy,
         date_from=str(date_from_val) if date_from_val else "",
         date_to=str(date_to_val) if date_to_val else "",
+        available_years=[int(y) for y in years_rows],
     )
 
     # ---- Recent predictions -------------------------------------------------

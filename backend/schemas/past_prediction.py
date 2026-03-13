@@ -47,6 +47,7 @@ class PastPredictionSummary(BaseModel):
     high_conf_accuracy: float
     date_from: str
     date_to: str
+    available_years: list[int] = []
 
 
 class PastPredictionsResponse(BaseModel):
