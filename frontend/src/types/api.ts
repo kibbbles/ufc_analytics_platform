@@ -215,6 +215,48 @@ export interface UpcomingEventWithFights extends UpcomingEventListItem {
   fights: UpcomingFight[]
 }
 
+// ── Past Predictions (Model Scorecard) ───────────────────────────────────────
+
+export interface PastPredictionItem {
+  fight_id: string
+  event_id: string | null
+  event_name: string | null
+  event_date: string | null
+  fighter_a_id: string | null
+  fighter_b_id: string | null
+  fighter_a_name: string | null
+  fighter_b_name: string | null
+  weight_class: string | null
+  win_prob_a: number | null
+  win_prob_b: number | null
+  pred_method_ko_tko: number | null
+  pred_method_sub: number | null
+  pred_method_dec: number | null
+  predicted_winner_id: string | null
+  predicted_method: string | null
+  actual_winner_id: string | null
+  actual_method: string | null
+  is_correct: boolean | null
+  confidence: number | null
+  is_upset: boolean | null
+}
+
+export interface PastPredictionSummary {
+  total_fights: number
+  correct: number
+  accuracy: number
+  high_conf_fights: number
+  high_conf_correct: number
+  high_conf_accuracy: number
+  date_from: string
+  date_to: string
+}
+
+export interface PastPredictionsResponse {
+  summary: PastPredictionSummary
+  recent: PastPredictionItem[]
+}
+
 // ── Predictions ──────────────────────────────────────────────────────────────
 
 export interface PredictionRequest {

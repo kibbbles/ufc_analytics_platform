@@ -4,6 +4,7 @@ from schemas.fight import FightStatsResponse, FightResponse, FightListItem, Figh
 from schemas.event import EventResponse, EventWithFightsResponse, EventListResponse
 from schemas.prediction import PredictionRequest, MethodProbabilities, PredictionResponse
 from schemas.analytics import StyleEvolutionPoint, StyleEvolutionResponse, EnduranceRoundData, FighterEnduranceResponse
+from schemas.past_prediction import PastPredictionItem, PastPredictionSummary, PastPredictionsResponse
 
 __all__ = [
     "PaginationMeta",
@@ -13,4 +14,5 @@ __all__ = [
     "PredictionRequest", "MethodProbabilities", "PredictionResponse",
     "StyleEvolutionPoint", "StyleEvolutionResponse",
     "EnduranceRoundData", "FighterEnduranceResponse",
+    "PastPredictionItem", "PastPredictionSummary", "PastPredictionsResponse",
 ]

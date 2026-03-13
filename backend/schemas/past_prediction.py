@@ -1,0 +1,54 @@
+"""schemas/past_prediction.py — Pydantic v2 schemas for past predictions endpoint."""
+
+from __future__ import annotations
+
+from datetime import date
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class PastPredictionItem(BaseModel):
+    # Fight context
+    fight_id: str
+    event_id: Optional[str] = None
+    event_name: Optional[str] = None
+    event_date: Optional[date] = None
+    fighter_a_id: Optional[str] = None
+    fighter_b_id: Optional[str] = None
+    fighter_a_name: Optional[str] = None
+    fighter_b_name: Optional[str] = None
+    weight_class: Optional[str] = None
+    # Prediction
+    win_prob_a: Optional[float] = None
+    win_prob_b: Optional[float] = None
+    pred_method_ko_tko: Optional[float] = None
+    pred_method_sub: Optional[float] = None
+    pred_method_dec: Optional[float] = None
+    predicted_winner_id: Optional[str] = None
+    predicted_method: Optional[str] = None
+    # Actual result
+    actual_winner_id: Optional[str] = None
+    actual_method: Optional[str] = None
+    # Metrics
+    is_correct: Optional[bool] = None
+    confidence: Optional[float] = None
+    is_upset: Optional[bool] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PastPredictionSummary(BaseModel):
+    total_fights: int
+    correct: int
+    accuracy: float
+    high_conf_fights: int     # confidence >= 0.65
+    high_conf_correct: int
+    high_conf_accuracy: float
+    date_from: str
+    date_to: str
+
+
+class PastPredictionsResponse(BaseModel):
+    summary: PastPredictionSummary
+    recent: list[PastPredictionItem]
