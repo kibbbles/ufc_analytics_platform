@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
-import LoadingSkeleton from '@components/common/LoadingSkeleton'
-import type { PastPredictionItem } from '@t/api'
+import { LoadingSkeleton, Pagination } from '@components/common'
+import { formatDate } from '@utils/format'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -12,175 +13,187 @@ function formatPct(value: number): string {
   return (value * 100).toFixed(1) + '%'
 }
 
-function getWinnerName(item: PastPredictionItem): string {
-  if (!item.predicted_winner_id) return '—'
-  if (item.predicted_winner_id === item.fighter_a_id) return item.fighter_a_name ?? '—'
-  if (item.predicted_winner_id === item.fighter_b_id) return item.fighter_b_name ?? '—'
-  return '—'
-}
-
-function getActualWinnerName(item: PastPredictionItem): string {
-  if (!item.actual_winner_id) return '—'
-  if (item.actual_winner_id === item.fighter_a_id) return item.fighter_a_name ?? '—'
-  if (item.actual_winner_id === item.fighter_b_id) return item.fighter_b_name ?? '—'
-  return '—'
-}
-
-// ---------------------------------------------------------------------------
-// Subcomponent: single prediction row
-// ---------------------------------------------------------------------------
-
-function PredictionRow({ item }: { item: PastPredictionItem }) {
-  const isCorrect = item.is_correct
-  const isUpset   = item.is_upset
-
-  let indicator: string
-  let indicatorColor: string
-  if (isUpset) {
-    indicator      = '~'
-    indicatorColor = 'text-amber-500'
-  } else if (isCorrect) {
-    indicator      = '✓'
-    indicatorColor = 'text-green-500'
-  } else {
-    indicator      = '✗'
-    indicatorColor = 'text-red-500'
-  }
-
-  const predWinnerName   = getWinnerName(item)
-  const actualWinnerName = getActualWinnerName(item)
-  const confPct          = item.confidence != null ? formatPct(item.confidence) : '—'
-  const predMethod       = item.predicted_method ?? '—'
-  const actualMethod     = item.actual_method ?? '—'
-
-  const predWinnerCorrect = item.is_correct === true
-
-  return (
-    <div className="flex items-start justify-between gap-3 py-3 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0">
-      {/* Left: indicator + names */}
-      <div className="flex items-start gap-2 min-w-0">
-        <span
-          className={`font-mono font-bold text-base mt-0.5 w-4 shrink-0 ${indicatorColor}`}
-          aria-label={isCorrect ? 'correct' : isUpset ? 'upset' : 'incorrect'}
-        >
-          {indicator}
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-medium truncate">
-            {item.fighter_a_name ?? '?'} vs {item.fighter_b_name ?? '?'}
-          </p>
-          {item.weight_class && (
-            <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {item.weight_class}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Right: prediction + actual */}
-      <div className="text-right shrink-0">
-        <p className="text-xs">
-          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Predicted{' '}
-          </span>
-          <span
-            className={
-              predWinnerCorrect
-                ? 'font-medium text-[var(--color-primary)]'
-                : 'text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]'
-            }
-          >
-            {predWinnerName}
-          </span>
-          <span className="font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            {' '}{confPct}
-          </span>
-          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            {' '}via {predMethod}
-          </span>
-        </p>
-        <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          Actual: {actualWinnerName} via {actualMethod}
-        </p>
-      </div>
-    </div>
-  )
-}
+const PAGE_SIZE = 10
+const CURRENT_YEAR = new Date().getFullYear()
+const YEARS = Array.from({ length: CURRENT_YEAR - 2021 }, (_, i) => CURRENT_YEAR - i)
 
 // ---------------------------------------------------------------------------
 // Model Scorecard section
 // ---------------------------------------------------------------------------
 
 function ModelScorecard() {
-  const { data, loading } = useApi(() => pastPredictionsService.get(10), [])
+  const [page, setPage]         = useState(1)
+  const [search, setSearch]     = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [year, setYear]         = useState<number | undefined>(undefined)
 
-  const summary = data?.summary
-  const recent  = data?.recent ?? []
+  // Summary stats (fetched once)
+  const { data: summaryData, loading: summaryLoading } = useApi(
+    () => pastPredictionsService.get(1),
+    [],
+  )
+
+  // Event list (paginated, filtered)
+  const { data: eventsData, loading: eventsLoading } = useApi(
+    () =>
+      pastPredictionsService.getEvents({
+        page,
+        page_size: PAGE_SIZE,
+        search: debouncedSearch || undefined,
+        year,
+      }),
+    [page, debouncedSearch, year],
+  )
+
+  const summary = summaryData?.summary
 
   // Derive date range label
   let dateLabel = 'Test set'
   if (summary?.date_from) {
-    // Format like "Jan 2022 – present"
     const fromDate = new Date(summary.date_from + 'T00:00:00')
     const fromStr  = fromDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     dateLabel = `Test set · ${fromStr} – present`
   }
 
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    setSearch(val)
+    setPage(1)
+    // Simple debounce via timeout
+    clearTimeout((handleSearchChange as unknown as { _t?: ReturnType<typeof setTimeout> })._t)
+    const t = setTimeout(() => setDebouncedSearch(val), 300)
+    ;(handleSearchChange as unknown as { _t?: ReturnType<typeof setTimeout> })._t = t
+  }
+
+  function handleYearChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    setYear(e.target.value ? Number(e.target.value) : undefined)
+    setPage(1)
+  }
+
   return (
     <section>
       {/* Section header */}
-      <div className="flex items-baseline justify-between mb-4">
+      <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-xl font-bold">Model Scorecard</h2>
         <span className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
           {dateLabel}
         </span>
       </div>
 
-      {loading ? (
-        <LoadingSkeleton lines={6} />
+      {/* Summary stats — compact single-line */}
+      {summaryLoading ? (
+        <LoadingSkeleton lines={2} />
+      ) : summary && summary.total_fights > 0 ? (
+        <div className="mb-1">
+          <p className="text-sm font-mono tabular-nums">
+            <span className="font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+              {formatPct(summary.accuracy)} accurate
+            </span>
+            <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+              {' · '}{summary.correct}/{summary.total_fights} fights
+            </span>
+            {summary.high_conf_fights > 0 && (
+              <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                {' '}({formatPct(summary.high_conf_accuracy)} when ≥65% confident)
+              </span>
+            )}
+          </p>
+          <p className="mt-1.5 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history.
+          </p>
+        </div>
       ) : (
-        <>
-          {/* Summary stats */}
-          {summary && summary.total_fights > 0 ? (
-            <div className="mb-5 flex flex-wrap items-end gap-x-6 gap-y-1">
-              <div className="flex items-end gap-2">
-                <span className="font-mono text-4xl font-bold leading-none">
-                  {formatPct(summary.accuracy)}
-                </span>
-                <span className="text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-0.5">
-                  accurate
-                </span>
-              </div>
-              <div className="text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                <span className="font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-                  {summary.correct}/{summary.total_fights}
-                </span>
-                {' '}fights
-              </div>
-              {summary.high_conf_fights > 0 && (
-                <div className="text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  <span className="font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-                    {formatPct(summary.high_conf_accuracy)}
-                  </span>
-                  {' '}when ≥65% confident
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="mb-5 text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              No predictions yet — run the backfill script to populate.
-            </p>
-          )}
+        <p className="mb-5 text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+          No predictions yet.
+        </p>
+      )}
 
-          {/* Recent predictions list */}
-          {recent.length > 0 && (
-            <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-surface-light)] dark:bg-[var(--color-surface)] px-4 divide-y-0">
-              {recent.map((item) => (
-                <PredictionRow key={item.fight_id} item={item} />
-              ))}
+      {/* Search + year filter */}
+      <div className="mt-4 mb-3 flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[160px]">
+          <input
+            type="text"
+            placeholder="Search events…"
+            value={search}
+            onChange={handleSearchChange}
+            aria-label="Filter scorecard events"
+            className="w-full rounded-md border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+          />
+          {search && (
+            <button
+              onClick={() => { setSearch(''); setDebouncedSearch(''); setPage(1) }}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-lg leading-none text-[var(--color-text-muted)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)]"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <select
+          value={year ?? ''}
+          onChange={handleYearChange}
+          aria-label="Filter by year"
+          className="rounded-md border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+        >
+          <option value="">All years</option>
+          {YEARS.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Event list */}
+      {eventsLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] p-4">
+              <LoadingSkeleton lines={2} />
             </div>
+          ))}
+        </div>
+      ) : eventsData && eventsData.data.length > 0 ? (
+        <>
+          <div className="space-y-2">
+            {eventsData.data.map((event) => (
+              <Link
+                key={event.event_id}
+                to={`/past-predictions/events/${event.event_id}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 hover:border-[var(--color-primary)]/50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight truncate">
+                    {event.event_name ?? 'Unknown Event'}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    {event.event_date ? formatDate(event.event_date) : '—'}
+                    {' · '}{event.fight_count} {event.fight_count === 1 ? 'bout' : 'bouts'}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className="font-mono text-sm tabular-nums font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+                    {formatPct(event.accuracy)}
+                  </span>
+                  <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    {event.correct_count}/{event.fight_count}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {!debouncedSearch && !year && (
+            <Pagination
+              page={page}
+              totalPages={eventsData.total_pages}
+              onPrev={() => setPage((p) => p - 1)}
+              onNext={() => setPage((p) => p + 1)}
+            />
           )}
         </>
+      ) : (
+        <p className="py-8 text-center text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+          {debouncedSearch || year ? 'No events match your search.' : 'No past predictions yet.'}
+        </p>
       )}
     </section>
   )

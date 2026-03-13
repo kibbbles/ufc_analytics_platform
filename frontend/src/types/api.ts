@@ -257,6 +257,27 @@ export interface PastPredictionsResponse {
   recent: PastPredictionItem[]
 }
 
+export interface PastPredictionEventItem {
+  event_id: string
+  event_name: string | null
+  event_date: string | null
+  fight_count: number
+  correct_count: number
+  accuracy: number
+}
+
+export interface PastPredictionEventsResponse {
+  data: PastPredictionEventItem[]
+  total: number
+  total_pages: number
+  page: number
+  page_size: number
+}
+
+export interface PastPredictionEventDetail extends PastPredictionEventItem {
+  fights: PastPredictionItem[]
+}
+
 // ── Predictions ──────────────────────────────────────────────────────────────
 
 export interface PredictionRequest {

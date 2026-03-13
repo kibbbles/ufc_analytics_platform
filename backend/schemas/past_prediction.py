@@ -52,3 +52,30 @@ class PastPredictionSummary(BaseModel):
 class PastPredictionsResponse(BaseModel):
     summary: PastPredictionSummary
     recent: list[PastPredictionItem]
+
+
+class PastPredictionEventItem(BaseModel):
+    event_id: str
+    event_name: Optional[str] = None
+    event_date: Optional[date] = None
+    fight_count: int
+    correct_count: int
+    accuracy: float
+
+
+class PastPredictionEventsResponse(BaseModel):
+    data: list[PastPredictionEventItem]
+    total: int
+    total_pages: int
+    page: int
+    page_size: int
+
+
+class PastPredictionEventDetail(BaseModel):
+    event_id: str
+    event_name: Optional[str] = None
+    event_date: Optional[date] = None
+    fight_count: int
+    correct_count: int
+    accuracy: float
+    fights: list[PastPredictionItem]

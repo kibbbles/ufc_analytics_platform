@@ -62,12 +62,33 @@ Also included in Task 21 (already done, keep):
 - A **Completed / Upcoming toggle** at the top — switches between historical events list and the upcoming events list (reuses `/upcoming` data)
 - A **search/filter input** that filters the visible event list client-side as the user types
 
-#### Task 23 — Past Predictions (Model Transparency) — pending (stretch)
+#### Task 23 — Past Predictions (Model Transparency) — IN PROGRESS
+
 Show the model's test-set results on completed fights. FiveThirtyEight honesty play — don't just show predictions, show the track record.
-- Per-fight: model's predicted winner + confidence %, actual result, correct/incorrect indicator
-- Highlight upsets (model confident but wrong)
-- Aggregate accuracy stats (overall, by weight class, by confidence tier)
-- Needs: `past_predictions` table, one-time backfill script, FastAPI endpoint, UI component on event detail pages
+
+**Completed:**
+- ✅ `past_predictions` table created (VARCHAR(8) IDs/FKs)
+- ✅ `compute_past_predictions.py` backfill: 1716 fights from Jan 2022 → present using training_data.parquet
+- ✅ `GET /api/v1/past-predictions` — summary stats + recent fights
+- ✅ Home page `ModelScorecard` card (initial version)
+
+**In progress / final design:**
+- ModelScorecard stats block: compact single-line format — `62.4% accurate · 1071/1716 fights (84.2% when ≥65% confident)` — all same font/size; one-sentence model description below
+- Event list with search (by name) + year filter + pagination (most recent first) — same UX as Completed Events page
+- Clicking an event → `/past-predictions/events/:event_id` — dedicated page showing all model predictions vs actual results for that event
+
+**Per-fight display on event page:**
+- ✓/✗/~ indicator (correct / incorrect / upset)
+- Fighter A vs Fighter B
+- Predicted: [winner name] [confidence%] via [method]
+- Actual: [winner name] via [method]
+
+**New backend endpoints needed:**
+- `GET /api/v1/past-predictions/events?page=&page_size=&search=&year=` — paginated event list (event_id, event_name, event_date, fight_count, correct/total), most recent first
+- `GET /api/v1/past-predictions/events/{event_id}` — all fights for that event with full prediction detail
+
+**Model description line (shown on scorecard):**
+"Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history."
 
 **Not blocking MVP.**
 
