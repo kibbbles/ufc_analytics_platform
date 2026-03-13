@@ -2,7 +2,9 @@ import { Link, useParams } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { upcomingService } from '@services/upcomingService'
 import { fightersService } from '@services/fightersService'
+import { fightsService } from '@services/fightsService'
 import { Card, LoadingSkeleton } from '@components/common'
+import { FightRow } from '@components/features'
 import type { FighterResponse, UpcomingFight, UpcomingFightPrediction } from '@t/api'
 import { inchesToFeet, ageFromDob } from '@utils/format'
 
@@ -66,88 +68,6 @@ function ageDisplay(dob: string | null): string {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function WinProbBar({
-  probA,
-  probB,
-  nameA,
-  nameB,
-}: {
-  probA: number
-  probB: number
-  nameA: string
-  nameB: string
-}) {
-  const aWins = probA >= probB
-  return (
-    <div>
-      <div
-        className="flex h-4 w-full overflow-hidden rounded-full"
-        aria-label={`${nameA} ${pct(probA)} vs ${nameB} ${pct(probB)}`}
-        role="img"
-      >
-        <div
-          style={{ width: `${probA * 100}%` }}
-          className="bg-[var(--color-primary)] transition-all"
-        />
-        <div
-          style={{ width: `${probB * 100}%` }}
-          className="bg-[var(--color-text-muted)]/30 transition-all"
-        />
-      </div>
-      <div className="mt-2 flex justify-between">
-        <span
-          className={`font-mono text-3xl font-bold tabular-nums ${
-            aWins
-              ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
-              : 'text-[var(--color-text-muted)]'
-          }`}
-        >
-          {pct(probA)}
-        </span>
-        <span
-          className={`font-mono text-3xl font-bold tabular-nums ${
-            !aWins
-              ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
-              : 'text-[var(--color-text-muted)]'
-          }`}
-        >
-          {pct(probB)}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function MethodBreakdown({ pred }: { pred: UpcomingFightPrediction }) {
-  const methods = [
-    { label: 'KO/TKO', value: pred.method_ko_tko },
-    { label: 'Sub',    value: pred.method_sub },
-    { label: 'Dec',    value: pred.method_dec },
-  ]
-  const topLabel = methods.reduce((a, b) => ((a.value ?? 0) > (b.value ?? 0) ? a : b)).label
-
-  return (
-    <div className="flex justify-center gap-6 font-mono text-sm tabular-nums">
-      {methods.map(({ label, value }) => (
-        <div key={label} className="text-center">
-          <div
-            className={
-              label === topLabel
-                ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
-                : 'text-[var(--color-text-muted)] opacity-60'
-            }
-          >
-            {pct(value)}
-          </div>
-          <div className="mt-0.5 text-[11px] uppercase tracking-wide text-[var(--color-text-muted)]">
-            {label}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 function TaleOfTape({
   a,
@@ -278,6 +198,22 @@ export default function UpcomingFightPage() {
     [fight?.fighter_b_id],
   )
 
+  const { data: fightsA } = useApi(
+    () =>
+      fight?.fighter_a_id
+        ? fightsService.getList({ fighter_id: fight.fighter_a_id, page_size: 5 })
+        : Promise.resolve(null),
+    [fight?.fighter_a_id],
+  )
+
+  const { data: fightsB } = useApi(
+    () =>
+      fight?.fighter_b_id
+        ? fightsService.getList({ fighter_id: fight.fighter_b_id, page_size: 5 })
+        : Promise.resolve(null),
+    [fight?.fighter_b_id],
+  )
+
   const pred = fight?.prediction
   const aWins = (pred?.win_prob_a ?? 0) >= (pred?.win_prob_b ?? 0)
   const nameA = fight?.fighter_a_name ?? '—'
@@ -308,18 +244,8 @@ export default function UpcomingFightPage() {
 
       {fight && !loading && (
         <div className="space-y-4">
-          {/* Header: weight class + fighter names */}
+          {/* Header: fighter names + weight class below */}
           <div className="text-center">
-            <div className="mb-3 flex justify-center gap-2">
-              {fight.weight_class && (
-                <span className="text-xs text-[var(--color-text-muted)]">{fight.weight_class}</span>
-              )}
-              {fight.is_title_fight && (
-                <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                  Title
-                </span>
-              )}
-            </div>
             <div className="flex items-center justify-center gap-3 flex-wrap">
               {fight.fighter_a_id ? (
                 <Link
@@ -355,26 +281,68 @@ export default function UpcomingFightPage() {
                 </span>
               )}
             </div>
+            {(fight.weight_class || fight.is_title_fight) && (
+              <div className="mt-2 flex justify-center gap-2">
+                {fight.weight_class && (
+                  <span className="text-xs text-[var(--color-text-muted)]">{fight.weight_class}</span>
+                )}
+                {fight.is_title_fight && (
+                  <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                    Title
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Win probability bar */}
-          {pred?.win_prob_a != null && pred.win_prob_b != null && (
-            <Card>
-              <WinProbBar
-                probA={pred.win_prob_a}
-                probB={pred.win_prob_b}
-                nameA={nameA}
-                nameB={nameB}
-              />
-            </Card>
-          )}
-
-          {/* Method breakdown */}
-          {pred && (
-            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Method Prediction</span>}>
-              <MethodBreakdown pred={pred} />
-            </Card>
-          )}
+          {/* Condensed prediction: probabilities + method line */}
+          {pred?.win_prob_a != null && pred.win_prob_b != null && (() => {
+            const methods = [
+              { label: 'KO/TKO', value: pred.method_ko_tko },
+              { label: 'Sub',    value: pred.method_sub },
+              { label: 'Dec',    value: pred.method_dec },
+            ]
+            const topLabel = methods.reduce((a, b) => ((a.value ?? 0) > (b.value ?? 0) ? a : b)).label
+            return (
+              <Card>
+                <div className="flex items-center justify-between gap-4">
+                  <span
+                    className={`font-mono text-3xl font-bold tabular-nums ${
+                      aWins
+                        ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                        : 'text-[var(--color-text-muted)]'
+                    }`}
+                  >
+                    {pct(pred.win_prob_a)}
+                  </span>
+                  <span className="text-xs text-[var(--color-text-muted)]">win prob</span>
+                  <span
+                    className={`font-mono text-3xl font-bold tabular-nums ${
+                      !aWins
+                        ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                        : 'text-[var(--color-text-muted)]'
+                    }`}
+                  >
+                    {pct(pred.win_prob_b)}
+                  </span>
+                </div>
+                <div className="mt-2 flex justify-center gap-4 font-mono text-sm tabular-nums">
+                  {methods.map(({ label, value }) => (
+                    <span
+                      key={label}
+                      className={
+                        label === topLabel
+                          ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                          : 'text-[var(--color-text-muted)] opacity-50'
+                      }
+                    >
+                      {label} {pct(value)}
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            )
+          })()}
 
           {/* Tale of the Tape — only if we have at least one fighter profile */}
           {(fighterA || fighterB) && (
@@ -385,6 +353,104 @@ export default function UpcomingFightPage() {
                 nameA={nameA}
                 nameB={nameB}
               />
+            </Card>
+          )}
+
+          {/* Striking */}
+          {(fighterA || fighterB) && (
+            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Striking</span>}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <th className="pb-2 text-left font-medium">{nameA}</th>
+                    <th className="pb-2 text-center font-medium"></th>
+                    <th className="pb-2 text-right font-medium">{nameB}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: 'SLpM',      valA: fighterA?.slpm?.toFixed(2)  ?? '—', valB: fighterB?.slpm?.toFixed(2)  ?? '—' },
+                    { label: 'Str. Acc.', valA: fighterA?.str_acc            ?? '—', valB: fighterB?.str_acc            ?? '—' },
+                    { label: 'SApM',      valA: fighterA?.sapm?.toFixed(2)  ?? '—', valB: fighterB?.sapm?.toFixed(2)  ?? '—' },
+                    { label: 'Str. Def.', valA: fighterA?.str_def            ?? '—', valB: fighterB?.str_def            ?? '—' },
+                  ].map(({ label, valA, valB }) => (
+                    <tr key={label} className="border-t border-[var(--color-border)]">
+                      <td className="py-2 font-mono tabular-nums">{valA}</td>
+                      <td className="py-2 text-center text-xs text-[var(--color-text-muted)]">{label}</td>
+                      <td className="py-2 text-right font-mono tabular-nums">{valB}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          {/* Grappling */}
+          {(fighterA || fighterB) && (
+            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Grappling</span>}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <th className="pb-2 text-left font-medium">{nameA}</th>
+                    <th className="pb-2 text-center font-medium"></th>
+                    <th className="pb-2 text-right font-medium">{nameB}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: 'TD Avg.',   valA: fighterA?.td_avg?.toFixed(2)  ?? '—', valB: fighterB?.td_avg?.toFixed(2)  ?? '—' },
+                    { label: 'TD Acc.',   valA: fighterA?.td_acc               ?? '—', valB: fighterB?.td_acc               ?? '—' },
+                    { label: 'TD Def.',   valA: fighterA?.td_def               ?? '—', valB: fighterB?.td_def               ?? '—' },
+                    { label: 'Sub. Avg.', valA: fighterA?.sub_avg?.toFixed(2) ?? '—', valB: fighterB?.sub_avg?.toFixed(2) ?? '—' },
+                  ].map(({ label, valA, valB }) => (
+                    <tr key={label} className="border-t border-[var(--color-border)]">
+                      <td className="py-2 font-mono tabular-nums">{valA}</td>
+                      <td className="py-2 text-center text-xs text-[var(--color-text-muted)]">{label}</td>
+                      <td className="py-2 text-right font-mono tabular-nums">{valB}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          {/* Recent fights */}
+          {(fight.fighter_a_id || fight.fighter_b_id) && (
+            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Recent Fights</span>}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-[var(--color-text-muted)]">{nameA}</p>
+                  {!fight.fighter_a_id ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : !fightsA ? (
+                    <LoadingSkeleton lines={3} />
+                  ) : fightsA.data.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : (
+                    <div className="-my-1">
+                      {fightsA.data.map((f) => (
+                        <FightRow key={f.id} fight={f} viewingFighterId={fight.fighter_a_id ?? undefined} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-[var(--color-text-muted)]">{nameB}</p>
+                  {!fight.fighter_b_id ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : !fightsB ? (
+                    <LoadingSkeleton lines={3} />
+                  ) : fightsB.data.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : (
+                    <div className="-my-1">
+                      {fightsB.data.map((f) => (
+                        <FightRow key={f.id} fight={f} viewingFighterId={fight.fighter_b_id ?? undefined} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </Card>
           )}
 
