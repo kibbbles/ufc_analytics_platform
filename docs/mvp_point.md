@@ -45,62 +45,60 @@ Also included in Task 21 (already done, keep):
 
 #### ✅ Task 22 — Fight Matchup Page + Events Page Enhancements — DONE
 
-**Fight matchup page** (`/upcoming/fights/:id` or `/fights/:id`):
+**Fight matchup page** (`/upcoming/fights/:id`):
 - Clicking a fight row navigates to a dedicated matchup page — no modal, no popup
-- Modelled on UFCStats event-detail → fight-detail flow: click a fight row on the upcoming page, land directly on the full matchup view
-- Page shows everything in one place (no "view matchup" intermediate step):
-  - **Tale of the Tape**: height, weight, reach, age, stance side-by-side
-  - **Win probability bar** (the dominant visual, same as the accordion row)
-  - **Method breakdown**: KO/TKO / Sub / Decision probabilities
-  - **Striking differentials**: sig strikes, accuracy, head/body/leg breakdown
-  - **Grappling differentials**: takedown %, submission attempts, control time
-  - **Key model features**: the top drivers behind the prediction
-- Fighter names are **links** to `/fighters/:id` — same fighter detail page used by the Fighter Lookup section (shows past fight history, tale of the tape, etc.)
-- Mobile-first layout: single column, stats as labeled rows with A vs B values
+- Page shows everything in one place: Tale of the Tape, win probability bar, method breakdown, striking differentials, grappling differentials, key model features, recent fights for each fighter
+- Fighter names are links to `/fighters/:id`
+- Mobile-first single-column layout
 
 **Events page enhancements** (`/events`):
-- A **Completed / Upcoming toggle** at the top — switches between historical events list and the upcoming events list (reuses `/upcoming` data)
-- A **search/filter input** that filters the visible event list client-side as the user types
+- Completed / Upcoming toggle at the top
+- Event name search/filter input
 
-#### Task 23 — Past Predictions (Model Transparency) — IN PROGRESS
+#### ✅ Task 23 — Past Predictions (Model Transparency) — DONE
 
 Show the model's test-set results on completed fights. FiveThirtyEight honesty play — don't just show predictions, show the track record.
 
-**Completed:**
-- ✅ `past_predictions` table created (VARCHAR(8) IDs/FKs)
-- ✅ `compute_past_predictions.py` backfill: 1716 fights from Jan 2022 → present using training_data.parquet
-- ✅ `GET /api/v1/past-predictions` — summary stats + recent fights
-- ✅ Home page `ModelScorecard` card (initial version)
+**What's built:**
+- `past_predictions` table (VARCHAR(8) IDs/FKs — fight IDs are 8-char hex)
+- `compute_past_predictions.py` backfill: 1716 fights from Jan 2022 → present using training_data.parquet; 62.4% accuracy overall, 84.2% when ≥65% confident
+- `GET /api/v1/past-predictions` — summary stats + recent fights
+- `GET /api/v1/past-predictions/events` — paginated event list with search + year filter
+- `GET /api/v1/past-predictions/events/{event_id}` — all fights for a given event
+- `GET /api/v1/past-predictions/fights` — fighter name search, optional, defaults to 10 most recent
+- `GET /api/v1/past-predictions/fights/{fight_id}` — single fight detail
+- Home page `ModelScorecard` card: compact stats line, model description, Events | Fight Search tabs
+- Events tab: paginated event browser with search + year filter — matches Events page UX
+- Fight Search tab: defaults to 10 most recent, search by fighter name, year filter
+- `PastPredictionEventPage` (`/past-predictions/events/:event_id`): all fight predictions for an event, centered, fights clickable
+- `PastPredictionFightPage` (`/past-predictions/fights/:fight_id`): mirrors UpcomingFightPage exactly (tale of tape, prediction card, striking, grappling, recent fights) + ActualResultCard (green correct / red incorrect / amber upset)
 
-**In progress / final design:**
-- ModelScorecard stats block: compact single-line format — `62.4% accurate · 1071/1716 fights (84.2% when ≥65% confident)` — all same font/size; one-sentence model description below
-- Event list with search (by name) + year filter + pagination (most recent first) — same UX as Completed Events page
-- Clicking an event → `/past-predictions/events/:event_id` — dedicated page showing all model predictions vs actual results for that event
+**Key bug fixes during Task 23:**
+- VARCHAR(6) → VARCHAR(8) for fight_id FKs (fight IDs are 8-char not 6)
+- Removed unused TS variables to fix Vercel TS6133 build errors
+- Fixed nested `<Link>` inside `<a>` (invalid HTML) — replaced outer with `div+onClick`
+- Fixed `[object Object]` error: FastAPI 422 returns `detail` as array; Axios interceptor now guards `typeof rawDetail === 'string'`
+- Fixed debounce with `useRef` (closure-based approach broke across renders)
+- Added `available_years` to summary endpoint (dynamic year dropdown, no hardcoded years)
+- Made `search` optional in `/fights` endpoint (was accidentally required → caused 422 on load)
 
-**Per-fight display on event page:**
-- ✓/✗/~ indicator (correct / incorrect / upset)
-- Fighter A vs Fighter B
-- Predicted: [winner name] [confidence%] via [method]
-- Actual: [winner name] via [method]
+#### ✅ Task 24 — Mobile Polish + Deployment Verification — DONE
 
-**New backend endpoints needed:**
-- `GET /api/v1/past-predictions/events?page=&page_size=&search=&year=` — paginated event list (event_id, event_name, event_date, fight_count, correct/total), most recent first
-- `GET /api/v1/past-predictions/events/{event_id}` — all fights for that event with full prediction detail
+All pages verified usable on mobile. Render + Vercel deploys clean. Render free tier cold-start (~30s) is accepted tradeoff for portfolio project. No blocking layout issues found.
 
-**Model description line (shown on scorecard):**
-"Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history."
+**What Task 24 actually means** (for reference):
+- Every page checked at 375px viewport — no horizontal scroll, touch targets ≥44px, stats readable
+- Header hamburger menu works on small screens
+- Accordion fight cards on `/upcoming` expand cleanly on mobile tap
+- Fight matchup page single-column on mobile (tale of tape as labeled rows, not side-by-side)
+- Vercel auto-deploys on push to `main`; Render deploys on Docker image rebuild
+- Cold-start mitigation: Render free tier sleeps after 15 min inactivity, wakes on next request (~30s). Accepted for now. Upgrade to $7/month paid tier or Firebase to eliminate
 
-**Not blocking MVP.**
+#### ✅ Task 20 — Integration Testing — DONE (implicit)
+The full pipeline runs end-to-end: UFCStats scraper → ETL → feature engineering → model retrain → upcoming predictions → API → UI. Manual verification confirms all data flowing correctly.
 
-#### Task 24 — Mobile Polish + Deployment Verification — pending
-Final pass before MVP sign-off:
-- Verify all pages usable at 375px
-- Confirm Render + Vercel deploys are clean
-- Check cold-start behaviour on Render free tier
-- Any remaining layout/spacing issues
-
-#### Task 20 — Integration Testing — pending (last, after 21–24)
-End-to-end verification: upcoming scraper → predictions → API → UI all working together correctly after all tasks complete.
+#### Task 25 — Firebase / Cloud Run Migration — Post-MVP
+Not blocking. See Post-MVP section.
 
 ---
 
@@ -113,47 +111,25 @@ End-to-end verification: upcoming scraper → predictions → API → UI all wor
 
 ### Pages
 
-**Upcoming** (`/upcoming`)
+**Upcoming** (`/upcoming`) ✅
 - Live upcoming UFC event card(s) scraped from UFCStats (Task 15)
-- **Accordion/dropdown rows** — click an event to expand the fight card inline (no page navigation needed)
-- Per-fight rows show: fighter A vs fighter B, win probability bar (dominant visual), top method chip (e.g. "60% Decision"), key stat differentials — all scannable at a glance on mobile
-- Tapping a fight row expands for full method breakdown + differentials (depth on demand)
-- Stats-forward, no narrative — the numbers tell the story
-- UFC-only scope: no other promotions, deeper analytics than a general fight site
-- **Inspired by Tapology** (fight card layout, clean row-based presentation) and **Oddschecker** (probability/odds displayed right in the fight row — applied here as model win % instead of Vegas lines)
-- The main feature of the site
+- Accordion/dropdown rows — click an event to expand the fight card inline
+- Per-fight rows show win probability bar, method breakdown, key stat differentials
+- Tapping a fight row → full matchup page
 
-**Events** (`/events`)
-- Already functional ✅
-- Add **Completed / Upcoming toggle** at top (UFCStats-inspired) — toggles between `/events` and `/upcoming`
-- Add **event name search/filter** input
+**Events** (`/events`) ✅
+- Completed / Upcoming toggle ✅
+- Event name search/filter ✅
 
-**Fighter Lookup** (`/fighters` and `/fighters/:id`)
-- List and detail pages already functional ✅
+**Fighter Lookup** (`/fighters` and `/fighters/:id`) ✅
 
-**About** (`/about`) ✅ Done
-- Content: Introduction to the project — who built it, what it does, how it works
-- Tone: casual and personal, not corporate
-- Content direction:
-  - Hi, I'm Kabe
-  - This project scrapes UFC fight data directly from UFCStats.com — no third-party APIs
-  - Data covers every UFC event since 1994, updated weekly after each event
-  - Uses machine learning models (XGBoost, Random Forest) trained on historical fight data to predict outcomes
-  - Each upcoming card shows win probability, method prediction (KO/TKO, Submission, Decision), and the key stats driving each pick
-  - Built with FastAPI, React, PostgreSQL (Supabase), hosted on Render + Vercel
-  - Open to feedback, built for fun and to sharpen data science + engineering skills
+**About** (`/about`) ✅
 
-**Home** (`/`)
-- Keep for now, design TBD based on evolving preferences
-
-**Predictions, Analytics, Style Evolution, Endurance** (any non-functional routes)
-- Show a "currently under development" placeholder
+**Home** (`/`) ✅ — ModelScorecard with Events | Fight Search tabs
 
 ---
 
 ## Design Preferences (continuously updated)
-
-*This section will be updated by Kabe as the project progresses.*
 
 - Aesthetic: data journalism (FiveThirtyEight / The Pudding style) — not a commercial app
 - Mobile-first, works well on 375px screens
@@ -172,24 +148,27 @@ End-to-end verification: upcoming scraper → predictions → API → UI all wor
 
 ## Definition of Done
 
-The MVP is complete when:
+**MVP is complete ✅**
+
 - [x] Upcoming page shows next UFC event(s) with accordion fight card — per-fight win probability, method breakdown (Task 21 ✅)
 - [x] Fight matchup page — dedicated route per fight with tale of the tape, method breakdown, model feature breakdown, fighter name links (Task 22 ✅)
-- [ ] Completed / Upcoming toggle and event name search on Events page (Task 22)
+- [x] Completed / Upcoming toggle and event name search on Events page (Task 22 ✅)
+- [x] Past predictions scorecard with Events + Fight Search tabs (Task 23 ✅)
+- [x] Fight detail page for past predictions mirroring upcoming matchup page (Task 23 ✅)
 - [x] All non-functional nav items show a "currently under development" placeholder
 - [x] About page is live
 - [x] Header shows "Kabe's Maybes — UFC odds, my way" on desktop, "Kabe's Maybes" on mobile
 - [x] Nav trimmed to: Home, Upcoming, Events, Fighter Lookup, About
-- [ ] Site looks acceptable on mobile (375px) and desktop
-- [ ] All changes deployed and live at kabes-maybes.vercel.app
-- [ ] Ready to migrate hosting to Firebase
-- [ ] (stretch) Past predictions visible on completed event pages — model hit/miss per fight, overall accuracy stats
+- [x] Site looks acceptable on mobile (375px) and desktop
+- [x] All changes deployed and live at kabes-maybes.vercel.app
+- [x] Ready to migrate hosting to Firebase
 
 ---
 
 ## Post-MVP (not blocking)
+
+- Task 25 — Firebase / Cloud Run migration (backend off Render, faster cold starts)
 - Fight Outcome Predictor with interactive sliders (Task 8)
 - Style Evolution Timeline (Task 9)
 - Fighter Endurance Dashboard (Task 10)
 - Custom domain (e.g. kabesmaybes.com)
-- Firebase migration

@@ -68,8 +68,10 @@ scrape_ufc_stats/
 nul
 
 # Docs — keep only portfolio-facing files public
-# Allowed: docs/project_writeup.ipynb, docs/title_fight_analysis.txt
+# Allowed: docs/project_writeup.ipynb, docs/title_fight_analysis.txt, docs/mvp_point.md, docs/project_history.md
 docs/*.md
+!docs/mvp_point.md
+!docs/project_history.md
 docs/*.pdf
 docs/*.txt
 docs/*.py

@@ -1,0 +1,361 @@
+# Kabe's Maybes — Project History & Architecture
+
+A full account of how this project was built, every major decision made, and how all the pieces connect.
+
+---
+
+## What This Is
+
+**Kabe's Maybes** (`kabes-maybes.vercel.app`) is a data journalism–style UFC analytics platform. It scrapes every UFC event from UFCStats.com, trains machine learning models on historical fight outcomes, and publishes weekly predictions for upcoming cards — complete with a transparency scorecard showing past accuracy.
+
+The aesthetic is deliberately "analyst who loves MMA" rather than commercial product: numbers-forward, no marketing copy, dark mode by default.
+
+---
+
+## How It Started (Commits: `d1e4903` → `8ceb197`)
+
+The project began as a pure data scraping exercise. The earliest commits show an evolving attempt to get UFC data from UFCStats.com — a site with no official API. The first approach used a third-party scraper (`scrape_ufc_stats` added as a git submodule, then immediately removed when it proved broken).
+
+Key early decisions:
+- **PostgreSQL on Supabase** — chosen for its free tier, built-in SQL editor, and direct `psycopg2` connection. No ORM at this stage — raw SQL inserts.
+- **6-table schema** — `event_details`, `fighter_details`, `fight_details`, `fight_results`, `fighter_tott` (Tale of the Tape), `fight_stats` — mirroring exactly what UFCStats exposes.
+- **GitHub Actions** for automation from day one — weekly scrape runs on Sunday 18:00 UTC, keepalive pings to prevent Supabase from sleeping.
+- **VARCHARs everywhere for IDs** — UFCStats uses hex-style IDs in URLs (e.g. `/fighter-details/3b27d3e9`). These were preserved as-is rather than converting to integers, because they're the natural join keys between the scraper output and the database.
+
+The scraper went through many iterations (`full_historical_scraper`, then `live_scraper.py`) before settling. The final `live_scraper.py` handles all 6 tables in one run.
+
+---
+
+## Data & ETL Pipeline (Task 3 — `2b689af` → `5e1144b`)
+
+After the initial data load (756 events, 4,449 fighters, 8,482 fights, 39,912 fight stats), the raw data was messy:
+- Stats stored as strings like `"17 of 37"` (sig strikes landed / attempted)
+- Control time as `"3:42"` (not seconds)
+- Heights as `"6' 1\""`, weights as `"185 lbs."`
+- `"--"` placeholders wherever data was missing
+- No foreign key relationships populated (fight_stats had no `fighter_id`)
+- No derived columns (weight class, title fight flags)
+
+**ETL pipeline** (`post_scrape_clean.py`) runs 4 phases in sequence:
+1. **FK Resolution** — populate `fighter_a_id`, `fighter_b_id` on fight_details; `fighter_id`/`opponent_id` on fight_results; `fighter_id` on fight_stats (via fuzzy name matching with rapidfuzz, WRatio score ≥88)
+2. **Quality Cleanup** — NULL out `"--"` placeholders, strip trailing spaces from METHOD
+3. **Type Parsing** — parse `"X of Y"` strings into `sig_str_landed`/`sig_str_attempted` integers; `CTRL` → `ctrl_seconds`; height/weight/reach/dob into typed numeric columns
+4. **Derived Columns** — `weight_class` (inferred from WEIGHTCLASS text), `is_title_fight`, `is_interim_title`, `is_championship_rounds`
+
+This runs automatically after every weekly scrape via GitHub Actions chaining: scraper → ETL → feature engineering → model retrain.
+
+**Critical query pattern discovered during ETL**: `fight_results` has one row per fight, where `fighter_id` = winner and `opponent_id` = loser. A naive `WHERE fighter_id = :id` returns wins only — losses are invisible. All fighter history queries use an OR pattern (`WHERE fighter_id = :id OR opponent_id = :id`).
+
+---
+
+## ML Models (Task 6 — `aee098c`)
+
+**Feature engineering**: 30+ features built from fighter differentials:
+- Physical: height diff, reach diff, weight diff, age diff
+- Experience: UFC fights diff, win streak diff, finish rate diff
+- Striking (rolling 5-fight windows): sig strike accuracy diff, head/body/leg distribution
+- Grappling: takedown % diff, submission attempt rate diff, control time diff
+- Derived: days since last fight, career KO% diff, career sub% diff
+
+**Two-model ensemble**:
+- **Random Forest** (primary) — `sklearn.ensemble.RandomForestClassifier`, trained on fights from Jan 2017 onward (earlier fights lack reliable stat coverage)
+- **XGBoost** — used as a cross-check; RF ensemble is the production predictor
+
+**Method prediction**: separate multi-class model predicting KO/TKO vs Submission vs Decision probability
+
+**Training data**: built into `training_data.parquet` by `feature_engineering.py`, auto-rebuilt by GitHub Actions after each ETL run, then `retrain.yml` retrains and commits updated model artifacts
+
+**Validation**: 62.4% overall accuracy on test set (Jan 2022 → present, 1716 fights). 84.2% accuracy on high-confidence predictions (≥65% win probability) — this is the headline number.
+
+---
+
+## Backend — FastAPI (Task 4 → Tasks 11–19)
+
+**Tech choice**: FastAPI was chosen over Flask for automatic OpenAPI docs (invaluable for frontend development) and Pydantic v2 validation.
+
+**Structure**:
+```
+backend/
+├── api/
+│   ├── main.py              # App, CORS, middleware, exception handlers
+│   ├── dependencies.py      # get_db() session dependency
+│   └── v1/endpoints/        # One file per feature area
+│       ├── fighters.py
+│       ├── fights.py
+│       ├── events.py
+│       ├── predictions.py   # POST /predictions/fight-outcome
+│       ├── upcoming.py      # Upcoming events/fights/predictions
+│       ├── past_predictions.py
+│       └── analytics.py
+├── schemas/                 # Pydantic v2 response models
+├── features/                # Feature extraction for ML inference
+│   └── extractors.py        # get_fights_long_df(), build_feature_vector()
+└── scraper/                 # All data pipeline scripts
+```
+
+**Middleware**: `RequestIDMiddleware` (adds `X-Request-ID` header), `TimingMiddleware` (logs request duration)
+
+**Key design decisions**:
+- All raw SQL via SQLAlchemy `text()` — no ORM models. The schema is legacy/append-only; defining ORM models would add maintenance burden with no benefit.
+- Pydantic schemas defined separately from DB access — clean separation between "what the DB returns" and "what the API exposes"
+- `get_db()` yields a session per request, closes on completion
+
+**Important FastAPI routing lesson**: `GET /fights` must be registered *before* `GET /fights/{fight_id}` in the router. FastAPI matches routes in registration order — if `/{fight_id}` is first, the literal path `/fights` gets treated as a fight ID.
+
+---
+
+## Hosting Odyssey
+
+The backend went through three hosting platforms before settling:
+
+| Stage | Platform | Reason for Change |
+|-------|----------|-------------------|
+| Initial | Local only | Development |
+| v1 | **Fly.io** | First deployment attempt; Docker-based, generous free tier |
+| v2 | **Render** | Fly.io free tier was eliminated; Render offers free Web Services |
+| v3 (planned) | **Firebase / Cloud Run** | Render free tier spins down after 15 min inactivity (~30s cold start). Firebase/Cloud Run has faster cold starts and is more production-grade |
+
+**Frontend**: always Vercel. Connected directly to the GitHub repo — every push to `main` triggers a deploy. Set `Root Directory = frontend` in Vercel settings. One env var: `VITE_API_BASE_URL`.
+
+**Database**: always Supabase (PostgreSQL). Free tier, direct psycopg2 connection string, no changes needed as backend hosting changed.
+
+Current production stack:
+```
+Browser → Vercel (React SPA, CDN) → Render (FastAPI, Docker) → Supabase (PostgreSQL)
+```
+
+---
+
+## Frontend — React (Task 7 → Tasks 21–23)
+
+**Tech choices**:
+- **React 19 + TypeScript 5.9** via Vite scaffold
+- **Tailwind CSS v4** — CSS-first configuration (`@import "tailwindcss"` + `@theme` block in `index.css`; no `tailwind.config.js`)
+- **React Router v6** — all pages lazy-loaded (code-split per route)
+- **Recharts** for standard charts, **Axios** for API calls
+- **Context API + useReducer** for global state (theme, no auth needed)
+
+**Design system**: All colors, fonts, and shadows as CSS custom properties in `frontend/src/index.css` `@theme` block. Components never hardcode values — they reference `var(--color-accent)` etc.
+
+**Dark / light mode**: `ThemeProvider` reads `localStorage` on mount, falls back to `prefers-color-scheme`. Toggle in header. Both modes equally polished.
+
+---
+
+## Page-by-Page History
+
+### Home (`/`)
+Started as a placeholder. Grew to host the **ModelScorecard** — the most complex component on the site. Scorecard shows:
+- Compact accuracy stats: `62.4% accurate · 1071/1716 fights (84.2% when ≥65% confident)`
+- One-sentence model description
+- **Events tab**: browse all past events the model was evaluated on, with per-event accuracy, search + year filter + pagination
+- **Fight Search tab**: search any fighter name to see all predictions involving them; defaults to 10 most recent fights
+
+### Upcoming (`/upcoming`)
+The centrepiece. Accordion-style: event rows expand to show the full fight card. Per-fight row shows fighter names, win probability bar, method chip. Design iterations visible in git history — went through many layouts (centered name, arrows, badges) before landing on the current clean version where:
+- Badges (NEXT / numbered event) are always on their own line above event name
+- Winner is indicated by full-contrast name vs muted loser — no arrow needed
+- Date + location on line 2, bout count on line 3 — consistent wrapping on all screens
+
+Fight rows link to the matchup page.
+
+### Fight Matchup (`/upcoming/fights/:id` and `/past-predictions/fights/:id`)
+Dedicated page per fight. Same layout for both upcoming and past predictions. Built to mirror how you'd read a fight preview:
+
+```
+[Fighter A]          [Fighter B]
+     Win probability bar (dominant visual)
+     Method: KO/TKO 32% | Sub 18% | Dec 50%
+
+     Tale of the Tape (height / weight / reach / age / stance)
+     Striking (sig strikes, accuracy, head/body/leg)
+     Grappling (TD%, sub attempts, control time)
+     Top model features (what drove the prediction)
+     Recent fights for each fighter
+```
+
+For **past predictions**, an additional `ActualResultCard` appears at the top:
+- Green border + "✓ Correct" — model called it right
+- Red border + "✗ Incorrect" — model was wrong
+- Amber border + "~ Upset" — model was wrong AND the underdog won
+
+### Events (`/events`)
+Historical events list. Added Completed / Upcoming toggle (reuses `/upcoming` data) and event name search filter. Clicking an event goes to the event detail page (fight card for that event).
+
+### Past Prediction Event (`/past-predictions/events/:event_id`)
+Shows all model predictions for a completed event. Each row: ✓/✗/~ indicator, Fighter A vs Fighter B, predicted winner + confidence + method, actual winner + method. Rows are clickable links to the fight matchup page.
+
+### Fighter Lookup (`/fighters` + `/fighters/:id`)
+List page with search. Detail page shows tale of the tape, career record (W-L-D), fight history table.
+
+### About (`/about`)
+Personal intro page. Casual tone. Explains the project, the data source, the model approach, the tech stack.
+
+---
+
+## How a User Click Triggers the Full Stack
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  USER ACTION                                                        │
+│  e.g. opens /upcoming, clicks "UFC 315" accordion row               │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  REACT (Vercel CDN)                                                 │
+│                                                                     │
+│  UpcomingPage.tsx                                                   │
+│  └── pastPredictionsService / upcomingService                       │
+│      └── apiClient.get('/upcoming/events/{id}')   ← Axios           │
+│          └── VITE_API_BASE_URL + '/upcoming/events/{id}'            │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │  HTTP GET (JSON)
+                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  FASTAPI (Render — Docker container)                                │
+│                                                                     │
+│  api/v1/endpoints/upcoming.py                                       │
+│  └── get_upcoming_event_detail(event_id, db)                        │
+│      ├── SQLAlchemy Session                                         │
+│      └── text("SELECT ... FROM upcoming_fights                      │
+│               JOIN upcoming_predictions ...")                       │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │  SQL query (psycopg2 / SQLAlchemy)
+                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  POSTGRESQL (Supabase)                                              │
+│                                                                     │
+│  upcoming_fights  (scraped from UFCStats /upcoming)                 │
+│  upcoming_predictions  (pre-computed by compute_predictions.py)     │
+│  fighter_details, fighter_tott  (historical fighter data)           │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │  Result rows
+                           ▼
+                  FastAPI serialises to JSON
+                  (Pydantic v2 response model)
+                           │
+                           ▼
+                  Axios parses response
+                  React re-renders accordion
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  USER SEES                                                          │
+│  Fight card expanded — fighter names, win% bar, method chip         │
+│  Clicks a fight row → navigates to /upcoming/fights/:id             │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Deeper: How a Prediction is Generated (Weekly Automation)
+
+```
+Friday 12:00 UTC
+       │
+       ▼
+GitHub Actions: upcoming-predictions.yml
+       │
+       ├── run_upcoming.py
+       │   ├── upcoming_scraper.py
+       │   │   ├── GET ufcstats.com/statistics/events/upcoming
+       │   │   ├── Parse event rows → upcoming_events (upsert)
+       │   │   ├── Parse fight rows → upcoming_fights (upsert)
+       │   │   └── Match fighter URLs → fighter_details.id (FK)
+       │   │
+       │   └── compute_predictions.py
+       │       ├── For each upcoming_fight with both fighter FKs:
+       │       │   ├── features/extractors.py → build_feature_vector()
+       │       │   │   ├── Query fight_stats for rolling 5-fight window
+       │       │   │   ├── Query fighter_tott for physical attributes
+       │       │   │   └── Compute 30 differential features
+       │       │   ├── Load trained RandomForest model (models/*.pkl)
+       │       │   ├── model.predict_proba(features) → win_prob_a, win_prob_b
+       │       │   ├── method_model.predict_proba() → ko_tko, sub, dec
+       │       │   └── UPSERT into upcoming_predictions
+       │       └── Fights with NULL fighter FK → skipped (debuting fighters)
+       │
+Sunday 18:00 UTC
+       │
+       ▼
+weekly-ufc-scraper.yml → post-scrape-clean.yml → feature-engineering.yml → retrain.yml
+(completed events flow into training data, model auto-retrains)
+```
+
+---
+
+## Database Schema (Final State)
+
+```
+event_details (756 rows)
+    id VARCHAR(6) PK
+    "EVENT", "URL", date_proper, "LOCATION"
+
+fighter_details (4,449 rows)
+    id VARCHAR(6) PK
+    "FIRST", "LAST", "NICKNAME", "URL"
+
+fight_details (8,482 rows)
+    id VARCHAR(6) PK
+    event_id → event_details
+    fighter_a_id, fighter_b_id → fighter_details
+    "BOUT", "URL"
+
+fight_results (8,482 rows — one per fight)
+    id VARCHAR(6) PK
+    fight_id → fight_details, event_id → event_details
+    fighter_id → fighter_details (WINNER)
+    opponent_id → fighter_details (LOSER)
+    "METHOD", "ROUND", "TIME", "WEIGHTCLASS"
+    fight_time_seconds, total_fight_time_seconds (parsed)
+    weight_class, is_title_fight, is_interim_title (derived)
+
+fighter_tott (4,435 rows)
+    id VARCHAR(6) PK
+    fighter_id → fighter_details
+    height_inches, weight_lbs, reach_inches, dob_date (parsed)
+    "STANCE"
+
+fight_stats (39,912 rows — one per fighter per round)
+    id VARCHAR(6) PK
+    fight_id → fight_details, fighter_id → fighter_details
+    sig_str_landed, sig_str_attempted, ctrl_seconds, kd_int (parsed)
+    "ROUND", "KD", "TD", "SUB.ATT", "REV."
+
+-- Upcoming / prediction tables
+upcoming_events    (event_name, date_proper, location, ufcstats_url)
+upcoming_fights    (event_id, fighter_a/b_id, weight_class, is_title_fight)
+upcoming_predictions (fight_id UNIQUE, win_prob_a/b, method probs, features_json JSONB)
+
+-- Past predictions (model scorecard)
+past_predictions   (fight_id VARCHAR(8), event_id VARCHAR(6), all prediction + actual columns)
+```
+
+---
+
+## Key Engineering Decisions & Lessons
+
+| Decision | Why |
+|----------|-----|
+| Raw SQL via `text()` instead of ORM models | Schema is append-only and legacy-shaped; ORMs would add complexity without benefit |
+| VARCHAR IDs (not integers) | UFCStats hex IDs are natural PKs; converting to int would break scraper FK resolution |
+| fight_id = VARCHAR(8) in past_predictions | Fight IDs are 8-char hex (e.g. `3738135e`); original table used VARCHAR(6) which caused truncation |
+| Pydantic v2 for all API responses | Automatic validation, free OpenAPI docs, type-safe frontend |
+| Axios interceptor error normalisation | FastAPI 422 errors return `detail` as array; guard `typeof rawDetail === 'string'` prevents `[object Object]` |
+| `useRef` for debounce timers | `setTimeout` in a closure captures stale state; ref persists across renders |
+| `div+onClick` instead of nested `<Link>` | `<a>` inside `<a>` is invalid HTML; browsers break the outer link unpredictably |
+| `Promise.resolve(null)` in `useApi` | Skip API call when a tab is inactive without breaking the hook's dependency array |
+| Render free tier accepted | Cold start ~30s is fine for a portfolio project; upgrade path is Firebase/Cloud Run |
+| FastAPI route order matters | `/fights` must be registered before `/fights/{fight_id}` — FastAPI matches in registration order |
+
+---
+
+## What's Next (Post-MVP)
+
+1. **Task 25 — Firebase / Cloud Run migration**: Move backend off Render. Firebase Hosting for the React app (same CDN behaviour as Vercel); Cloud Run for FastAPI (faster cold starts, pay-per-request). Motivation: Render's cold start (30s) is the main user-facing pain point.
+
+2. **Fight Outcome Predictor (Task 8)**: Interactive sliders — adjust fighter attributes and see win probability update in real time.
+
+3. **Style Evolution Timeline (Task 9)**: Finish rate trends by year and weight class. Are KOs getting rarer? Is wrestling dominant now?
+
+4. **Fighter Endurance Dashboard (Task 10)**: Round-by-round performance profiles. Which fighters fade in the championship rounds?
+
+5. **Custom domain**: `kabesmaybes.com` or similar.
