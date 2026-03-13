@@ -198,16 +198,17 @@ def get_past_prediction_event(
 ) -> PastPredictionEventDetail:
     rows = db.execute(text("""
         SELECT
-            fight_id, event_id, event_name, event_date,
-            fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
-            weight_class, win_prob_a, win_prob_b,
-            pred_method_ko_tko, pred_method_sub, pred_method_dec,
-            predicted_winner_id, predicted_method,
-            actual_winner_id, actual_method,
-            is_correct, confidence, is_upset
-        FROM past_predictions
-        WHERE event_id = :event_id
-        ORDER BY fight_id
+            pp.fight_id, pp.event_id, pp.event_name, pp.event_date,
+            pp.fighter_a_id, pp.fighter_b_id, pp.fighter_a_name, pp.fighter_b_name,
+            pp.weight_class, pp.win_prob_a, pp.win_prob_b,
+            pp.pred_method_ko_tko, pp.pred_method_sub, pp.pred_method_dec,
+            pp.predicted_winner_id, pp.predicted_method,
+            pp.actual_winner_id, pp.actual_method,
+            pp.is_correct, pp.confidence, pp.is_upset
+        FROM past_predictions pp
+        LEFT JOIN fight_details fd ON fd.id = pp.fight_id
+        WHERE pp.event_id = :event_id
+        ORDER BY COALESCE(fd.position, 999) ASC
     """), {"event_id": event_id}).mappings().all()
 
     if not rows:
@@ -273,10 +274,17 @@ def search_past_prediction_fights(
     params["offset"] = (page - 1) * page_size
 
     rows = db.execute(text(f"""
-        SELECT {_FIGHT_COLS}
-        FROM past_predictions
+        SELECT pp.fight_id, pp.event_id, pp.event_name, pp.event_date,
+               pp.fighter_a_id, pp.fighter_b_id, pp.fighter_a_name, pp.fighter_b_name,
+               pp.weight_class, pp.win_prob_a, pp.win_prob_b,
+               pp.pred_method_ko_tko, pp.pred_method_sub, pp.pred_method_dec,
+               pp.predicted_winner_id, pp.predicted_method,
+               pp.actual_winner_id, pp.actual_method,
+               pp.is_correct, pp.confidence, pp.is_upset
+        FROM past_predictions pp
+        LEFT JOIN fight_details fd ON fd.id = pp.fight_id
         {where}
-        ORDER BY event_date DESC, fight_id
+        ORDER BY pp.event_date DESC, COALESCE(fd.position, 999) ASC
         LIMIT :limit OFFSET :offset
     """), params).mappings().all()
 
