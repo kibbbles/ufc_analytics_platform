@@ -5,7 +5,7 @@ import { fightersService } from '@services/fightersService'
 import { fightsService } from '@services/fightsService'
 import { Card, LoadingSkeleton } from '@components/common'
 import type { FighterResponse, FightListItem, UpcomingFight } from '@t/api'
-import { inchesToFeet, ageFromDob, formatDate } from '@utils/format'
+import { inchesToFeet, formatDate } from '@utils/format'
 
 // ── Feature metadata (keeps labels + sign convention) ────────────────────────
 
@@ -62,9 +62,6 @@ function heightDisplay(inches: number | null): string {
   return inches != null ? inchesToFeet(inches) : '—'
 }
 
-function ageDisplay(dob: string | null): string {
-  return dob ? `${ageFromDob(dob)} yrs` : '—'
-}
 
 function fmtTime(seconds: number | null): string {
   if (seconds == null) return '—'
