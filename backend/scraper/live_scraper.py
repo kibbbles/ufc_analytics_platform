@@ -770,21 +770,26 @@ class LiveUFCScraper:
                 """), {'fid': fighter_id}).fetchone()
 
                 params = {
-                    'fighter':    fighter_name,
-                    'height':     tott_data.get('height', ''),
-                    'weight':     tott_data.get('weight', ''),
-                    'reach':      tott_data.get('reach',  ''),
-                    'stance':     tott_data.get('stance', ''),
-                    'dob':        tott_data.get('dob',    ''),
-                    'url':        tott_data.get('url',    ''),
-                    'fighter_id': fighter_id,
+                    'fighter':       fighter_name,
+                    'height':        tott_data.get('height', ''),
+                    'weight':        tott_data.get('weight', ''),
+                    'reach':         tott_data.get('reach',  ''),
+                    'stance':        tott_data.get('stance', ''),
+                    'dob':           tott_data.get('dob',    ''),
+                    'url':           tott_data.get('url',    ''),
+                    'fighter_id':    fighter_id,
+                    'career_wins':   tott_data.get('career_wins'),
+                    'career_losses': tott_data.get('career_losses'),
+                    'career_draws':  tott_data.get('career_draws'),
                 }
 
                 if existing:
                     conn.execute(text("""
                         UPDATE fighter_tott
                         SET "FIGHTER"=:fighter, "HEIGHT"=:height, "WEIGHT"=:weight,
-                            "REACH"=:reach, "STANCE"=:stance, "DOB"=:dob, "URL"=:url
+                            "REACH"=:reach, "STANCE"=:stance, "DOB"=:dob, "URL"=:url,
+                            career_wins=:career_wins, career_losses=:career_losses,
+                            career_draws=:career_draws
                         WHERE fighter_id=:fighter_id
                     """), params)
                 else:
@@ -793,10 +798,12 @@ class LiveUFCScraper:
                     conn.execute(text("""
                         INSERT INTO fighter_tott
                             (id, "FIGHTER", "HEIGHT", "WEIGHT", "REACH",
-                             "STANCE", "DOB", "URL", fighter_id)
+                             "STANCE", "DOB", "URL", fighter_id,
+                             career_wins, career_losses, career_draws)
                         VALUES
                             (:id, :fighter, :height, :weight, :reach,
-                             :stance, :dob, :url, :fighter_id)
+                             :stance, :dob, :url, :fighter_id,
+                             :career_wins, :career_losses, :career_draws)
                     """), params)
 
                 conn.commit()
@@ -805,7 +812,7 @@ class LiveUFCScraper:
             logging.error(f"Error storing fighter tott for '{fighter_name}': {e}")
 
     def scrape_fighter_physical_stats(self, fighter_url):
-        """Scrape height/weight/reach/stance/DOB from a fighter profile page."""
+        """Scrape height/weight/reach/stance/DOB and all-time career record from a fighter profile page."""
         try:
             time.sleep(random.uniform(2, 4))
             response = self.session.get(fighter_url, timeout=30)
@@ -820,12 +827,26 @@ class LiveUFCScraper:
                     value = item.get_text().replace(label_elem.text, '').strip()
                     if value and value != '--':
                         stats[label] = value
+
+            # All-time career record (includes non-UFC bouts)
+            career_wins = career_losses = career_draws = None
+            record_elem = soup.find('span', class_='b-content__title-record')
+            if record_elem:
+                m = re.search(r'(\d+)-(\d+)-(\d+)', record_elem.get_text())
+                if m:
+                    career_wins   = int(m.group(1))
+                    career_losses = int(m.group(2))
+                    career_draws  = int(m.group(3))
+
             return {
-                'height': stats.get('Height'),
-                'weight': stats.get('Weight'),
-                'reach':  stats.get('Reach'),
-                'stance': stats.get('STANCE'),
-                'dob':    stats.get('DOB'),
+                'height':        stats.get('Height'),
+                'weight':        stats.get('Weight'),
+                'reach':         stats.get('Reach'),
+                'stance':        stats.get('STANCE'),
+                'dob':           stats.get('DOB'),
+                'career_wins':   career_wins,
+                'career_losses': career_losses,
+                'career_draws':  career_draws,
             }
         except Exception as e:
             logging.error(f"Error scraping physical stats from {fighter_url}: {e}")

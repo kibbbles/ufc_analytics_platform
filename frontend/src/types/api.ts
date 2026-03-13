@@ -53,6 +53,10 @@ export interface FighterResponse {
   draws: number | null
   no_contests: number | null
   avg_fight_time_seconds: number | null
+  // All-time career record (includes non-UFC bouts, null until bulk scrape runs)
+  career_wins: number | null
+  career_losses: number | null
+  career_draws: number | null
 }
 
 // ── Events ───────────────────────────────────────────────────────────────────

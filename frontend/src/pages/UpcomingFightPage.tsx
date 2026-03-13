@@ -86,11 +86,15 @@ function TaleOfTape({
   nameA: string
   nameB: string
 }) {
-  const record = (f: FighterResponse | null) =>
-    f ? `${f.wins ?? 0}-${f.losses ?? 0}-${f.draws ?? 0}` : '—'
+  const hasCareer = (a?.career_wins != null) || (b?.career_wins != null)
+  const record = (f: FighterResponse | null) => {
+    if (!f) return '—'
+    if (f.career_wins != null) return `${f.career_wins}-${f.career_losses ?? 0}-${f.career_draws ?? 0}`
+    return `${f.wins ?? 0}-${f.losses ?? 0}-${f.draws ?? 0}`
+  }
 
   const rows: { label: string; valA: string; valB: string }[] = [
-    { label: 'Record (UFC)',  valA: record(a),                                                          valB: record(b)                                                          },
+    { label: hasCareer ? 'Record' : 'Record (UFC)',  valA: record(a),                                                          valB: record(b)                                                          },
     { label: 'Avg. Fight',   valA: fmtTime(a?.avg_fight_time_seconds ?? null),                         valB: fmtTime(b?.avg_fight_time_seconds ?? null)                         },
     { label: 'Height',       valA: heightDisplay(a?.height_inches ?? null),                             valB: heightDisplay(b?.height_inches ?? null)                             },
     { label: 'Weight',       valA: a?.weight_lbs != null ? `${a.weight_lbs} lbs` : '—',               valB: b?.weight_lbs != null ? `${b.weight_lbs} lbs` : '—'               },

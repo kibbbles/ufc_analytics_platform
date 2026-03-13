@@ -11,6 +11,7 @@ Expected runtime: 2-3 hours (with 2-4 second delays between requests)
 
 import sys
 import os
+import re
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -83,13 +84,26 @@ class BulkPhysicalStatsScraper:
                     if value and value != '--':
                         stats[label] = value
 
+            # Scrape all-time career record from page header
+            career_wins = career_losses = career_draws = None
+            record_elem = soup.find('span', class_='b-content__title-record')
+            if record_elem:
+                m = re.search(r'(\d+)-(\d+)-(\d+)', record_elem.get_text())
+                if m:
+                    career_wins  = int(m.group(1))
+                    career_losses = int(m.group(2))
+                    career_draws  = int(m.group(3))
+
             # Map UFC labels to database columns
             return {
-                'height': stats.get('Height'),
-                'weight': stats.get('Weight'),
-                'reach': stats.get('Reach'),
-                'stance': stats.get('STANCE'),
-                'dob': stats.get('DOB')
+                'height':        stats.get('Height'),
+                'weight':        stats.get('Weight'),
+                'reach':         stats.get('Reach'),
+                'stance':        stats.get('STANCE'),
+                'dob':           stats.get('DOB'),
+                'career_wins':   career_wins,
+                'career_losses': career_losses,
+                'career_draws':  career_draws,
             }
 
         except Exception as e:
@@ -126,6 +140,13 @@ class BulkPhysicalStatsScraper:
             if (not current_data['DOB'] or current_data['DOB'] == '--') and new_stats.get('dob'):
                 updates['DOB'] = new_stats['dob']
                 fields_updated.append('DOB')
+
+            # Career record: always overwrite when fresh data available (changes after every fight)
+            if new_stats.get('career_wins') is not None:
+                updates['career_wins']   = new_stats['career_wins']
+                updates['career_losses'] = new_stats['career_losses']
+                updates['career_draws']  = new_stats['career_draws']
+                fields_updated.append('career_record')
 
             # If nothing to update, skip
             if not updates:
@@ -174,19 +195,24 @@ class BulkPhysicalStatsScraper:
             with engine.connect() as conn:
                 conn.execute(text('''
                     INSERT INTO fighter_tott
-                        (id, "FIGHTER", "HEIGHT", "WEIGHT", "REACH", "STANCE", "DOB", "URL", fighter_id)
+                        (id, "FIGHTER", "HEIGHT", "WEIGHT", "REACH", "STANCE", "DOB", "URL",
+                         fighter_id, career_wins, career_losses, career_draws)
                     VALUES
-                        (:id, :fighter, :height, :weight, :reach, :stance, :dob, :url, :fighter_id)
+                        (:id, :fighter, :height, :weight, :reach, :stance, :dob, :url,
+                         :fighter_id, :career_wins, :career_losses, :career_draws)
                 '''), {
-                    'id':         tott_id,
-                    'fighter':    fighter_name,
-                    'height':     stats.get('height') or '',
-                    'weight':     stats.get('weight') or '',
-                    'reach':      stats.get('reach')  or '',
-                    'stance':     stats.get('stance') or '',
-                    'dob':        stats.get('dob')    or '',
-                    'url':        fighter_url,
-                    'fighter_id': fighter_id,
+                    'id':           tott_id,
+                    'fighter':      fighter_name,
+                    'height':       stats.get('height') or '',
+                    'weight':       stats.get('weight') or '',
+                    'reach':        stats.get('reach')  or '',
+                    'stance':       stats.get('stance') or '',
+                    'dob':          stats.get('dob')    or '',
+                    'url':           fighter_url,
+                    'fighter_id':    fighter_id,
+                    'career_wins':   stats.get('career_wins'),
+                    'career_losses': stats.get('career_losses'),
+                    'career_draws':  stats.get('career_draws'),
                 })
                 conn.commit()
             return True

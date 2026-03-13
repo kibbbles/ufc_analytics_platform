@@ -52,6 +52,11 @@ class FighterResponse(FighterBase):
     # Career stats (computed from fight_results)
     avg_fight_time_seconds: Optional[int] = None
 
+    # All-time career record (scraped from UFCStats profile — includes non-UFC bouts)
+    career_wins: Optional[int] = None
+    career_losses: Optional[int] = None
+    career_draws: Optional[int] = None
+
 
 class FighterListItem(BaseModel):
     """Lightweight schema used in paginated list responses."""
