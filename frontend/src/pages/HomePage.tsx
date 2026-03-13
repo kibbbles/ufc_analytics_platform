@@ -120,8 +120,6 @@ function ModelScorecard() {
   // Derive date range label
   let dateLabel = 'Test set'
   if (summary?.date_from) {
-    const from = summary.date_from.slice(0, 7) // "YYYY-MM"
-    const to   = summary.date_to ? summary.date_to.slice(0, 4) : 'present'
     // Format like "Jan 2022 – present"
     const fromDate = new Date(summary.date_from + 'T00:00:00')
     const fromStr  = fromDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
