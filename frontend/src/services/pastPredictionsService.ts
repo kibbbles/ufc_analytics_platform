@@ -23,7 +23,7 @@ export const pastPredictionsService = {
       .get<PastPredictionEventDetail>(`/past-predictions/events/${eventId}`)
       .then((r) => r.data),
 
-  searchFights: (params: { search: string; page?: number; page_size?: number }) =>
+  searchFights: (params: { search?: string; year?: number; page?: number; page_size?: number }) =>
     apiClient
       .get<PastPredictionFightsResponse>('/past-predictions/fights', { params })
       .then((r) => r.data),

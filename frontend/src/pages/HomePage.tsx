@@ -117,13 +117,18 @@ function ModelScorecard() {
     [tab, page, debouncedSearch, year],
   )
 
-  // Fights tab (only when search term present)
+  // Fights tab — show most recent by default, filter by search/year when provided
   const { data: fightsData, loading: fightsLoading, error: fightsError } = useApi(
     () =>
-      tab === 'fights' && debouncedSearch.length >= 1
-        ? pastPredictionsService.searchFights({ search: debouncedSearch, page, page_size: PAGE_SIZE })
+      tab === 'fights'
+        ? pastPredictionsService.searchFights({
+            search: debouncedSearch || undefined,
+            year,
+            page,
+            page_size: PAGE_SIZE,
+          })
         : Promise.resolve(null),
-    [tab, page, debouncedSearch],
+    [tab, page, debouncedSearch, year],
   )
 
   const summary    = summaryData?.summary
@@ -247,7 +252,7 @@ function ModelScorecard() {
             </button>
           )}
         </div>
-        {tab === 'events' && availYears.length > 0 && (
+        {availYears.length > 0 && (
           <select
             value={year ?? ''}
             onChange={handleYearChange}
@@ -321,11 +326,7 @@ function ModelScorecard() {
 
       {/* ── Fights tab ─────────────────────────────────────────────────────── */}
       {tab === 'fights' && (
-        !debouncedSearch ? (
-          <p className="py-8 text-center text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Enter a fighter name to search.
-          </p>
-        ) : fightsLoading ? (
+        fightsLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }, (_, i) => (
               <div key={i} className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] p-4">
@@ -353,7 +354,7 @@ function ModelScorecard() {
           </>
         ) : (
           <p className="py-8 text-center text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            No fights found for "{debouncedSearch}".
+            {debouncedSearch || year ? `No fights found matching your filter.` : 'No past predictions yet.'}
           </p>
         )
       )}

@@ -1,17 +1,28 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
-import LoadingSkeleton from '@components/common/LoadingSkeleton'
-import { formatDate } from '@utils/format'
-import type { PastPredictionItem } from '@t/api'
+import { fightersService } from '@services/fightersService'
+import { fightsService } from '@services/fightsService'
+import { Card, LoadingSkeleton } from '@components/common'
+import { inchesToFeet, formatDate } from '@utils/format'
+import type { FighterResponse, FightListItem, PastPredictionItem } from '@t/api'
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function pct(v: number | null | undefined, decimals = 1): string {
+function pct(v: number | null | undefined): string {
   if (v == null) return '—'
-  return (v * 100).toFixed(decimals) + '%'
+  return `${(v * 100).toFixed(1)}%`
+}
+
+function heightDisplay(inches: number | null | undefined): string {
+  return inches != null ? inchesToFeet(inches) : '—'
+}
+
+function fmtTime(seconds: number | null | undefined): string {
+  if (seconds == null) return '—'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
 function winnerName(item: PastPredictionItem, id: string | null | undefined): string {
@@ -21,173 +32,179 @@ function winnerName(item: PastPredictionItem, id: string | null | undefined): st
   return '—'
 }
 
-// ---------------------------------------------------------------------------
-// Win probability bar
-// ---------------------------------------------------------------------------
+// ── TaleOfTape ────────────────────────────────────────────────────────────────
 
-function WinProbBar({ item }: { item: PastPredictionItem }) {
-  const probA = item.win_prob_a ?? 0.5
-  const probB = item.win_prob_b ?? 0.5
-  const pctA  = (probA * 100).toFixed(1)
-  const pctB  = (probB * 100).toFixed(1)
+function TaleOfTape({
+  a, b, nameA, nameB,
+}: {
+  a: FighterResponse | null
+  b: FighterResponse | null
+  nameA: string
+  nameB: string
+}) {
+  const hasCareer = (a?.career_wins != null) || (b?.career_wins != null)
+  const record = (f: FighterResponse | null) => {
+    if (!f) return '—'
+    if (f.career_wins != null) return `${f.career_wins}-${f.career_losses ?? 0}-${f.career_draws ?? 0}`
+    return `${f.wins ?? 0}-${f.losses ?? 0}-${f.draws ?? 0}`
+  }
 
-  const actualWinsA = item.actual_winner_id === item.fighter_a_id
-
-  return (
-    <div className="my-6">
-      {/* Fighter name labels */}
-      <div className="flex justify-between mb-1 text-sm font-semibold">
-        <Link
-          to={`/fighters/${item.fighter_a_id}`}
-          className={`hover:text-[var(--color-primary)] transition-colors ${actualWinsA ? '' : 'text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]'}`}
-        >
-          {item.fighter_a_name ?? 'Fighter A'}
-        </Link>
-        <Link
-          to={`/fighters/${item.fighter_b_id}`}
-          className={`hover:text-[var(--color-primary)] transition-colors ${!actualWinsA ? '' : 'text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]'}`}
-        >
-          {item.fighter_b_name ?? 'Fighter B'}
-        </Link>
-      </div>
-
-      {/* Probability bar */}
-      <div className="relative h-8 rounded-full overflow-hidden flex">
-        <div
-          className="bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-mono font-bold"
-          style={{ width: `${probA * 100}%` }}
-        >
-          {Number(pctA) >= 20 ? pctA + '%' : ''}
-        </div>
-        <div
-          className="bg-[var(--color-text-muted-light)] dark:bg-[var(--color-text-muted)] flex items-center justify-center text-white text-xs font-mono font-bold flex-1"
-        >
-          {Number(pctB) >= 20 ? pctB + '%' : ''}
-        </div>
-      </div>
-
-      {/* Predicted winner label */}
-      <p className="mt-1.5 text-xs text-center text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-        Model predicted{' '}
-        <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-          {winnerName(item, item.predicted_winner_id)}
-        </span>
-        {item.confidence != null && (
-          <span className="font-mono tabular-nums"> ({pct(item.confidence)} confident)</span>
-        )}
-      </p>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Method breakdown
-// ---------------------------------------------------------------------------
-
-function MethodBreakdown({ item }: { item: PastPredictionItem }) {
-  const methods = [
-    { label: 'KO / TKO',   value: item.pred_method_ko_tko },
-    { label: 'Submission', value: item.pred_method_sub },
-    { label: 'Decision',   value: item.pred_method_dec },
+  const rows = [
+    { label: hasCareer ? 'Record' : 'Record (UFC)', valA: record(a), valB: record(b) },
+    { label: 'Avg. Fight', valA: fmtTime(a?.avg_fight_time_seconds), valB: fmtTime(b?.avg_fight_time_seconds) },
+    { label: 'Height',     valA: heightDisplay(a?.height_inches),    valB: heightDisplay(b?.height_inches) },
+    { label: 'Weight',     valA: a?.weight_lbs != null ? `${a.weight_lbs} lbs` : '—', valB: b?.weight_lbs != null ? `${b.weight_lbs} lbs` : '—' },
+    { label: 'Reach',      valA: a?.reach_inches != null ? `${a.reach_inches}"` : '—', valB: b?.reach_inches != null ? `${b.reach_inches}"` : '—' },
+    { label: 'Stance',     valA: a?.stance ?? '—', valB: b?.stance ?? '—' },
+    { label: 'DOB',        valA: a?.dob_date ? formatDate(String(a.dob_date)) : '—', valB: b?.dob_date ? formatDate(String(b.dob_date)) : '—' },
   ]
-  const maxVal = Math.max(...methods.map((m) => m.value ?? 0))
 
   return (
-    <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] p-4 mb-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-3">
-        Method Prediction
-      </h3>
-      <div className="space-y-2">
-        {methods.map(({ label, value }) => {
-          const v = value ?? 0
-          const isTop = v === maxVal
-          return (
-            <div key={label} className="flex items-center gap-2">
-              <span className="w-24 shrink-0 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                {label}
-              </span>
-              <div className="flex-1 h-2 rounded-full bg-[var(--color-border-light)] dark:bg-[var(--color-border)] overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${isTop ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted-light)] dark:bg-[var(--color-text-muted)]'}`}
-                  style={{ width: `${v * 100}%` }}
-                />
-              </div>
-              <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums">
-                {pct(v)}
-              </span>
-            </div>
-          )
-        })}
-      </div>
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+          <th className="pb-2 text-left font-medium">{nameA}</th>
+          <th className="pb-2 text-center font-medium"></th>
+          <th className="pb-2 text-right font-medium">{nameB}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ label, valA, valB }) => (
+          <tr key={label} className="border-t border-[var(--color-border)]">
+            <td className="py-2 font-mono tabular-nums">{valA}</td>
+            <td className="py-2 text-center text-xs text-[var(--color-text-muted)]">{label}</td>
+            <td className="py-2 text-right font-mono tabular-nums">{valB}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+// ── RecentFightMini ───────────────────────────────────────────────────────────
+
+function RecentFightMini({
+  fights, viewingFighterId,
+}: {
+  fights: FightListItem[]
+  viewingFighterId: string
+}) {
+  return (
+    <div className="space-y-2">
+      {fights.map((f) => {
+        const parts = (f.bout ?? '').split(' vs. ')
+        const isA = f.fighter_a_id === viewingFighterId
+        const opponentRaw = (isA ? parts[1] : parts[0] ?? '').trim()
+        const opponentLastName = opponentRaw.split(' ').at(-1) ?? '—'
+        const opponentId = isA ? f.fighter_b_id : f.fighter_a_id
+        const isWin  = f.winner_id === viewingFighterId
+        const isLoss = f.winner_id !== null && f.winner_id !== viewingFighterId
+        return (
+          <div key={f.id} className="flex items-center gap-2 text-sm">
+            <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold tabular-nums ${
+              isWin  ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+              : isLoss ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+              : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'
+            }`}>
+              {isWin ? 'W' : isLoss ? 'L' : '—'}
+            </span>
+            {opponentId ? (
+              <Link to={`/fighters/${opponentId}`} className="font-medium hover:text-[var(--color-primary)] transition-colors">
+                {opponentLastName}
+              </Link>
+            ) : (
+              <span className="font-medium text-[var(--color-text-muted)]">{opponentLastName}</span>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Actual result card
-// ---------------------------------------------------------------------------
+// ── Actual result card ────────────────────────────────────────────────────────
 
-function ActualResult({ item }: { item: PastPredictionItem }) {
+function ActualResultCard({ item }: { item: PastPredictionItem }) {
   const isUpset   = item.is_upset
   const isCorrect = item.is_correct
 
-  let label: string
+  let badge: string
   let bgClass: string
-  let textClass: string
-  if (isUpset) {
-    label = 'Upset — model was confident but wrong'
-    bgClass = 'bg-amber-500/10 border-amber-500/30'
-    textClass = 'text-amber-600 dark:text-amber-400'
-  } else if (isCorrect) {
-    label = 'Correct prediction'
-    bgClass = 'bg-green-500/10 border-green-500/30'
-    textClass = 'text-green-600 dark:text-green-400'
-  } else {
-    label = 'Incorrect prediction'
-    bgClass = 'bg-red-500/10 border-red-500/30'
-    textClass = 'text-red-600 dark:text-red-400'
-  }
-
-  const actualWinner = winnerName(item, item.actual_winner_id)
+  let badgeClass: string
+  if (isUpset)        { badge = '~ Upset';     bgClass = 'bg-amber-500/10 border-amber-500/30'; badgeClass = 'text-amber-600 dark:text-amber-400' }
+  else if (isCorrect) { badge = '✓ Correct';   bgClass = 'bg-green-500/10 border-green-500/30'; badgeClass = 'text-green-600 dark:text-green-400' }
+  else                { badge = '✗ Incorrect'; bgClass = 'bg-red-500/10 border-red-500/30';     badgeClass = 'text-red-600 dark:text-red-400' }
 
   return (
-    <div className={`rounded-lg border p-4 mb-4 ${bgClass}`}>
-      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textClass}`}>{label}</p>
-      <p className="text-sm">
-        <span className="font-semibold">{actualWinner}</span>
-        {item.actual_method && (
-          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            {' '}via {item.actual_method}
-          </span>
-        )}
-      </p>
+    <div className={`rounded-lg border p-4 ${bgClass}`}>
+      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${badgeClass}`}>{badge}</p>
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-semibold">{winnerName(item, item.actual_winner_id)}</span>
+        <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+          {item.actual_method ?? '—'}
+        </span>
+      </div>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PastPredictionFightPage() {
   const { fight_id } = useParams<{ fight_id: string }>()
   const navigate     = useNavigate()
+
   const { data: item, loading, error } = useApi(
     () => pastPredictionsService.getFight(fight_id!),
     [fight_id],
   )
 
+  const { data: fighterA } = useApi(
+    () => item?.fighter_a_id ? fightersService.getById(item.fighter_a_id) : Promise.resolve(null),
+    [item?.fighter_a_id],
+  )
+  const { data: fighterB } = useApi(
+    () => item?.fighter_b_id ? fightersService.getById(item.fighter_b_id) : Promise.resolve(null),
+    [item?.fighter_b_id],
+  )
+  const { data: fightsA } = useApi(
+    () => item?.fighter_a_id ? fightsService.getList({ fighter_id: item.fighter_a_id, page_size: 5 }) : Promise.resolve(null),
+    [item?.fighter_a_id],
+  )
+  const { data: fightsB } = useApi(
+    () => item?.fighter_b_id ? fightsService.getList({ fighter_id: item.fighter_b_id, page_size: 5 }) : Promise.resolve(null),
+    [item?.fighter_b_id],
+  )
+
+  const nameA  = item?.fighter_a_name ?? '—'
+  const nameB  = item?.fighter_b_name ?? '—'
+  const probA  = item?.win_prob_a ?? 0
+  const probB  = item?.win_prob_b ?? 0
+  const aWins  = probA >= probB
+
+  const methods = [
+    { label: 'KO/TKO', value: item?.pred_method_ko_tko },
+    { label: 'Sub',    value: item?.pred_method_sub },
+    { label: 'Dec',    value: item?.pred_method_dec },
+  ]
+  const topLabel = methods.reduce((a, b) => ((a.value ?? 0) > (b.value ?? 0) ? a : b)).label
+
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Back button */}
+    <div className="mx-auto max-w-[640px]">
       <button
         onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors mb-6"
+        className="inline-flex items-center gap-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors mb-6"
       >
         ← Back
       </button>
 
-      {loading && <LoadingSkeleton lines={10} />}
+      {loading && (
+        <div className="space-y-4">
+          <LoadingSkeleton lines={2} />
+          <LoadingSkeleton lines={4} />
+          <LoadingSkeleton lines={6} />
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-600 dark:text-red-400">
@@ -195,30 +212,178 @@ export default function PastPredictionFightPage() {
         </div>
       )}
 
-      {item && (
-        <>
-          {/* Event context */}
-          <div className="mb-1 text-center">
-            <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {item.event_name ?? ''}
-              {item.event_date ? ` · ${formatDate(item.event_date)}` : ''}
-            </p>
-            {item.weight_class && (
-              <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                {item.weight_class}
-              </p>
-            )}
+      {item && !loading && (
+        <div className="space-y-4">
+          {/* Header: fighter names */}
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              {item.fighter_a_id ? (
+                <Link
+                  to={`/fighters/${item.fighter_a_id}`}
+                  className={`text-xl font-bold hover:text-[var(--color-primary)] transition-colors ${
+                    aWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  {nameA}
+                </Link>
+              ) : (
+                <span className={`text-xl font-bold ${aWins ? '' : 'text-[var(--color-text-muted)]'}`}>{nameA}</span>
+              )}
+              <span className="text-sm text-[var(--color-text-muted)]">vs</span>
+              {item.fighter_b_id ? (
+                <Link
+                  to={`/fighters/${item.fighter_b_id}`}
+                  className={`text-xl font-bold hover:text-[var(--color-primary)] transition-colors ${
+                    !aWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  {nameB}
+                </Link>
+              ) : (
+                <span className={`text-xl font-bold ${!aWins ? '' : 'text-[var(--color-text-muted)]'}`}>{nameB}</span>
+              )}
+            </div>
+            <div className="mt-2 flex justify-center gap-2 flex-wrap">
+              {item.weight_class && (
+                <span className="text-xs text-[var(--color-text-muted)]">{item.weight_class}</span>
+              )}
+              {item.event_name && (
+                <span className="text-xs text-[var(--color-text-muted)]">
+                  · {item.event_name}
+                  {item.event_date ? ` · ${formatDate(item.event_date)}` : ''}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Win probability bar */}
-          <WinProbBar item={item} />
-
-          {/* Method breakdown */}
-          <MethodBreakdown item={item} />
+          {/* Prediction card — same layout as UpcomingFightPage */}
+          {item.win_prob_a != null && item.win_prob_b != null && (
+            <Card>
+              <div className="flex items-center justify-between gap-4">
+                <span className={`font-mono text-3xl font-bold tabular-nums ${aWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                  {pct(item.win_prob_a)}
+                </span>
+                <span className="text-xs text-[var(--color-text-muted)]">win prob</span>
+                <span className={`font-mono text-3xl font-bold tabular-nums ${!aWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                  {pct(item.win_prob_b)}
+                </span>
+              </div>
+              <div className="mt-2 flex justify-center gap-4 font-mono text-sm tabular-nums">
+                {methods.map(({ label, value }) => (
+                  <span
+                    key={label}
+                    className={label === topLabel
+                      ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                      : 'text-[var(--color-text-muted)] opacity-50'
+                    }
+                  >
+                    {label} {pct(value)}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Actual result */}
-          <ActualResult item={item} />
-        </>
+          <ActualResultCard item={item} />
+
+          {/* Tale of the Tape */}
+          {(fighterA || fighterB) && (
+            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Tale of the Tape</span>}>
+              <TaleOfTape a={fighterA} b={fighterB} nameA={nameA} nameB={nameB} />
+            </Card>
+          )}
+
+          {/* Striking */}
+          {(fighterA || fighterB) && (
+            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Striking</span>}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <th className="pb-2 text-left font-medium">{nameA}</th>
+                    <th className="pb-2 text-center font-medium"></th>
+                    <th className="pb-2 text-right font-medium">{nameB}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: 'SLpM',      valA: fighterA?.slpm?.toFixed(2) ?? '—', valB: fighterB?.slpm?.toFixed(2) ?? '—' },
+                    { label: 'Str. Acc.', valA: fighterA?.str_acc ?? '—',           valB: fighterB?.str_acc ?? '—' },
+                    { label: 'SApM',      valA: fighterA?.sapm?.toFixed(2) ?? '—', valB: fighterB?.sapm?.toFixed(2) ?? '—' },
+                    { label: 'Str. Def.', valA: fighterA?.str_def ?? '—',           valB: fighterB?.str_def ?? '—' },
+                  ].map(({ label, valA, valB }) => (
+                    <tr key={label} className="border-t border-[var(--color-border)]">
+                      <td className="py-2 font-mono tabular-nums">{valA}</td>
+                      <td className="py-2 text-center text-xs text-[var(--color-text-muted)]">{label}</td>
+                      <td className="py-2 text-right font-mono tabular-nums">{valB}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          {/* Grappling */}
+          {(fighterA || fighterB) && (
+            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Grappling</span>}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <th className="pb-2 text-left font-medium">{nameA}</th>
+                    <th className="pb-2 text-center font-medium"></th>
+                    <th className="pb-2 text-right font-medium">{nameB}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: 'TD Avg.',   valA: fighterA?.td_avg?.toFixed(2) ?? '—',  valB: fighterB?.td_avg?.toFixed(2) ?? '—' },
+                    { label: 'TD Acc.',   valA: fighterA?.td_acc ?? '—',               valB: fighterB?.td_acc ?? '—' },
+                    { label: 'TD Def.',   valA: fighterA?.td_def ?? '—',               valB: fighterB?.td_def ?? '—' },
+                    { label: 'Sub. Avg.', valA: fighterA?.sub_avg?.toFixed(2) ?? '—', valB: fighterB?.sub_avg?.toFixed(2) ?? '—' },
+                  ].map(({ label, valA, valB }) => (
+                    <tr key={label} className="border-t border-[var(--color-border)]">
+                      <td className="py-2 font-mono tabular-nums">{valA}</td>
+                      <td className="py-2 text-center text-xs text-[var(--color-text-muted)]">{label}</td>
+                      <td className="py-2 text-right font-mono tabular-nums">{valB}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          {/* Recent fights */}
+          {(item.fighter_a_id || item.fighter_b_id) && (
+            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Recent Fights</span>}>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameA}</p>
+                  {!item.fighter_a_id ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : !fightsA ? (
+                    <LoadingSkeleton lines={3} />
+                  ) : fightsA.data.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : (
+                    <RecentFightMini fights={fightsA.data} viewingFighterId={item.fighter_a_id} />
+                  )}
+                </div>
+                <div>
+                  <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameB}</p>
+                  {!item.fighter_b_id ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : !fightsB ? (
+                    <LoadingSkeleton lines={3} />
+                  ) : fightsB.data.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : (
+                    <RecentFightMini fights={fightsB.data} viewingFighterId={item.fighter_b_id} />
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
       )}
     </div>
   )

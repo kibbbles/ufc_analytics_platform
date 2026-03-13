@@ -245,18 +245,28 @@ _FIGHT_COLS = """
     summary="Search past predictions by fighter name",
 )
 def search_past_prediction_fights(
-    search: str = Query(..., min_length=1, description="Fighter name search term"),
+    search: str | None = Query(None, description="Fighter name search term (optional)"),
+    year: int | None = Query(None, description="Filter by year"),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
 ) -> PastPredictionFightsResponse:
-    params: dict = {"search": f"%{search}%"}
+    params: dict = {}
+    conditions: list[str] = []
 
-    total: int = db.execute(text("""
-        SELECT COUNT(*)
-        FROM past_predictions
-        WHERE LOWER(fighter_a_name) LIKE LOWER(:search)
-           OR LOWER(fighter_b_name) LIKE LOWER(:search)
+    if search:
+        conditions.append(
+            "(LOWER(fighter_a_name) LIKE LOWER(:search) OR LOWER(fighter_b_name) LIKE LOWER(:search))"
+        )
+        params["search"] = f"%{search}%"
+    if year:
+        conditions.append("EXTRACT(YEAR FROM event_date) = :year")
+        params["year"] = year
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+    total: int = db.execute(text(f"""
+        SELECT COUNT(*) FROM past_predictions {where}
     """), params).scalar() or 0
 
     params["limit"]  = page_size
@@ -265,8 +275,7 @@ def search_past_prediction_fights(
     rows = db.execute(text(f"""
         SELECT {_FIGHT_COLS}
         FROM past_predictions
-        WHERE LOWER(fighter_a_name) LIKE LOWER(:search)
-           OR LOWER(fighter_b_name) LIKE LOWER(:search)
+        {where}
         ORDER BY event_date DESC, fight_id
         LIMIT :limit OFFSET :offset
     """), params).mappings().all()
