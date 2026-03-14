@@ -8,7 +8,7 @@ workers = 4
 worker_class = "uvicorn.workers.UvicornWorker"
 
 # Bind
-bind = "0.0.0.0:8000"
+bind = f"0.0.0.0:{__import__('os').environ.get('PORT', '8000')}"
 
 # Logging — write to stdout/stderr so the process manager (systemd, Docker, etc.)
 # captures everything; structured JSON is handled by core/logging.py

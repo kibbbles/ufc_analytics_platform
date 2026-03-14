@@ -260,6 +260,7 @@ def run(date_from: str = "2022-01-01") -> None:
             "is_correct":          is_correct,
             "confidence":          confidence,
             "is_upset":            is_upset,
+            "prediction_source":   "backfill",
         })
 
         if i % 50 == 0:
@@ -277,7 +278,8 @@ def run(date_from: str = "2022-01-01") -> None:
             pred_method_ko_tko, pred_method_sub, pred_method_dec,
             predicted_winner_id, predicted_method,
             actual_winner_id, actual_method,
-            is_correct, confidence, is_upset
+            is_correct, confidence, is_upset,
+            prediction_source
         ) VALUES (
             :id, :fight_id, :event_id, :event_name, :event_date,
             :fighter_a_id, :fighter_b_id, :fighter_a_name, :fighter_b_name,
@@ -286,9 +288,10 @@ def run(date_from: str = "2022-01-01") -> None:
             :pred_method_ko_tko, :pred_method_sub, :pred_method_dec,
             :predicted_winner_id, :predicted_method,
             :actual_winner_id, :actual_method,
-            :is_correct, :confidence, :is_upset
+            :is_correct, :confidence, :is_upset,
+            :prediction_source
         )
-        ON CONFLICT (fight_id) DO UPDATE SET
+        ON CONFLICT (fight_id, prediction_source) DO UPDATE SET
             event_id            = EXCLUDED.event_id,
             event_name          = EXCLUDED.event_name,
             event_date          = EXCLUDED.event_date,

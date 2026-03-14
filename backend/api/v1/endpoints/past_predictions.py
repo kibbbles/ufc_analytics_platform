@@ -42,6 +42,12 @@ def get_past_predictions(
 ) -> PastPredictionsResponse:
     # ---- Summary row --------------------------------------------------------
     summary_row = db.execute(text("""
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id) *
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
         SELECT
             COUNT(*)                                                          AS total_fights,
             SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)                      AS correct,
@@ -49,7 +55,7 @@ def get_past_predictions(
             SUM(CASE WHEN is_correct AND confidence >= 0.65 THEN 1 ELSE 0 END) AS high_conf_correct,
             MIN(event_date)                                                   AS date_from,
             MAX(event_date)                                                   AS date_to
-        FROM past_predictions
+        FROM best
     """)).mappings().first()
 
     total_fights     = int(summary_row["total_fights"] or 0)
@@ -68,7 +74,7 @@ def get_past_predictions(
         FROM past_predictions
         WHERE event_date IS NOT NULL
         ORDER BY yr DESC
-    """)).scalars().all()
+    """)).scalars().all()  # all rows fine here — just listing years
 
     summary = PastPredictionSummary(
         total_fights=total_fights,
@@ -87,29 +93,21 @@ def get_past_predictions(
         return PastPredictionsResponse(summary=summary, recent=[])
 
     recent_rows = db.execute(text("""
-        SELECT
-            fight_id,
-            event_id,
-            event_name,
-            event_date,
-            fighter_a_id,
-            fighter_b_id,
-            fighter_a_name,
-            fighter_b_name,
-            weight_class,
-            win_prob_a,
-            win_prob_b,
-            pred_method_ko_tko,
-            pred_method_sub,
-            pred_method_dec,
-            predicted_winner_id,
-            predicted_method,
-            actual_winner_id,
-            actual_method,
-            is_correct,
-            confidence,
-            is_upset
-        FROM past_predictions
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id)
+                fight_id, event_id, event_name, event_date,
+                fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
+                weight_class, win_prob_a, win_prob_b,
+                pred_method_ko_tko, pred_method_sub, pred_method_dec,
+                predicted_winner_id, predicted_method,
+                actual_winner_id, actual_method,
+                is_correct, confidence, is_upset,
+                prediction_source, pre_fight_predicted_at
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT * FROM best
         ORDER BY event_date DESC, fight_id
         LIMIT :limit
     """), {"limit": limit}).mappings().all()
@@ -144,8 +142,14 @@ def list_past_prediction_events(
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
     total: int = db.execute(text(f"""
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id) *
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
         SELECT COUNT(DISTINCT event_id)
-        FROM past_predictions
+        FROM best
         {where}
     """), params).scalar() or 0
 
@@ -153,13 +157,19 @@ def list_past_prediction_events(
     params["offset"] = (page - 1) * page_size
 
     rows = db.execute(text(f"""
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id) *
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
         SELECT
             event_id,
             MAX(event_name)   AS event_name,
             MAX(event_date)   AS event_date,
             COUNT(*)          AS fight_count,
             SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) AS correct_count
-        FROM past_predictions
+        FROM best
         {where}
         GROUP BY event_id
         ORDER BY MAX(event_date) DESC
@@ -197,17 +207,24 @@ def get_past_prediction_event(
     db: Session = Depends(get_db),
 ) -> PastPredictionEventDetail:
     rows = db.execute(text("""
-        SELECT
-            pp.fight_id, pp.event_id, pp.event_name, pp.event_date,
-            pp.fighter_a_id, pp.fighter_b_id, pp.fighter_a_name, pp.fighter_b_name,
-            pp.weight_class, pp.win_prob_a, pp.win_prob_b,
-            pp.pred_method_ko_tko, pp.pred_method_sub, pp.pred_method_dec,
-            pp.predicted_winner_id, pp.predicted_method,
-            pp.actual_winner_id, pp.actual_method,
-            pp.is_correct, pp.confidence, pp.is_upset
-        FROM past_predictions pp
-        LEFT JOIN fight_details fd ON fd.id = pp.fight_id
-        WHERE pp.event_id = :event_id
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id)
+                fight_id, event_id, event_name, event_date,
+                fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
+                weight_class, win_prob_a, win_prob_b,
+                pred_method_ko_tko, pred_method_sub, pred_method_dec,
+                predicted_winner_id, predicted_method,
+                actual_winner_id, actual_method,
+                is_correct, confidence, is_upset,
+                prediction_source, pre_fight_predicted_at
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT best.*
+        FROM best
+        LEFT JOIN fight_details fd ON fd.id = best.fight_id
+        WHERE best.event_id = :event_id
         ORDER BY COALESCE(fd.position, 999) ASC
     """), {"event_id": event_id}).mappings().all()
 
@@ -236,7 +253,27 @@ _FIGHT_COLS = """
     pred_method_ko_tko, pred_method_sub, pred_method_dec,
     predicted_winner_id, predicted_method,
     actual_winner_id, actual_method,
-    is_correct, confidence, is_upset
+    is_correct, confidence, is_upset,
+    prediction_source, pre_fight_predicted_at
+"""
+
+# CTE that deduplicates past_predictions to one row per fight, preferring
+# pre_fight_archive over backfill so the scorecard shows leakage-free numbers.
+_DEDUP_CTE = """
+    WITH best AS (
+        SELECT DISTINCT ON (fight_id)
+            fight_id, event_id, event_name, event_date,
+            fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
+            weight_class, win_prob_a, win_prob_b,
+            pred_method_ko_tko, pred_method_sub, pred_method_dec,
+            predicted_winner_id, predicted_method,
+            actual_winner_id, actual_method,
+            is_correct, confidence, is_upset,
+            prediction_source, pre_fight_predicted_at
+        FROM past_predictions
+        ORDER BY fight_id,
+                 CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+    )
 """
 
 
@@ -267,24 +304,38 @@ def search_past_prediction_fights(
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
     total: int = db.execute(text(f"""
-        SELECT COUNT(*) FROM past_predictions {where}
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id) *
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT COUNT(*) FROM best {where}
     """), params).scalar() or 0
 
     params["limit"]  = page_size
     params["offset"] = (page - 1) * page_size
 
     rows = db.execute(text(f"""
-        SELECT pp.fight_id, pp.event_id, pp.event_name, pp.event_date,
-               pp.fighter_a_id, pp.fighter_b_id, pp.fighter_a_name, pp.fighter_b_name,
-               pp.weight_class, pp.win_prob_a, pp.win_prob_b,
-               pp.pred_method_ko_tko, pp.pred_method_sub, pp.pred_method_dec,
-               pp.predicted_winner_id, pp.predicted_method,
-               pp.actual_winner_id, pp.actual_method,
-               pp.is_correct, pp.confidence, pp.is_upset
-        FROM past_predictions pp
-        LEFT JOIN fight_details fd ON fd.id = pp.fight_id
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id)
+                fight_id, event_id, event_name, event_date,
+                fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
+                weight_class, win_prob_a, win_prob_b,
+                pred_method_ko_tko, pred_method_sub, pred_method_dec,
+                predicted_winner_id, predicted_method,
+                actual_winner_id, actual_method,
+                is_correct, confidence, is_upset,
+                prediction_source, pre_fight_predicted_at
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT best.*
+        FROM best
+        LEFT JOIN fight_details fd ON fd.id = best.fight_id
         {where}
-        ORDER BY pp.event_date DESC, COALESCE(fd.position, 999) ASC
+        ORDER BY best.event_date DESC, COALESCE(fd.position, 999) ASC
         LIMIT :limit OFFSET :offset
     """), params).mappings().all()
 
@@ -307,9 +358,11 @@ def get_past_prediction_fight(
     db: Session = Depends(get_db),
 ) -> PastPredictionItem:
     row = db.execute(text(f"""
-        SELECT {_FIGHT_COLS}
+        SELECT DISTINCT ON (fight_id) {_FIGHT_COLS}
         FROM past_predictions
         WHERE fight_id = :fight_id
+        ORDER BY fight_id,
+                 CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
     """), {"fight_id": fight_id}).mappings().first()
 
     if row is None:

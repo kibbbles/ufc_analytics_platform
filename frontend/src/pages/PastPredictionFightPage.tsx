@@ -292,6 +292,27 @@ export default function PastPredictionFightPage() {
             </Card>
           )}
 
+          {/* Prediction provenance badge */}
+          {item.prediction_source && (
+            <div className="flex justify-center">
+              {item.prediction_source === 'pre_fight_archive' ? (
+                <span
+                  title="Prediction was frozen before this fight occurred — no post-fight data was used"
+                  className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20"
+                >
+                  pre-fight prediction
+                </span>
+              ) : (
+                <span
+                  title="Prediction was computed retrospectively from historical data — may reflect post-fight stats"
+                  className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                >
+                  legacy backfill
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Actual result */}
           <ActualResultCard item={item} />
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -34,6 +34,9 @@ class PastPredictionItem(BaseModel):
     is_correct: Optional[bool] = None
     confidence: Optional[float] = None
     is_upset: Optional[bool] = None
+    # Data quality / provenance
+    prediction_source: Optional[str] = None          # 'pre_fight_archive' | 'backfill'
+    pre_fight_predicted_at: Optional[datetime] = None # when the pre-fight prediction was made
 
     model_config = {"from_attributes": True}
 

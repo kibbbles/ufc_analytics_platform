@@ -81,3 +81,40 @@ jobs:
           name: etl-cleanup-logs
           path: backend/scraper/*.log
           retention-days: 7
+
+  archive-predictions:
+    name: Archive pre-fight predictions (prevent data leakage)
+    needs: etl-cleanup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Archive completed predictions
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python backend/scraper/archive_completed_predictions.py
+
+      - name: Report success
+        if: success()
+        run: echo "Prediction archive step completed successfully."
