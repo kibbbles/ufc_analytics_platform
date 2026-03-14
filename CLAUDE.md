@@ -62,6 +62,7 @@ UFC fans and analysts lack sophisticated tools to:
 - **Middleware:** CORS, RequestID (X-Request-ID header), Timing (logs per-request duration)
 - **Logging:** Structured JSON via python-json-logger, rotating file handler (`logs/app.log`)
 - **Server:** Uvicorn (dev, `run_dev.py`) / Gunicorn + UvicornWorker (prod, `gunicorn.conf.py`)
+- **Hosting:** Google Cloud Run (`kabes-maybes-api`, `us-central1`, `min-instances=0`); auto-deploys via `deploy-backend.yml` on push to `main`
 
 ### Frontend Stack
 - **Framework:** React 19 with TypeScript 5.9 (Vite scaffold)
@@ -149,23 +150,25 @@ session.close()
 
 **All routes:**
 ```
-GET  /health                                  liveness check
-GET  /health/db                               DB readiness (503 on failure)
-GET  /api/v1/fighters                         paginated list (?search= ?page= ?page_size=)
-GET  /api/v1/fighters/{id}                    full profile + tott + record
-GET  /api/v1/fights                           paginated list (filters: event_id, fighter_id, weight_class, method)
-GET  /api/v1/fights/{id}                      fight detail + round-by-round stats
-GET  /api/v1/events                           paginated list (?year=)
-GET  /api/v1/events/{id}                      event + fight card
-POST /api/v1/predictions/fight-outcome        win probability (XGBoost + RF ensemble — Task 6 complete)
-GET  /api/v1/analytics/style-evolution        finish rates by year (?weight_class=)
-GET  /api/v1/analytics/fighter-endurance/{id} round-by-round performance profile
-
-# Phase 2 — Upcoming Events (Tasks 11-20, pending)
-GET  /api/v1/upcoming/events                  list upcoming events (ordered by date ASC)
-GET  /api/v1/upcoming/events/{id}             event card + fight list + pre-computed predictions
-GET  /api/v1/upcoming/fights/{id}             single fight prediction + full feature differentials
-POST /api/v1/admin/refresh-upcoming           manual trigger: re-scrape upcoming page + recompute
+GET  /health                                        liveness check
+GET  /health/db                                     DB readiness (503 on failure)
+GET  /api/v1/fighters                               paginated list (?search= ?page= ?page_size=)
+GET  /api/v1/fighters/{id}                          full profile + tott + record
+GET  /api/v1/fights                                 paginated list (filters: event_id, fighter_id, weight_class, method)
+GET  /api/v1/fights/{id}                            fight detail + round-by-round stats
+GET  /api/v1/events                                 paginated list (?year=)
+GET  /api/v1/events/{id}                            event + fight card
+POST /api/v1/predictions/fight-outcome              win probability (Random Forest ensemble)
+GET  /api/v1/analytics/style-evolution              finish rates by year (?weight_class=)
+GET  /api/v1/analytics/fighter-endurance/{id}       round-by-round performance profile
+GET  /api/v1/upcoming/events                        list upcoming events (ordered by date ASC)
+GET  /api/v1/upcoming/events/{id}                   event card + fight list + pre-computed predictions
+GET  /api/v1/upcoming/fights/{id}                   single fight prediction + full feature differentials
+GET  /api/v1/past-predictions                       model scorecard — summary + recent outcomes
+GET  /api/v1/past-predictions/events                paginated past events with per-event accuracy
+GET  /api/v1/past-predictions/events/{id}           all predictions for a specific past event
+GET  /api/v1/past-predictions/fights                fight-level search across all past predictions
+GET  /api/v1/past-predictions/fights/{id}           single past prediction by fight ID
 ```
 
 **Key files:**
@@ -203,14 +206,16 @@ python backend/scraper/validate_etl.py                # standalone validation
 
 ### Available Scrapers
 - `backend/scraper/live_scraper.py` — Active scraper; writes to all 6 tables (events, fights, results, stats, fighter profiles, tott)
-- `backend/scraper/upcoming_scraper.py` — **Phase 2 (Task 13, pending)** Scrapes UFCStats /upcoming, stores in upcoming_events/upcoming_fights/upcoming_predictions tables
-- `backend/scraper/run_upcoming.py` — **Phase 2 (Task 15, pending)** Entry point for upcoming scraper (mirrors live_scraper.py main)
+- `backend/scraper/upcoming_scraper.py` — Scrapes UFCStats /upcoming, stores in upcoming_events/upcoming_fights/upcoming_predictions tables
+- `backend/scraper/run_upcoming.py` — Entry point for upcoming scraper
+- `backend/scraper/compute_past_predictions.py` — Retroactive scorecard backfill (prediction_source='backfill')
+- `backend/scraper/archive_completed_predictions.py` — Freezes pre-fight prediction snapshots before ETL runs (prediction_source='pre_fight_archive')
 - `backend/scraper/bulk_scrape_career_stats.py` — Career stats scraper (manual use)
 - `backend/scraper/bulk_scrape_physical_stats.py` — Physical stats scraper (manual use)
 
 ### Database Schema (Current)
 ```sql
--- Phase 1 core tables
+-- Core historical tables
 event_details (756 rows)       -- UFC events
 fighter_details (4,449 rows)   -- Fighter profiles
 fight_details (~8,482 rows)    -- Fight matchups
@@ -218,10 +223,14 @@ fight_results (8,482 rows)     -- Fight outcomes + typed/derived columns
 fighter_tott (4,435 rows)      -- Tale of the Tape + typed columns
 fight_stats (39,912 rows)      -- Round-by-round stats + typed columns
 
--- Phase 2 upcoming tables (Tasks 11-20, to be created)
+-- Upcoming event tables (live)
 upcoming_events                -- Booked UFC events not yet completed
 upcoming_fights                -- Announced bouts with fighter FK refs (nullable for new fighters)
 upcoming_predictions           -- Pre-computed ML predictions + full feature differential JSON
+
+-- Model scorecard table (live)
+past_predictions               -- prediction_source: 'pre_fight_archive' | 'backfill'
+                               -- DISTINCT ON (fight_id) dedup prefers pre_fight_archive
 ```
 
 ### Data Loading Procedure
@@ -236,20 +245,25 @@ python post_scrape_clean.py        # Run full ETL pipeline + validation
 ```
 
 ### Automation
+- `.github/workflows/daily-keepalive.yml` — Daily 03:00 UTC: ping Supabase to prevent free tier pause
 - `.github/workflows/weekly-ufc-scraper.yml` — Sunday 18:00 UTC: live_scraper.py → completed events
-- `.github/workflows/post-scrape-clean.yml` — ETL cleanup + validation, auto-triggered after scrape
+- `.github/workflows/post-scrape-clean.yml` — ETL cleanup + archive_completed_predictions.py, auto-triggered after scrape
 - `.github/workflows/feature-engineering.yml` — Rebuild training matrix, auto-triggered after ETL
 - `.github/workflows/retrain.yml` — Retrain ML models, auto-triggered after feature engineering
-- `.github/workflows/upcoming-predictions.yml` — **Phase 2 (Task 15, pending)** Friday 12:00 UTC: upcoming_scraper + pre-compute predictions
+- `.github/workflows/deploy-backend.yml` — Build Docker image + deploy to Cloud Run; triggers on push to `main` (backend paths only)
+- `.github/workflows/upcoming-predictions.yml` — Friday 12:00 UTC: upcoming_scraper + pre-compute predictions
 
 **Weekly automation chain:**
 ```
-Sunday 18:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
-                  → post-scrape-clean     (ETL cleanup)
-                  → feature-engineering  (rebuild training_data.parquet)
-                  → retrain              (retrain + commit model artefacts)
+Daily   03:00 UTC  → daily-keepalive       (keep Supabase alive)
 
-Friday 12:00 UTC  → upcoming-predictions  (scrape next Saturday's card + pre-compute)
+Friday  12:00 UTC  → upcoming-predictions  (scrape next Saturday's card + pre-compute)
+
+Sunday  18:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
+                   → post-scrape-clean     (ETL cleanup + archive pre-fight predictions)
+                   → feature-engineering  (rebuild training_data.parquet)
+                   → retrain              (retrain + commit model artefacts)
+                   → deploy-backend       (build + deploy updated image to Cloud Run)
 ```
 
 
@@ -428,41 +442,30 @@ for ad-hoc queries and API endpoints that return fighter history.
 
 ### Architecture
 ```
-User's browser → Vercel — kabes-maybes.vercel.app (frontend, free) ✅ LIVE
+User's browser → Vercel — kabes-maybes.vercel.app (frontend) ✅ LIVE
                       ↓ API calls
-                 Render — ufc-analytics-platform.onrender.com (FastAPI, free 512MB) ✅ LIVE
+                 Google Cloud Run — kabes-maybes-api (FastAPI, Docker, us-central1) ✅ LIVE
                       ↓ SQL
                  Supabase (PostgreSQL) ✅ LIVE
 ```
 
-### Frontend — Vercel (free)
-- Connect GitHub repo at vercel.com → auto-deploys on every `git push`
-- Set Root Directory to `frontend` in Vercel project settings
-- Set one env var in Vercel dashboard: `VITE_API_BASE_URL=https://ufc-analytics-platform.onrender.com/api/v1`
-- Project name: `kabes-maybes` → URL: `https://kabes-maybes.vercel.app` ✅ LIVE
+### Frontend — Vercel
+- Auto-deploys on every push to `main`
+- Root Directory: `frontend`
+- Env var: `VITE_API_BASE_URL=https://kabes-maybes-api-417674442311.us-central1.run.app/api/v1`
+- CORS regex in `main.py` covers all Vercel preview URLs: `kabes-maybes(-git-.*-kibbbles-projects)?\.vercel\.app`
+- URL: `https://kabes-maybes.vercel.app` ✅ LIVE
 
-### Backend — Render (free tier, 512MB RAM)
-Deployment files:
-- `Dockerfile` — builds the FastAPI container (Python 3.12-slim, 1 gunicorn worker)
-- `.dockerignore` — excludes frontend, tests, logs, .env from container
-- `render.yaml` — Render IaC config: service name, Dockerfile path, health check, env vars
+### Backend — Google Cloud Run
+- Project: `kabes-maybes` (GCP, `kabe.chin@gmail.com`)
+- Service: `kabes-maybes-api`, region `us-central1`, `min-instances=0`
+- Image: `us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api:latest`
+- Secrets via Google Cloud Secret Manager: `DATABASE_URL`, `ALLOWED_ORIGINS`
+- Auto-deploys via `deploy-backend.yml` GitHub Actions on push to `main` (backend paths)
+- URL: `https://kabes-maybes-api-417674442311.us-central1.run.app` ✅ LIVE
+- Verify: `/health` → `{"status":"ok"}` | `/docs` → Swagger UI
 
-**Tradeoff:** Render's free tier spins down after 15 minutes of inactivity (cold start ~30s on next request). Acceptable for a portfolio project; upgrade to $7/month paid tier to eliminate cold starts when actively job hunting.
-
-**One-time setup (in browser at render.com):**
-1. Sign in with GitHub at render.com
-2. New → Web Service → connect `ufc_analytics_platform` repo
-3. Render auto-detects `render.yaml` — confirm settings
-4. Add environment variables in Render dashboard:
-   - `DATABASE_URL` = `postgresql://postgres:p2GrvZEea/XEY%d@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres`
-   - `ALLOWED_ORIGINS` = `["https://kabes-maybes.vercel.app","http://localhost:3000"]`
-   - `ENVIRONMENT` = `production`
-5. Click Deploy
-
-**URL:** `https://ufc-analytics-platform.onrender.com`
-**Verify:** `/health` → `{"status":"ok"}` | `/docs` → Swagger UI
-
-**Subsequent deploys:** automatic on every `git push` to `main`
+**Rollback to Render:** change `VITE_API_BASE_URL` in Vercel to `https://ufc-analytics-platform.onrender.com/api/v1` — no code changes needed.
 
 ## Frontend Design Philosophy
 
