@@ -204,7 +204,7 @@ function ModelScorecard() {
             )}
           </p>
           <p className="mt-1.5 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history.
+            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. Model retrains automatically every Sunday after new results are scraped.
           </p>
         </div>
       ) : null}
@@ -373,6 +373,9 @@ export default function HomePage() {
         <h1 className="text-3xl font-bold">UFC Analytics</h1>
         <p className="mt-2 text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
           ML-powered fight predictions and historical analysis
+        </p>
+        <p className="mt-1 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+          Fight results and stats scraped every Sunday · Upcoming predictions refreshed every Friday
         </p>
       </div>
 
