@@ -19,6 +19,16 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: unknown): State {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred'
+
+    // Stale chunk after a new deploy — reload once to pick up fresh assets
+    if (message.includes('Failed to fetch dynamically imported module')) {
+      const reloaded = sessionStorage.getItem('chunk_reload')
+      if (!reloaded) {
+        sessionStorage.setItem('chunk_reload', '1')
+        window.location.reload()
+      }
+    }
+
     return { hasError: true, message }
   }
 
