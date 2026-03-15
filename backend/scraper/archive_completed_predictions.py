@@ -203,7 +203,7 @@ def run(dry_run: bool = False) -> None:
             "is_upset":              is_upset,
             "prediction_source":     "pre_fight_archive",
             "pre_fight_predicted_at": r["pre_fight_predicted_at"],
-            "features_json":         r["features_json"],
+            "features_json":         json.dumps(r["features_json"]) if r["features_json"] is not None else None,
         }
 
         if dry_run:
