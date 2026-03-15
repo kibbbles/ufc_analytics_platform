@@ -76,6 +76,26 @@ def get_past_predictions(
         ORDER BY yr DESC
     """)).scalars().all()  # all rows fine here — just listing years
 
+    # ---- Pre-fight only stats (prediction_source = 'pre_fight_archive') ------
+    pf_row = db.execute(text("""
+        SELECT
+            COUNT(*)                                                            AS total,
+            SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)                        AS correct,
+            AVG(confidence)                                                     AS avg_confidence,
+            SUM(CASE WHEN confidence >= 0.65 THEN 1 ELSE 0 END)               AS high_conf_fights,
+            SUM(CASE WHEN is_correct AND confidence >= 0.65 THEN 1 ELSE 0 END) AS high_conf_correct
+        FROM past_predictions
+        WHERE prediction_source = 'pre_fight_archive'
+    """)).mappings().first()
+
+    pf_total          = int(pf_row["total"] or 0)
+    pf_correct        = int(pf_row["correct"] or 0)
+    pf_avg_conf       = float(pf_row["avg_confidence"] or 0.0)
+    pf_hc_fights      = int(pf_row["high_conf_fights"] or 0)
+    pf_hc_correct     = int(pf_row["high_conf_correct"] or 0)
+    pf_accuracy       = pf_correct / pf_total if pf_total > 0 else 0.0
+    pf_hc_accuracy    = pf_hc_correct / pf_hc_fights if pf_hc_fights > 0 else 0.0
+
     summary = PastPredictionSummary(
         total_fights=total_fights,
         correct=correct,
@@ -86,6 +106,13 @@ def get_past_predictions(
         date_from=str(date_from_val) if date_from_val else "",
         date_to=str(date_to_val) if date_to_val else "",
         available_years=[int(y) for y in years_rows],
+        pre_fight_total=pf_total,
+        pre_fight_correct=pf_correct,
+        pre_fight_accuracy=pf_accuracy,
+        pre_fight_avg_confidence=pf_avg_conf,
+        pre_fight_high_conf_fights=pf_hc_fights,
+        pre_fight_high_conf_correct=pf_hc_correct,
+        pre_fight_high_conf_accuracy=pf_hc_accuracy,
     )
 
     # ---- Recent predictions -------------------------------------------------

@@ -254,6 +254,14 @@ export interface PastPredictionSummary {
   date_from: string
   date_to: string
   available_years: number[]
+  // Pre-fight only (prediction_source = 'pre_fight_archive')
+  pre_fight_total: number
+  pre_fight_correct: number
+  pre_fight_accuracy: number
+  pre_fight_avg_confidence: number
+  pre_fight_high_conf_fights: number
+  pre_fight_high_conf_correct: number
+  pre_fight_high_conf_accuracy: number
 }
 
 export interface PastPredictionsResponse {

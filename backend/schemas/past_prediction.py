@@ -51,6 +51,14 @@ class PastPredictionSummary(BaseModel):
     date_from: str
     date_to: str
     available_years: list[int] = []
+    # Pre-fight only stats (prediction_source = 'pre_fight_archive')
+    pre_fight_total: int = 0
+    pre_fight_correct: int = 0
+    pre_fight_accuracy: float = 0.0
+    pre_fight_avg_confidence: float = 0.0
+    pre_fight_high_conf_fights: int = 0
+    pre_fight_high_conf_correct: int = 0
+    pre_fight_high_conf_accuracy: float = 0.0
 
 
 class PastPredictionsResponse(BaseModel):

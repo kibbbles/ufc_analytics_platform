@@ -190,21 +190,62 @@ function ModelScorecard() {
         <p className="text-sm text-red-500">Failed to load scorecard: {summaryError}</p>
       ) : summary && summary.total_fights > 0 ? (
         <div className="mb-4">
-          <p className="text-sm font-mono tabular-nums">
-            <span className="font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-              {formatPct(summary.accuracy)} accurate
-            </span>
-            <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {' · '}{summary.correct}/{summary.total_fights} fights
-            </span>
-            {summary.high_conf_fights > 0 && (
-              <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                {' '}({formatPct(summary.high_conf_accuracy)} when ≥65% confident)
-              </span>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {/* All predictions card */}
+            <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-4 py-3">
+              <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-1.5">
+                All predictions
+              </p>
+              <p className="font-mono text-xl font-bold tabular-nums">
+                {formatPct(summary.accuracy)}
+              </p>
+              <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                {summary.correct}/{summary.total_fights} fights
+              </p>
+              {summary.high_conf_fights > 0 && (
+                <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  {formatPct(summary.high_conf_accuracy)} at ≥65% conf
+                </p>
+              )}
+              <p className="mt-2 text-xs italic text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                Includes historical estimate
+              </p>
+            </div>
+
+            {/* Live pre-fight card */}
+            {summary.pre_fight_total > 0 ? (
+              <div className="rounded-lg border border-[var(--color-primary)]/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-1.5">
+                  Live pre-fight
+                </p>
+                <p className="font-mono text-xl font-bold tabular-nums text-[var(--color-primary)]">
+                  {formatPct(summary.pre_fight_accuracy)}
+                </p>
+                <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  {summary.pre_fight_correct}/{summary.pre_fight_total} fights
+                </p>
+                <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  avg conf {formatPct(summary.pre_fight_avg_confidence)}
+                </p>
+                {summary.pre_fight_high_conf_fights > 0 && (
+                  <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    {formatPct(summary.pre_fight_high_conf_accuracy)} at ≥65% conf
+                  </p>
+                )}
+                <p className="mt-2 text-xs italic text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  Frozen before event · no look-ahead
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-[var(--color-border-light)] dark:border-[var(--color-border)] px-4 py-3 flex items-center justify-center">
+                <p className="text-xs text-center text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  Live pre-fight data<br />accumulates over time
+                </p>
+              </div>
             )}
-          </p>
-          <p className="mt-1.5 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. Model retrains automatically every Sunday after new results are scraped.
+          </div>
+          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. Live pre-fight predictions are frozen before each event with no access to post-fight data. Model retrains automatically every Sunday.
           </p>
         </div>
       ) : null}
