@@ -224,8 +224,18 @@ def get_past_prediction_event(
         SELECT best.*
         FROM best
         LEFT JOIN fight_details fd ON fd.id = best.fight_id
+        LEFT JOIN LATERAL (
+            SELECT position FROM upcoming_fights uf
+            WHERE (
+                (uf.fighter_a_id = best.fighter_a_id AND uf.fighter_b_id = best.fighter_b_id)
+                OR
+                (uf.fighter_a_id = best.fighter_b_id AND uf.fighter_b_id = best.fighter_a_id)
+            )
+            ORDER BY uf.scraped_at DESC
+            LIMIT 1
+        ) uf_pos ON TRUE
         WHERE best.event_id = :event_id
-        ORDER BY COALESCE(fd.position, 999) ASC
+        ORDER BY COALESCE(uf_pos.position, fd.position, 999) ASC
     """), {"event_id": event_id}).mappings().all()
 
     if not rows:

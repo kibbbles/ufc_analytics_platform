@@ -66,7 +66,10 @@ def list_upcoming_events(db: Session = Depends(get_db)):
             ue.is_numbered,
             COUNT(uf.id)     AS fight_count
         FROM upcoming_events ue
-        LEFT JOIN upcoming_fights uf ON uf.event_id = ue.id
+        LEFT JOIN upcoming_fights uf
+            ON uf.event_id = ue.id
+            AND (uf.archived IS NULL OR uf.archived = FALSE)
+        WHERE ue.date_proper >= CURRENT_DATE
         GROUP BY ue.id
         ORDER BY ue.date_proper ASC
     """)).mappings().all()
@@ -123,6 +126,7 @@ def get_upcoming_event(event_id: str, db: Session = Depends(get_db)):
         FROM upcoming_fights uf
         LEFT JOIN upcoming_predictions up ON up.fight_id = uf.id
         WHERE uf.event_id = :event_id
+          AND (uf.archived IS NULL OR uf.archived = FALSE)
         ORDER BY uf.position ASC NULLS LAST, uf.id ASC
     """), {"event_id": event_id}).mappings().all()
 
@@ -168,6 +172,7 @@ def get_upcoming_fight(fight_id: str, db: Session = Depends(get_db)):
         FROM upcoming_fights uf
         LEFT JOIN upcoming_predictions up ON up.fight_id = uf.id
         WHERE uf.id = :fight_id
+          AND (uf.archived IS NULL OR uf.archived = FALSE)
     """), {"fight_id": fight_id}).mappings().first()
 
     if row is None:
