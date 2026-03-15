@@ -313,5 +313,41 @@
     },
     "best_model": "logistic_regression",
     "method_accuracy": 0.4909
+  },
+  {
+    "timestamp": "2026-03-15T18:39:55.908845+00:00",
+    "feature_hash": "aedb0e08",
+    "n_features": 30,
+    "train_rows": 4375,
+    "val_rows": 937,
+    "test_rows": 938,
+    "models": {
+      "logistic_regression": {
+        "train_accuracy": 0.6206,
+        "val_accuracy": 0.5966,
+        "val_auc": 0.644,
+        "test_accuracy": 0.6375,
+        "test_auc": 0.679,
+        "val_test_gap": -0.0409
+      },
+      "xgboost": {
+        "train_accuracy": 0.6727,
+        "val_accuracy": 0.5891,
+        "val_auc": 0.6387,
+        "test_accuracy": 0.6269,
+        "test_auc": 0.6783,
+        "val_test_gap": -0.0378
+      },
+      "random_forest": {
+        "train_accuracy": 0.7017,
+        "val_accuracy": 0.6009,
+        "val_auc": 0.6421,
+        "test_accuracy": 0.6407,
+        "test_auc": 0.6789,
+        "val_test_gap": -0.0399
+      }
+    },
+    "best_model": "logistic_regression",
+    "method_accuracy": 0.4909
   }
 ]
