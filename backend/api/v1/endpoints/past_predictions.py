@@ -351,6 +351,24 @@ def get_past_prediction_stats(
         ORDER BY MIN(confidence) DESC
     """)).mappings().all()
 
+    _WC_ORDER = """
+        CASE weight_class
+            WHEN 'Heavyweight'            THEN 1
+            WHEN 'Light Heavyweight'      THEN 2
+            WHEN 'Middleweight'           THEN 3
+            WHEN 'Welterweight'           THEN 4
+            WHEN 'Lightweight'            THEN 5
+            WHEN 'Featherweight'          THEN 6
+            WHEN 'Bantamweight'           THEN 7
+            WHEN 'Flyweight'              THEN 8
+            WHEN 'Women''s Featherweight' THEN 9
+            WHEN 'Women''s Bantamweight'  THEN 10
+            WHEN 'Women''s Flyweight'     THEN 11
+            WHEN 'Women''s Strawweight'   THEN 12
+            ELSE 99
+        END ASC
+    """
+
     all_wc_rows = db.execute(text(f"""
         WITH best AS (
             SELECT DISTINCT ON (fight_id) weight_class, is_correct
@@ -364,8 +382,7 @@ def get_past_prediction_stats(
         FROM best
         WHERE weight_class IS NOT NULL AND is_correct IS NOT NULL
         GROUP BY weight_class
-        ORDER BY COUNT(*) DESC
-        LIMIT 8
+        ORDER BY {_WC_ORDER}
     """)).mappings().all()
 
     # ── Pre-fight only ───────────────────────────────────────────────────────
@@ -380,7 +397,7 @@ def get_past_prediction_stats(
         ORDER BY MIN(confidence) DESC
     """)).mappings().all()
 
-    pf_wc_rows = db.execute(text("""
+    pf_wc_rows = db.execute(text(f"""
         SELECT weight_class,
                COUNT(*) AS fights,
                SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
@@ -388,8 +405,7 @@ def get_past_prediction_stats(
         WHERE prediction_source = 'pre_fight_archive'
           AND weight_class IS NOT NULL AND is_correct IS NOT NULL
         GROUP BY weight_class
-        ORDER BY COUNT(*) DESC
-        LIMIT 8
+        ORDER BY {_WC_ORDER}
     """)).mappings().all()
 
     pf_calibration = db.execute(text("""
