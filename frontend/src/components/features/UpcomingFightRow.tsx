@@ -36,6 +36,9 @@ export default function UpcomingFightRow({ fight }: Props) {
   const aWins = hasPrediction && prediction.win_prob_a! >= prediction.win_prob_b!
   const methods = hasPrediction ? getMethods(prediction!) : []
   const topLabel = hasPrediction ? topMethodLabel(methods) : ''
+  const confidence = hasPrediction
+    ? (Math.max(prediction!.win_prob_a ?? 0, prediction!.win_prob_b ?? 0) - 0.5) * 2
+    : null
 
   return (
     <div
@@ -119,20 +122,28 @@ export default function UpcomingFightRow({ fight }: Props) {
 
       {/* Method breakdown */}
       {hasPrediction ? (
-        <div className="mt-1.5 flex justify-center gap-4 font-mono text-xs tabular-nums">
-          {methods.map(({ label, value }) => (
-            <span
-              key={label}
-              className={
-                label === topLabel
-                  ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
-                  : 'text-[var(--color-text-muted)] opacity-50'
-              }
-            >
-              {label} {pct(value)}
-            </span>
-          ))}
-        </div>
+        <>
+          <div className="mt-1.5 flex justify-center gap-4 font-mono text-xs tabular-nums">
+            {methods.map(({ label, value }) => (
+              <span
+                key={label}
+                className={
+                  label === topLabel
+                    ? 'font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                    : 'text-[var(--color-text-muted)] opacity-50'
+                }
+              >
+                {label} {pct(value)}
+              </span>
+            ))}
+          </div>
+          {confidence != null && (
+            <div className="mt-1 text-center">
+              <span className="text-xs text-[var(--color-text-muted)]">confidence </span>
+              <span className="font-mono text-xs font-semibold tabular-nums">{pct(confidence)}</span>
+            </div>
+          )}
+        </>
       ) : (
         <p className="mt-1 text-center text-xs text-[var(--color-text-muted)]">No prediction available</p>
       )}

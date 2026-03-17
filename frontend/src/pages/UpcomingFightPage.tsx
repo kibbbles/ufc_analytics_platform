@@ -400,11 +400,11 @@ export default function UpcomingFightPage() {
                   ))}
                 </div>
                 {(() => {
-                  const confidence = Math.max(pred.win_prob_a ?? 0, pred.win_prob_b ?? 0)
+                  const confidence = (Math.max(pred.win_prob_a ?? 0, pred.win_prob_b ?? 0) - 0.5) * 2
                   return (
                     <div className="mt-2 text-center text-xs text-[var(--color-text-muted)]">
                       confidence{' '}
-                      <span className={`font-mono tabular-nums font-semibold ${confidence >= 0.65 ? 'text-green-600 dark:text-green-400' : ''}`}>
+                      <span className="font-mono tabular-nums font-semibold">
                         {pct(confidence)}
                       </span>
                     </div>
