@@ -67,9 +67,6 @@ function FightSearchRow({ item }: { item: PastPredictionItem }) {
           <span className={isCorrect ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : ''}>
             {predWinner}
           </span>
-          {item.confidence != null && (
-            <span className="font-mono tabular-nums"> {formatPct(item.confidence)}</span>
-          )}
           {item.predicted_method && <span> via {item.predicted_method}</span>}
         </p>
         <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
@@ -79,6 +76,12 @@ function FightSearchRow({ item }: { item: PastPredictionItem }) {
           </span>
           {item.actual_method && <span> via {item.actual_method}</span>}
         </p>
+        {item.confidence != null && (
+          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            <span className="w-16 inline-block">Confidence</span>
+            <span className="font-mono font-semibold tabular-nums">{formatPct(item.confidence)}</span>
+          </p>
+        )}
       </div>
     </Link>
   )
@@ -253,7 +256,10 @@ function ModelScorecard() {
             )}
           </div>
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. Live pre-fight predictions are frozen before each event with no access to post-fight data. Model retrains automatically every Sunday.
+            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. Live pre-fight predictions are frozen before each event before any results are known, and the model retrains automatically every Sunday on completed fight data only — no look-ahead bias.
+          </p>
+          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            Confidence measures how far the model's prediction is from a coin flip, scaled to 0–100%: a 75/25 prediction is 50% confident, an 85/15 pick is 70% confident. It is not a statistical confidence interval — it reflects the model's conviction on a given matchup based on the feature differentials going in. The high-confidence threshold (≥65%) corresponds to the model giving one fighter at least an 82.5% chance of winning.
           </p>
         </div>
       ) : null}

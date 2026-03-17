@@ -168,7 +168,7 @@ def run(dry_run: bool = False) -> None:
         # ------------------------------------------------------------------
         predicted_winner_id = fighter_a_id if (win_prob_a or 0) >= 0.5 else fighter_b_id
         is_correct          = (predicted_winner_id == actual_winner_id) if actual_winner_id else None
-        confidence          = max(win_prob_a or 0, win_prob_b or 0)
+        confidence          = (max(win_prob_a or 0, win_prob_b or 0) - 0.5) * 2
         is_upset            = (not is_correct) and (confidence >= 0.65) if is_correct is not None else None
 
         methods = {
