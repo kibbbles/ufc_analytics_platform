@@ -111,13 +111,16 @@ def run(dry_run: bool = False) -> None:
             FROM upcoming_fights uf
             JOIN upcoming_events ue ON ue.id = uf.event_id
             JOIN upcoming_predictions up ON up.fight_id = uf.id
-            -- Match against completed fights, either fighter order
+            -- Match against completed fights, either fighter order.
+            -- Constrain to within 14 days of the upcoming event date to prevent
+            -- rematches (same fighter pair, older fight_details row) from matching.
             JOIN fight_details fd ON (
                 (fd.fighter_a_id = uf.fighter_a_id AND fd.fighter_b_id = uf.fighter_b_id)
                 OR
                 (fd.fighter_a_id = uf.fighter_b_id AND fd.fighter_b_id = uf.fighter_a_id)
             )
             JOIN event_details e ON e.id = fd.event_id
+                AND ABS(e.date_proper - ue.date_proper) <= 14
             LEFT JOIN fight_results fr ON fr.fight_id = fd.id
             WHERE ue.date_proper < CURRENT_DATE
               AND uf.fighter_a_id IS NOT NULL
