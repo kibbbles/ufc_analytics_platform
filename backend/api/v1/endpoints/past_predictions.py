@@ -408,6 +408,20 @@ def get_past_prediction_stats(
         ORDER BY {_WC_ORDER}
     """)).mappings().all()
 
+    all_calibration = db.execute(text("""
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id) confidence, is_correct
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT
+            AVG(CASE WHEN is_correct = TRUE  THEN confidence END) AS avg_conf_correct,
+            AVG(CASE WHEN is_correct = FALSE THEN confidence END) AS avg_conf_incorrect
+        FROM best
+        WHERE confidence IS NOT NULL AND is_correct IS NOT NULL
+    """)).mappings().first()
+
     pf_calibration = db.execute(text("""
         SELECT
             AVG(CASE WHEN is_correct = TRUE  THEN confidence END) AS avg_conf_correct,
@@ -435,18 +449,26 @@ def get_past_prediction_stats(
                                        accuracy=c / f if f else 0.0))
         return out
 
+    def _calib(row) -> tuple:
+        correct = float(row["avg_conf_correct"]) if row and row["avg_conf_correct"] is not None else None
+        incorrect = float(row["avg_conf_incorrect"]) if row and row["avg_conf_incorrect"] is not None else None
+        return correct, incorrect
+
+    all_conf_correct, all_conf_incorrect = _calib(all_calibration)
+    pf_conf_correct,  pf_conf_incorrect  = _calib(pf_calibration)
+
     return PastPredictionModalStats(
         all=ModalStatsSection(
             conf_buckets=_buckets(all_bucket_rows),
             weight_classes=_wc(all_wc_rows),
+            avg_conf_correct=all_conf_correct,
+            avg_conf_incorrect=all_conf_incorrect,
         ),
         pre_fight=ModalStatsSection(
             conf_buckets=_buckets(pf_bucket_rows),
             weight_classes=_wc(pf_wc_rows),
-            avg_conf_correct=float(pf_calibration["avg_conf_correct"])
-                if pf_calibration and pf_calibration["avg_conf_correct"] is not None else None,
-            avg_conf_incorrect=float(pf_calibration["avg_conf_incorrect"])
-                if pf_calibration and pf_calibration["avg_conf_incorrect"] is not None else None,
+            avg_conf_correct=pf_conf_correct,
+            avg_conf_incorrect=pf_conf_incorrect,
         ),
     )
 

@@ -175,8 +175,8 @@ export default function ScorecardModal({ mode, onClose }: Props) {
             <p className="text-sm text-red-500 text-center py-4">{error}</p>
           ) : (
             <>
-              {/* Pre-fight calibration callout (pre_fight mode only) */}
-              {mode === 'pre_fight' && section && (
+              {/* Calibration callout */}
+              {section && (
                 section.avg_conf_correct != null || section.avg_conf_incorrect != null
               ) && (
                 <div className="grid grid-cols-2 gap-3">
