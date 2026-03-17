@@ -139,7 +139,7 @@ export default function UpcomingFightRow({ fight }: Props) {
           </div>
           {confidence != null && (
             <div className="mt-1 text-center">
-              <span className="text-xs text-[var(--color-text-muted)]">confidence </span>
+              <span className="text-xs text-[var(--color-text-muted)]">conviction </span>
               <span className="font-mono text-xs font-semibold tabular-nums">{pct(confidence)}</span>
             </div>
           )}

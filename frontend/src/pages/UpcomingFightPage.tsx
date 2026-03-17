@@ -403,7 +403,7 @@ export default function UpcomingFightPage() {
                   const confidence = (Math.max(pred.win_prob_a ?? 0, pred.win_prob_b ?? 0) - 0.5) * 2
                   return (
                     <div className="mt-2 text-center text-xs text-[var(--color-text-muted)]">
-                      confidence{' '}
+                      conviction{' '}
                       <span className="font-mono tabular-nums font-semibold">
                         {pct(confidence)}
                       </span>

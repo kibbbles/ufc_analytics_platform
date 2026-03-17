@@ -321,16 +321,16 @@ _DEDUP_CTE = """
 @router.get(
     "/stats",
     response_model=PastPredictionModalStats,
-    summary="Confidence bucket and weight class accuracy breakdown for scorecard modals",
+    summary="Conviction bucket and weight class accuracy breakdown for scorecard modals",
 )
 def get_past_prediction_stats(
     db: Session = Depends(get_db),
 ) -> PastPredictionModalStats:
     _BUCKET_CASE = """
         CASE
-            WHEN confidence >= 0.70 THEN '70%+'
-            WHEN confidence >= 0.60 THEN '60-70%'
-            ELSE '50-60%'
+            WHEN confidence >= 0.30 THEN '30%+'
+            WHEN confidence >= 0.20 THEN '20-30%'
+            ELSE 'Under 20%'
         END
     """
 

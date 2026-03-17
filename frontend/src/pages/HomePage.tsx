@@ -78,7 +78,7 @@ function FightSearchRow({ item }: { item: PastPredictionItem }) {
         </p>
         {item.confidence != null && (
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            <span className="w-16 inline-block">Confidence</span>
+            <span className="w-16 inline-block">Conviction</span>
             <span className="font-mono font-semibold tabular-nums">{formatPct(item.confidence)}</span>
           </p>
         )}
@@ -236,7 +236,7 @@ function ModelScorecard() {
                   {summary.pre_fight_correct}/{summary.pre_fight_total} fights
                 </p>
                 <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  avg conf {formatPct(summary.pre_fight_avg_confidence)}
+                  avg conviction {formatPct(summary.pre_fight_avg_confidence)}
                 </p>
                 {summary.pre_fight_high_conf_fights > 0 && (
                   <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
@@ -259,7 +259,7 @@ function ModelScorecard() {
             Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. Live pre-fight predictions are frozen before each event before any results are known, and the model retrains automatically every Sunday on completed fight data only — no look-ahead bias.
           </p>
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Confidence measures how far the model's prediction is from a coin flip, scaled to 0–100%: a 75/25 prediction is 50% confident, an 85/15 pick is 70% confident. It is not a statistical confidence interval — it reflects the model's conviction on a given matchup based on the feature differentials going in. The high-confidence threshold (≥65%) corresponds to the model giving one fighter at least an 82.5% chance of winning.
+            Conviction measures how far the model's prediction is from a coin flip, scaled to 0–100%. A 60/40 prediction = 20% conviction, a 75/25 pick = 50% conviction, an 85/15 pick = 70% conviction. It is not a statistical confidence interval — it reflects how decisive the model is on a given matchup based on the feature differentials going in. The high-conviction threshold (≥65%) means the model gave one fighter at least an 82.5% chance of winning.
           </p>
         </div>
       ) : null}

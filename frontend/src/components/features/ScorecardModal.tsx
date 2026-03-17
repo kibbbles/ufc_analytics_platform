@@ -182,7 +182,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
                     <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                      Avg conf · correct
+                      Avg conviction · correct
                     </p>
                     <p className="font-mono text-lg font-bold tabular-nums text-green-500 mt-0.5">
                       {section.avg_conf_correct != null ? formatPct(section.avg_conf_correct) : '—'}
@@ -190,7 +190,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                   </div>
                   <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
                     <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                      Avg conf · wrong
+                      Avg conviction · wrong
                     </p>
                     <p className="font-mono text-lg font-bold tabular-nums text-[var(--color-primary)] mt-0.5">
                       {section.avg_conf_incorrect != null ? formatPct(section.avg_conf_incorrect) : '—'}
@@ -203,7 +203,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
               {section && section.conf_buckets.length > 0 && (
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-2">
-                    By confidence
+                    By Conviction
                   </h3>
                   <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] overflow-hidden">
                     <table className="w-full text-xs">
