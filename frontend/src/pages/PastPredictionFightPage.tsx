@@ -283,8 +283,8 @@ export default function PastPredictionFightPage() {
               </div>
               {item.confidence != null && (
                 <div className="mt-2 text-center text-xs text-[var(--color-text-muted)]">
-                  confidence{' '}
-                  <span className={`font-mono tabular-nums font-semibold ${item.confidence >= 0.65 ? 'text-green-600 dark:text-green-400' : ''}`}>
+                  conviction{' '}
+                  <span className="font-mono tabular-nums font-semibold">
                     {pct(item.confidence)}
                   </span>
                 </div>
