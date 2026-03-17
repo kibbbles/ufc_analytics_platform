@@ -91,11 +91,6 @@ function FightRow({ item }: { item: PastPredictionItem }) {
           <span className={isCorrect ? 'font-medium text-[var(--color-primary)]' : ''}>
             {predWinner}
           </span>
-          {item.confidence != null && (
-            <span className="font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {' '}{formatPct(item.confidence)}
-            </span>
-          )}
           {item.predicted_method && (
             <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
               {' '}via {item.predicted_method}
@@ -113,6 +108,14 @@ function FightRow({ item }: { item: PastPredictionItem }) {
             </span>
           )}
         </p>
+        {item.confidence != null && (
+          <p className="text-xs text-center text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
+            conviction{' '}
+            <span className="font-mono tabular-nums font-semibold">
+              {formatPct(item.confidence)}
+            </span>
+          </p>
+        )}
       </div>
     </div>
   )
