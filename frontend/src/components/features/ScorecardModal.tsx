@@ -139,25 +139,22 @@ export default function ScorecardModal({ mode, onClose }: Props) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/50"
+        className="fixed inset-0 z-40 bg-black/60 p-4 flex items-center justify-center"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Bottom sheet */}
+      {/* Centered modal */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={`${title} details`}
-        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl border-t border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] max-h-[85vh]"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
       >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="h-1 w-10 rounded-full bg-[var(--color-border-light)] dark:bg-[var(--color-border)]" />
-        </div>
+        <div className="pointer-events-auto w-full max-w-lg flex flex-col rounded-xl border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] shadow-2xl max-h-[85vh]">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)]">
+        <div className="flex items-center justify-between px-5 py-4 shrink-0 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)]">
           <h2 className="font-bold text-base">{title}</h2>
           <button
             onClick={onClose}
@@ -171,7 +168,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
         </div>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto flex-1 px-4 py-4 space-y-5 pb-8">
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5 pb-6">
           {loading ? (
             <LoadingSkeleton lines={8} />
           ) : error ? (
@@ -290,7 +287,8 @@ export default function ScorecardModal({ mode, onClose }: Props) {
             </>
           )}
         </div>
-      </div>
+        </div>{/* inner card */}
+      </div>{/* centering shell */}
     </>
   )
 }
