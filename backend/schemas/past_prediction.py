@@ -99,3 +99,31 @@ class PastPredictionFightsResponse(BaseModel):
     total_pages: int
     page: int
     page_size: int
+
+
+# ── Modal stats ───────────────────────────────────────────────────────────────
+
+class ConfBucket(BaseModel):
+    label: str
+    fights: int
+    correct: int
+    accuracy: float
+
+
+class WeightClassStat(BaseModel):
+    weight_class: str
+    fights: int
+    correct: int
+    accuracy: float
+
+
+class ModalStatsSection(BaseModel):
+    conf_buckets: list[ConfBucket]
+    weight_classes: list[WeightClassStat]
+    avg_conf_correct: Optional[float] = None
+    avg_conf_incorrect: Optional[float] = None
+
+
+class PastPredictionModalStats(BaseModel):
+    all: ModalStatsSection
+    pre_fight: ModalStatsSection

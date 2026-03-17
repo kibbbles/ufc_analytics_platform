@@ -298,6 +298,34 @@ export interface PastPredictionFightsResponse {
   page_size: number
 }
 
+// ── Past Prediction Modal Stats ───────────────────────────────────────────────
+
+export interface ConfBucket {
+  label: string
+  fights: number
+  correct: number
+  accuracy: number
+}
+
+export interface WeightClassStat {
+  weight_class: string
+  fights: number
+  correct: number
+  accuracy: number
+}
+
+export interface ModalStatsSection {
+  conf_buckets: ConfBucket[]
+  weight_classes: WeightClassStat[]
+  avg_conf_correct: number | null
+  avg_conf_incorrect: number | null
+}
+
+export interface PastPredictionModalStats {
+  all: ModalStatsSection
+  pre_fight: ModalStatsSection
+}
+
 // ── Predictions ──────────────────────────────────────────────────────────────
 
 export interface PredictionRequest {

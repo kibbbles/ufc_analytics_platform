@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import { LoadingSkeleton, Pagination } from '@components/common'
+import ScorecardModal, { type ScorecardModalMode } from '@components/features/ScorecardModal'
 import { formatDate } from '@utils/format'
 import type { PastPredictionItem } from '@t/api'
 
@@ -90,6 +91,7 @@ function FightSearchRow({ item }: { item: PastPredictionItem }) {
 type ScorecardTab = 'events' | 'fights'
 
 function ModelScorecard() {
+  const [modal, setModal]           = useState<ScorecardModalMode | null>(null)
   const [tab, setTab]               = useState<ScorecardTab>('events')
   const [page, setPage]             = useState(1)
   const [search, setSearch]         = useState('')
@@ -191,8 +193,11 @@ function ModelScorecard() {
       ) : summary && summary.total_fights > 0 ? (
         <div className="mb-4">
           <div className="grid grid-cols-2 gap-3 mb-3">
-            {/* All predictions card */}
-            <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-4 py-3">
+            {/* All predictions card — tap to open modal */}
+            <button
+              onClick={() => setModal('all')}
+              className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-4 py-3 text-left w-full hover:border-[var(--color-primary)]/50 transition-colors"
+            >
               <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-1.5">
                 All predictions
               </p>
@@ -210,11 +215,14 @@ function ModelScorecard() {
               <p className="mt-2 text-xs italic text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                 Includes historical estimate
               </p>
-            </div>
+            </button>
 
-            {/* Live pre-fight card */}
+            {/* Live pre-fight card — tap to open modal */}
             {summary.pre_fight_total > 0 ? (
-              <div className="rounded-lg border border-[var(--color-primary)]/40 px-4 py-3">
+              <button
+                onClick={() => setModal('pre_fight')}
+                className="rounded-lg border border-[var(--color-primary)]/40 px-4 py-3 text-left w-full hover:border-[var(--color-primary)]/70 transition-colors"
+              >
                 <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-1.5">
                   Live pre-fight
                 </p>
@@ -235,7 +243,7 @@ function ModelScorecard() {
                 <p className="mt-2 text-xs italic text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                   Frozen before event · no look-ahead
                 </p>
-              </div>
+              </button>
             ) : (
               <div className="rounded-lg border border-dashed border-[var(--color-border-light)] dark:border-[var(--color-border)] px-4 py-3 flex items-center justify-center">
                 <p className="text-xs text-center text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
@@ -399,6 +407,9 @@ function ModelScorecard() {
           </p>
         )
       )}
+
+      {/* Scorecard detail modal */}
+      {modal && <ScorecardModal mode={modal} onClose={() => setModal(null)} />}
     </section>
   )
 }

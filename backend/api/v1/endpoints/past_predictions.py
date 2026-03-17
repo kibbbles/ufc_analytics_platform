@@ -24,6 +24,10 @@ from schemas.past_prediction import (
     PastPredictionEventsResponse,
     PastPredictionEventDetail,
     PastPredictionFightsResponse,
+    ConfBucket,
+    WeightClassStat,
+    ModalStatsSection,
+    PastPredictionModalStats,
 )
 
 logger = logging.getLogger(__name__)
@@ -315,6 +319,123 @@ _DEDUP_CTE = """
 
 
 @router.get(
+    "/stats",
+    response_model=PastPredictionModalStats,
+    summary="Confidence bucket and weight class accuracy breakdown for scorecard modals",
+)
+def get_past_prediction_stats(
+    db: Session = Depends(get_db),
+) -> PastPredictionModalStats:
+    _BUCKET_CASE = """
+        CASE
+            WHEN confidence >= 0.70 THEN '70%+'
+            WHEN confidence >= 0.60 THEN '60-70%'
+            ELSE '50-60%'
+        END
+    """
+
+    # ── All predictions (dedup) ──────────────────────────────────────────────
+    all_bucket_rows = db.execute(text(f"""
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id) confidence, is_correct, weight_class
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT {_BUCKET_CASE} AS bucket,
+               COUNT(*) AS fights,
+               SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
+        FROM best
+        WHERE confidence IS NOT NULL AND is_correct IS NOT NULL
+        GROUP BY bucket
+        ORDER BY MIN(confidence) DESC
+    """)).mappings().all()
+
+    all_wc_rows = db.execute(text(f"""
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id) weight_class, is_correct
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT weight_class,
+               COUNT(*) AS fights,
+               SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
+        FROM best
+        WHERE weight_class IS NOT NULL AND is_correct IS NOT NULL
+        GROUP BY weight_class
+        ORDER BY COUNT(*) DESC
+        LIMIT 8
+    """)).mappings().all()
+
+    # ── Pre-fight only ───────────────────────────────────────────────────────
+    pf_bucket_rows = db.execute(text(f"""
+        SELECT {_BUCKET_CASE} AS bucket,
+               COUNT(*) AS fights,
+               SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
+        FROM past_predictions
+        WHERE prediction_source = 'pre_fight_archive'
+          AND confidence IS NOT NULL AND is_correct IS NOT NULL
+        GROUP BY bucket
+        ORDER BY MIN(confidence) DESC
+    """)).mappings().all()
+
+    pf_wc_rows = db.execute(text("""
+        SELECT weight_class,
+               COUNT(*) AS fights,
+               SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
+        FROM past_predictions
+        WHERE prediction_source = 'pre_fight_archive'
+          AND weight_class IS NOT NULL AND is_correct IS NOT NULL
+        GROUP BY weight_class
+        ORDER BY COUNT(*) DESC
+        LIMIT 8
+    """)).mappings().all()
+
+    pf_calibration = db.execute(text("""
+        SELECT
+            AVG(CASE WHEN is_correct = TRUE  THEN confidence END) AS avg_conf_correct,
+            AVG(CASE WHEN is_correct = FALSE THEN confidence END) AS avg_conf_incorrect
+        FROM past_predictions
+        WHERE prediction_source = 'pre_fight_archive'
+          AND confidence IS NOT NULL AND is_correct IS NOT NULL
+    """)).mappings().first()
+
+    def _buckets(rows: list) -> list[ConfBucket]:
+        out = []
+        for r in rows:
+            f = int(r["fights"])
+            c = int(r["correct"])
+            out.append(ConfBucket(label=r["bucket"], fights=f, correct=c,
+                                  accuracy=c / f if f else 0.0))
+        return out
+
+    def _wc(rows: list) -> list[WeightClassStat]:
+        out = []
+        for r in rows:
+            f = int(r["fights"])
+            c = int(r["correct"])
+            out.append(WeightClassStat(weight_class=r["weight_class"], fights=f, correct=c,
+                                       accuracy=c / f if f else 0.0))
+        return out
+
+    return PastPredictionModalStats(
+        all=ModalStatsSection(
+            conf_buckets=_buckets(all_bucket_rows),
+            weight_classes=_wc(all_wc_rows),
+        ),
+        pre_fight=ModalStatsSection(
+            conf_buckets=_buckets(pf_bucket_rows),
+            weight_classes=_wc(pf_wc_rows),
+            avg_conf_correct=float(pf_calibration["avg_conf_correct"])
+                if pf_calibration and pf_calibration["avg_conf_correct"] is not None else None,
+            avg_conf_incorrect=float(pf_calibration["avg_conf_incorrect"])
+                if pf_calibration and pf_calibration["avg_conf_incorrect"] is not None else None,
+        ),
+    )
+
+
+@router.get(
     "/fights",
     response_model=PastPredictionFightsResponse,
     summary="Search past predictions by fighter name",
@@ -322,6 +443,7 @@ _DEDUP_CTE = """
 def search_past_prediction_fights(
     search: str | None = Query(None, description="Fighter name search term (optional)"),
     year: int | None = Query(None, description="Filter by year"),
+    prediction_source: str | None = Query(None, description="Filter by prediction_source (e.g. 'pre_fight_archive')"),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
@@ -338,43 +460,64 @@ def search_past_prediction_fights(
         conditions.append("EXTRACT(YEAR FROM event_date) = :year")
         params["year"] = year
 
-    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    if prediction_source:
+        # Direct query — pre_fight_archive rows are already 1-per-fight by construction
+        params["prediction_source"] = prediction_source
+        source_conditions = ["prediction_source = :prediction_source"] + conditions
+        where = "WHERE " + " AND ".join(source_conditions)
 
-    total: int = db.execute(text(f"""
-        WITH best AS (
-            SELECT DISTINCT ON (fight_id) *
+        total: int = db.execute(text(f"""
+            SELECT COUNT(*) FROM past_predictions {where}
+        """), params).scalar() or 0
+
+        params["limit"]  = page_size
+        params["offset"] = (page - 1) * page_size
+
+        rows = db.execute(text(f"""
+            SELECT {_FIGHT_COLS}
             FROM past_predictions
-            ORDER BY fight_id,
-                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
-        )
-        SELECT COUNT(*) FROM best {where}
-    """), params).scalar() or 0
+            {where}
+            ORDER BY event_date DESC
+            LIMIT :limit OFFSET :offset
+        """), params).mappings().all()
+    else:
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
-    params["limit"]  = page_size
-    params["offset"] = (page - 1) * page_size
+        total = db.execute(text(f"""
+            WITH best AS (
+                SELECT DISTINCT ON (fight_id) *
+                FROM past_predictions
+                ORDER BY fight_id,
+                         CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+            )
+            SELECT COUNT(*) FROM best {where}
+        """), params).scalar() or 0
 
-    rows = db.execute(text(f"""
-        WITH best AS (
-            SELECT DISTINCT ON (fight_id)
-                fight_id, event_id, event_name, event_date,
-                fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
-                weight_class, win_prob_a, win_prob_b,
-                pred_method_ko_tko, pred_method_sub, pred_method_dec,
-                predicted_winner_id, predicted_method,
-                actual_winner_id, actual_method,
-                is_correct, confidence, is_upset,
-                prediction_source, pre_fight_predicted_at
-            FROM past_predictions
-            ORDER BY fight_id,
-                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
-        )
-        SELECT best.*
-        FROM best
-        LEFT JOIN fight_details fd ON fd.id = best.fight_id
-        {where}
-        ORDER BY best.event_date DESC, COALESCE(fd.position, 999) ASC
-        LIMIT :limit OFFSET :offset
-    """), params).mappings().all()
+        params["limit"]  = page_size
+        params["offset"] = (page - 1) * page_size
+
+        rows = db.execute(text(f"""
+            WITH best AS (
+                SELECT DISTINCT ON (fight_id)
+                    fight_id, event_id, event_name, event_date,
+                    fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
+                    weight_class, win_prob_a, win_prob_b,
+                    pred_method_ko_tko, pred_method_sub, pred_method_dec,
+                    predicted_winner_id, predicted_method,
+                    actual_winner_id, actual_method,
+                    is_correct, confidence, is_upset,
+                    prediction_source, pre_fight_predicted_at
+                FROM past_predictions
+                ORDER BY fight_id,
+                         CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+            )
+            SELECT best.*
+            FROM best
+            LEFT JOIN fight_details fd ON fd.id = best.fight_id
+            {where}
+            ORDER BY best.event_date DESC, COALESCE(fd.position, 999) ASC
+            LIMIT :limit OFFSET :offset
+        """), params).mappings().all()
 
     return PastPredictionFightsResponse(
         data=[PastPredictionItem(**dict(r)) for r in rows],

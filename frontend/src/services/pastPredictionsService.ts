@@ -5,6 +5,7 @@ import type {
   PastPredictionEventDetail,
   PastPredictionFightsResponse,
   PastPredictionItem,
+  PastPredictionModalStats,
 } from '@t/api'
 
 export const pastPredictionsService = {
@@ -23,7 +24,18 @@ export const pastPredictionsService = {
       .get<PastPredictionEventDetail>(`/past-predictions/events/${eventId}`)
       .then((r) => r.data),
 
-  searchFights: (params: { search?: string; year?: number; page?: number; page_size?: number }) =>
+  getModalStats: () =>
+    apiClient
+      .get<PastPredictionModalStats>('/past-predictions/stats')
+      .then((r) => r.data),
+
+  searchFights: (params: {
+    search?: string
+    year?: number
+    prediction_source?: string
+    page?: number
+    page_size?: number
+  }) =>
     apiClient
       .get<PastPredictionFightsResponse>('/past-predictions/fights', { params })
       .then((r) => r.data),
