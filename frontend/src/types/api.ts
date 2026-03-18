@@ -248,6 +248,7 @@ export interface PastPredictionSummary {
   total_fights: number
   correct: number
   accuracy: number
+  avg_confidence: number
   high_conf_fights: number
   high_conf_correct: number
   high_conf_accuracy: number
@@ -320,6 +321,7 @@ export interface ModalStatsSection {
   avg_conf_correct: number | null
   avg_conf_incorrect: number | null
   brier_score: number | null
+  brier_skill_score: number | null
   roc_auc: number | null
 }
 

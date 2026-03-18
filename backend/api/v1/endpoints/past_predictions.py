@@ -57,6 +57,7 @@ def get_past_predictions(
             SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)                      AS correct,
             SUM(CASE WHEN confidence >= 0.65 THEN 1 ELSE 0 END)              AS high_conf_fights,
             SUM(CASE WHEN is_correct AND confidence >= 0.65 THEN 1 ELSE 0 END) AS high_conf_correct,
+            AVG(confidence)                                                   AS avg_confidence,
             MIN(event_date)                                                   AS date_from,
             MAX(event_date)                                                   AS date_to
         FROM best
@@ -66,6 +67,7 @@ def get_past_predictions(
     correct          = int(summary_row["correct"] or 0)
     high_conf_fights = int(summary_row["high_conf_fights"] or 0)
     high_conf_correct= int(summary_row["high_conf_correct"] or 0)
+    avg_confidence   = float(summary_row["avg_confidence"] or 0.0)
 
     accuracy          = correct / total_fights if total_fights > 0 else 0.0
     high_conf_accuracy= high_conf_correct / high_conf_fights if high_conf_fights > 0 else 0.0
@@ -104,6 +106,7 @@ def get_past_predictions(
         total_fights=total_fights,
         correct=correct,
         accuracy=accuracy,
+        avg_confidence=avg_confidence,
         high_conf_fights=high_conf_fights,
         high_conf_correct=high_conf_correct,
         high_conf_accuracy=high_conf_accuracy,
@@ -468,7 +471,8 @@ def get_past_prediction_stats(
         avg_incorrect = sum(conf_incorrect) / len(conf_incorrect) if conf_incorrect else None
         brier = sum(brier_vals) / len(brier_vals) if brier_vals else None
         auc   = _roc_auc(y_true, y_score)
-        return avg_correct, avg_incorrect, brier, auc
+        bss = (1.0 - brier / 0.25) if brier is not None else None
+        return avg_correct, avg_incorrect, brier, bss, auc
 
     def _buckets(rows: list) -> list[ConfBucket]:
         out = []
@@ -488,8 +492,8 @@ def get_past_prediction_stats(
                                        accuracy=c / f if f else 0.0))
         return out
 
-    all_avg_correct, all_avg_incorrect, all_brier, all_auc = _section_metrics(all_raw)
-    pf_avg_correct,  pf_avg_incorrect,  pf_brier,  pf_auc  = _section_metrics(pf_raw)
+    all_avg_correct, all_avg_incorrect, all_brier, all_bss, all_auc = _section_metrics(all_raw)
+    pf_avg_correct,  pf_avg_incorrect,  pf_brier,  pf_bss,  pf_auc  = _section_metrics(pf_raw)
 
     return PastPredictionModalStats(
         all=ModalStatsSection(
@@ -498,6 +502,7 @@ def get_past_prediction_stats(
             avg_conf_correct=all_avg_correct,
             avg_conf_incorrect=all_avg_incorrect,
             brier_score=all_brier,
+            brier_skill_score=all_bss,
             roc_auc=all_auc,
         ),
         pre_fight=ModalStatsSection(
@@ -506,6 +511,7 @@ def get_past_prediction_stats(
             avg_conf_correct=pf_avg_correct,
             avg_conf_incorrect=pf_avg_incorrect,
             brier_score=pf_brier,
+            brier_skill_score=pf_bss,
             roc_auc=pf_auc,
         ),
     )

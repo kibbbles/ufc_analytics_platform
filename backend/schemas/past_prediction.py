@@ -51,6 +51,7 @@ class PastPredictionSummary(BaseModel):
     date_from: str
     date_to: str
     available_years: list[int] = []
+    avg_confidence: float = 0.0
     # Pre-fight only stats (prediction_source = 'pre_fight_archive')
     pre_fight_total: int = 0
     pre_fight_correct: int = 0
@@ -123,6 +124,7 @@ class ModalStatsSection(BaseModel):
     avg_conf_correct: Optional[float] = None
     avg_conf_incorrect: Optional[float] = None
     brier_score: Optional[float] = None
+    brier_skill_score: Optional[float] = None
     roc_auc: Optional[float] = None
 
 

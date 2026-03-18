@@ -210,6 +210,11 @@ function ModelScorecard() {
               <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                 {summary.correct}/{summary.total_fights} fights
               </p>
+              {summary.avg_confidence > 0 && (
+                <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  avg conviction {formatPct(summary.avg_confidence)}
+                </p>
+              )}
               <p className="mt-2 text-xs italic text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                 Includes historical estimate
               </p>

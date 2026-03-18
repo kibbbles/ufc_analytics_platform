@@ -186,7 +186,9 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                       {section.brier_score != null ? section.brier_score.toFixed(3) : '—'}
                     </p>
                     <p className="text-[10px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
-                      lower is better · 0.25 = random
+                      {section.brier_skill_score != null
+                        ? `${(section.brier_skill_score * 100).toFixed(1)}% better than random`
+                        : 'lower is better · 0.25 = random'}
                     </p>
                   </div>
                   <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
