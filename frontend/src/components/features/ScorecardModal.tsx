@@ -175,6 +175,34 @@ export default function ScorecardModal({ mode, onClose }: Props) {
             <p className="text-sm text-red-500 text-center py-4">{error}</p>
           ) : (
             <>
+              {/* Model performance — Brier + ROC-AUC */}
+              {section && (section.brier_score != null || section.roc_auc != null) && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
+                    <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                      Brier Score
+                    </p>
+                    <p className="font-mono text-lg font-bold tabular-nums mt-0.5">
+                      {section.brier_score != null ? section.brier_score.toFixed(3) : '—'}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
+                      lower is better · 0.25 = random
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
+                    <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                      ROC-AUC
+                    </p>
+                    <p className="font-mono text-lg font-bold tabular-nums mt-0.5">
+                      {section.roc_auc != null ? section.roc_auc.toFixed(3) : '—'}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
+                      higher is better · 0.5 = random
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Calibration callout */}
               {section && (
                 section.avg_conf_correct != null || section.avg_conf_incorrect != null

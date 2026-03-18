@@ -122,6 +122,8 @@ class ModalStatsSection(BaseModel):
     weight_classes: list[WeightClassStat]
     avg_conf_correct: Optional[float] = None
     avg_conf_incorrect: Optional[float] = None
+    brier_score: Optional[float] = None
+    roc_auc: Optional[float] = None
 
 
 class PastPredictionModalStats(BaseModel):

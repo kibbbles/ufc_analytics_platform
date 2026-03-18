@@ -408,28 +408,67 @@ def get_past_prediction_stats(
         ORDER BY {_WC_ORDER}
     """)).mappings().all()
 
-    all_calibration = db.execute(text("""
+    # ── Raw rows for Python-computed metrics (calibration, Brier, ROC-AUC) ────
+    all_raw = db.execute(text("""
         WITH best AS (
-            SELECT DISTINCT ON (fight_id) confidence, is_correct
+            SELECT DISTINCT ON (fight_id)
+                confidence, is_correct, win_prob_a, win_prob_b,
+                actual_winner_id, fighter_a_id
             FROM past_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
-        SELECT
-            AVG(CASE WHEN is_correct = TRUE  THEN confidence END) AS avg_conf_correct,
-            AVG(CASE WHEN is_correct = FALSE THEN confidence END) AS avg_conf_incorrect
-        FROM best
+        SELECT * FROM best
         WHERE confidence IS NOT NULL AND is_correct IS NOT NULL
-    """)).mappings().first()
+          AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
+          AND actual_winner_id IS NOT NULL AND fighter_a_id IS NOT NULL
+    """)).mappings().all()
 
-    pf_calibration = db.execute(text("""
-        SELECT
-            AVG(CASE WHEN is_correct = TRUE  THEN confidence END) AS avg_conf_correct,
-            AVG(CASE WHEN is_correct = FALSE THEN confidence END) AS avg_conf_incorrect
+    pf_raw = db.execute(text("""
+        SELECT confidence, is_correct, win_prob_a, win_prob_b,
+               actual_winner_id, fighter_a_id
         FROM past_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND confidence IS NOT NULL AND is_correct IS NOT NULL
-    """)).mappings().first()
+          AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
+          AND actual_winner_id IS NOT NULL AND fighter_a_id IS NOT NULL
+    """)).mappings().all()
+
+    def _roc_auc(y_true: list, y_score: list) -> float | None:
+        n_pos = sum(y_true)
+        n_neg = len(y_true) - n_pos
+        if n_pos == 0 or n_neg == 0:
+            return None
+        pairs = sorted(zip(y_score, y_true), key=lambda x: x[0], reverse=True)
+        auc = 0.0
+        pos_seen = 0
+        i = 0
+        while i < len(pairs):
+            j = i
+            while j < len(pairs) and pairs[j][0] == pairs[i][0]:
+                j += 1
+            group_pos = sum(1 for _, lbl in pairs[i:j] if lbl == 1)
+            group_neg = (j - i) - group_pos
+            auc += group_neg * pos_seen + 0.5 * group_pos * group_neg
+            pos_seen += group_pos
+            i = j
+        return auc / (n_pos * n_neg)
+
+    def _section_metrics(rows) -> tuple:
+        conf_correct, conf_incorrect, brier_vals, y_true, y_score = [], [], [], [], []
+        for r in rows:
+            is_correct = bool(r["is_correct"])
+            conf = float(r["confidence"])
+            (conf_correct if is_correct else conf_incorrect).append(conf)
+            a_won = str(r["actual_winner_id"]) == str(r["fighter_a_id"])
+            y_true.append(1 if a_won else 0)
+            y_score.append(float(r["win_prob_a"]))
+            brier_vals.append((float(r["win_prob_a"]) - (1.0 if a_won else 0.0)) ** 2)
+        avg_correct   = sum(conf_correct)   / len(conf_correct)   if conf_correct   else None
+        avg_incorrect = sum(conf_incorrect) / len(conf_incorrect) if conf_incorrect else None
+        brier = sum(brier_vals) / len(brier_vals) if brier_vals else None
+        auc   = _roc_auc(y_true, y_score)
+        return avg_correct, avg_incorrect, brier, auc
 
     def _buckets(rows: list) -> list[ConfBucket]:
         out = []
@@ -449,26 +488,25 @@ def get_past_prediction_stats(
                                        accuracy=c / f if f else 0.0))
         return out
 
-    def _calib(row) -> tuple:
-        correct = float(row["avg_conf_correct"]) if row and row["avg_conf_correct"] is not None else None
-        incorrect = float(row["avg_conf_incorrect"]) if row and row["avg_conf_incorrect"] is not None else None
-        return correct, incorrect
-
-    all_conf_correct, all_conf_incorrect = _calib(all_calibration)
-    pf_conf_correct,  pf_conf_incorrect  = _calib(pf_calibration)
+    all_avg_correct, all_avg_incorrect, all_brier, all_auc = _section_metrics(all_raw)
+    pf_avg_correct,  pf_avg_incorrect,  pf_brier,  pf_auc  = _section_metrics(pf_raw)
 
     return PastPredictionModalStats(
         all=ModalStatsSection(
             conf_buckets=_buckets(all_bucket_rows),
             weight_classes=_wc(all_wc_rows),
-            avg_conf_correct=all_conf_correct,
-            avg_conf_incorrect=all_conf_incorrect,
+            avg_conf_correct=all_avg_correct,
+            avg_conf_incorrect=all_avg_incorrect,
+            brier_score=all_brier,
+            roc_auc=all_auc,
         ),
         pre_fight=ModalStatsSection(
             conf_buckets=_buckets(pf_bucket_rows),
             weight_classes=_wc(pf_wc_rows),
-            avg_conf_correct=pf_conf_correct,
-            avg_conf_incorrect=pf_conf_incorrect,
+            avg_conf_correct=pf_avg_correct,
+            avg_conf_incorrect=pf_avg_incorrect,
+            brier_score=pf_brier,
+            roc_auc=pf_auc,
         ),
     )
 

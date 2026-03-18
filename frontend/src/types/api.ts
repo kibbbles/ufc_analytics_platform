@@ -319,6 +319,8 @@ export interface ModalStatsSection {
   weight_classes: WeightClassStat[]
   avg_conf_correct: number | null
   avg_conf_incorrect: number | null
+  brier_score: number | null
+  roc_auc: number | null
 }
 
 export interface PastPredictionModalStats {
