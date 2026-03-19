@@ -93,6 +93,10 @@ def run(dry_run: bool = False) -> None:
                 uf.fighter_a_name,
                 uf.fighter_b_name,
                 uf.weight_class      AS uf_weight_class,
+                uf.odds_a,
+                uf.odds_b,
+                uf.implied_prob_a,
+                uf.implied_prob_b,
                 up.win_prob_a,
                 up.win_prob_b,
                 up.method_ko_tko     AS pred_method_ko_tko,
@@ -207,6 +211,10 @@ def run(dry_run: bool = False) -> None:
             "prediction_source":     "pre_fight_archive",
             "pre_fight_predicted_at": r["pre_fight_predicted_at"],
             "features_json":         json.dumps(r["features_json"]) if r["features_json"] is not None else None,
+            "odds_a":                r.get("odds_a"),
+            "odds_b":                r.get("odds_b"),
+            "implied_prob_a":        r.get("implied_prob_a"),
+            "implied_prob_b":        r.get("implied_prob_b"),
         }
 
         if dry_run:
@@ -231,7 +239,8 @@ def run(dry_run: bool = False) -> None:
                     predicted_winner_id, predicted_method,
                     actual_winner_id, actual_method,
                     is_correct, confidence, is_upset,
-                    prediction_source, pre_fight_predicted_at, features_json
+                    prediction_source, pre_fight_predicted_at, features_json,
+                    odds_a, odds_b, implied_prob_a, implied_prob_b
                 ) VALUES (
                     :id, :fight_id, :event_id, :event_name, :event_date,
                     :fighter_a_id, :fighter_b_id, :fighter_a_name, :fighter_b_name,
@@ -241,7 +250,8 @@ def run(dry_run: bool = False) -> None:
                     :predicted_winner_id, :predicted_method,
                     :actual_winner_id, :actual_method,
                     :is_correct, :confidence, :is_upset,
-                    :prediction_source, :pre_fight_predicted_at, :features_json
+                    :prediction_source, :pre_fight_predicted_at, :features_json,
+                    :odds_a, :odds_b, :implied_prob_a, :implied_prob_b
                 )
                 ON CONFLICT (fight_id, prediction_source) DO NOTHING
             """), archive_row)
