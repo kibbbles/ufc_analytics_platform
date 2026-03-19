@@ -208,6 +208,10 @@ export interface UpcomingFight {
   fighter_b_id: string | null
   weight_class: string | null
   is_title_fight: boolean
+  odds_a: number | null
+  odds_b: number | null
+  implied_prob_a: number | null
+  implied_prob_b: number | null
   prediction: UpcomingFightPrediction | null
 }
 
@@ -325,9 +329,18 @@ export interface ModalStatsSection {
   roc_auc: number | null
 }
 
+export interface VegasComparison {
+  sample_size: number
+  vegas_accuracy: number
+  model_accuracy: number
+  disagree_count: number
+  disagree_accuracy: number | null
+}
+
 export interface PastPredictionModalStats {
   all: ModalStatsSection
   pre_fight: ModalStatsSection
+  vegas: VegasComparison | null
 }
 
 // ── Predictions ──────────────────────────────────────────────────────────────

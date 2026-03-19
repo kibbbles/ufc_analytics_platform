@@ -28,6 +28,7 @@ from schemas.past_prediction import (
     WeightClassStat,
     ModalStatsSection,
     PastPredictionModalStats,
+    VegasComparison,
 )
 
 logger = logging.getLogger(__name__)
@@ -495,6 +496,53 @@ def get_past_prediction_stats(
     all_avg_correct, all_avg_incorrect, all_brier, all_bss, all_auc = _section_metrics(all_raw)
     pf_avg_correct,  pf_avg_incorrect,  pf_brier,  pf_bss,  pf_auc  = _section_metrics(pf_raw)
 
+    # ── vs-Vegas comparison ───────────────────────────────────────────────────
+    vegas_row = db.execute(text("""
+        WITH best AS (
+            SELECT DISTINCT ON (fight_id)
+                implied_prob_a, win_prob_a, actual_winner_id, fighter_a_id
+            FROM past_predictions
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT
+            COUNT(*) AS sample_size,
+            SUM(CASE WHEN
+                (implied_prob_a > 0.5 AND actual_winner_id = fighter_a_id)
+                OR (implied_prob_a <= 0.5 AND actual_winner_id != fighter_a_id)
+                THEN 1 ELSE 0 END) AS vegas_correct,
+            SUM(CASE WHEN
+                (win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
+                OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id)
+                THEN 1 ELSE 0 END) AS model_correct,
+            SUM(CASE WHEN
+                (win_prob_a >= 0.5) != (implied_prob_a > 0.5)
+                THEN 1 ELSE 0 END) AS disagree_count,
+            SUM(CASE WHEN
+                (win_prob_a >= 0.5) != (implied_prob_a > 0.5)
+                AND ((win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
+                     OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id))
+                THEN 1 ELSE 0 END) AS disagree_correct
+        FROM best
+        WHERE implied_prob_a IS NOT NULL
+          AND actual_winner_id IS NOT NULL
+    """)).mappings().first()
+
+    vegas_cmp = None
+    if vegas_row and int(vegas_row["sample_size"]) > 0:
+        n = int(vegas_row["sample_size"])
+        vc = int(vegas_row["vegas_correct"])
+        mc = int(vegas_row["model_correct"])
+        dc = int(vegas_row["disagree_count"])
+        dcc = int(vegas_row["disagree_correct"])
+        vegas_cmp = VegasComparison(
+            sample_size=n,
+            vegas_accuracy=vc / n,
+            model_accuracy=mc / n,
+            disagree_count=dc,
+            disagree_accuracy=(dcc / dc) if dc > 0 else None,
+        )
+
     return PastPredictionModalStats(
         all=ModalStatsSection(
             conf_buckets=_buckets(all_bucket_rows),
@@ -514,6 +562,7 @@ def get_past_prediction_stats(
             brier_skill_score=pf_bss,
             roc_auc=pf_auc,
         ),
+        vegas=vegas_cmp,
     )
 
 

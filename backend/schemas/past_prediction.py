@@ -128,6 +128,15 @@ class ModalStatsSection(BaseModel):
     roc_auc: Optional[float] = None
 
 
+class VegasComparison(BaseModel):
+    sample_size: int
+    vegas_accuracy: float
+    model_accuracy: float
+    disagree_count: int
+    disagree_accuracy: Optional[float] = None
+
+
 class PastPredictionModalStats(BaseModel):
     all: ModalStatsSection
     pre_fight: ModalStatsSection
+    vegas: Optional[VegasComparison] = None

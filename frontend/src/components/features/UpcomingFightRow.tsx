@@ -24,9 +24,15 @@ function topMethodLabel(methods: Method[]): string {
   return methods.reduce((a, b) => ((a.value ?? 0) > (b.value ?? 0) ? a : b)).label
 }
 
+function fmtOdds(o: number | null): string {
+  if (o == null) return '—'
+  return o > 0 ? `+${o}` : `${o}`
+}
+
 export default function UpcomingFightRow({ fight }: Props) {
   const navigate = useNavigate()
-  const { fighter_a_name, fighter_b_name, weight_class, is_title_fight, prediction } = fight
+  const { fighter_a_name, fighter_b_name, weight_class, is_title_fight, prediction,
+          implied_prob_a, implied_prob_b, odds_a, odds_b } = fight
 
   const hasPrediction =
     prediction !== null &&
@@ -141,6 +147,12 @@ export default function UpcomingFightRow({ fight }: Props) {
             <div className="mt-1 text-center">
               <span className="text-xs text-[var(--color-text-muted)]">conviction </span>
               <span className="font-mono text-xs font-semibold tabular-nums">{pct(confidence)}</span>
+            </div>
+          )}
+          {implied_prob_a != null && implied_prob_b != null && (
+            <div className="mt-1 text-center font-mono text-xs tabular-nums text-[var(--color-text-muted)]">
+              vegas {pct(implied_prob_a)} / {pct(implied_prob_b)}
+              <span className="ml-1 opacity-60">({fmtOdds(odds_a)} / {fmtOdds(odds_b)})</span>
             </div>
           )}
         </>

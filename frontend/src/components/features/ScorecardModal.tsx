@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import { LoadingSkeleton } from '@components/common'
 import { formatDate } from '@utils/format'
-import type { PastPredictionModalStats, PastPredictionItem } from '@t/api'
+import type { PastPredictionModalStats, PastPredictionItem, VegasComparison } from '@t/api'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -294,6 +294,46 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                   </div>
                 </div>
               )}
+
+              {/* vs-Vegas comparison — only shown on All Predictions modal, only when sample > 0 */}
+              {mode === 'all' && stats?.vegas && stats.vegas.sample_size > 0 && (() => {
+                const v = stats.vegas as VegasComparison
+                return (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-2">
+                      Model vs Vegas ({v.sample_size} fights)
+                    </h3>
+                    <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-border)]/10">
+                            <th className="text-left px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]"> </th>
+                            <th className="text-right px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Accuracy</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)]">
+                            <td className="px-3 py-2">Model</td>
+                            <td className="px-3 py-2 font-mono tabular-nums text-right font-semibold">{formatPct(v.model_accuracy)}</td>
+                          </tr>
+                          <tr className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)]">
+                            <td className="px-3 py-2">Vegas</td>
+                            <td className="px-3 py-2 font-mono tabular-nums text-right font-semibold">{formatPct(v.vegas_accuracy)}</td>
+                          </tr>
+                          {v.disagree_count > 0 && v.disagree_accuracy != null && (
+                            <tr>
+                              <td className="px-3 py-2 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                                Model when disagreeing <span className="opacity-60">({v.disagree_count})</span>
+                              </td>
+                              <td className="px-3 py-2 font-mono tabular-nums text-right font-semibold">{formatPct(v.disagree_accuracy)}</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Recent fights */}
               {fights.length > 0 && (

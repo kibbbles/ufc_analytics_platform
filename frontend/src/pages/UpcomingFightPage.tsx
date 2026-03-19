@@ -410,6 +410,16 @@ export default function UpcomingFightPage() {
                     </div>
                   )
                 })()}
+                {fight.implied_prob_a != null && fight.implied_prob_b != null && (
+                  <div className="mt-1.5 text-center font-mono text-xs tabular-nums text-[var(--color-text-muted)]">
+                    vegas {pct(fight.implied_prob_a)} / {pct(fight.implied_prob_b)}
+                    {fight.odds_a != null && fight.odds_b != null && (
+                      <span className="ml-1 opacity-60">
+                        ({fight.odds_a > 0 ? '+' : ''}{fight.odds_a} / {fight.odds_b > 0 ? '+' : ''}{fight.odds_b})
+                      </span>
+                    )}
+                  </div>
+                )}
               </Card>
             )
           })()}
