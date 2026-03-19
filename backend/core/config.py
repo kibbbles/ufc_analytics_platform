@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str = ""
 
+    # The Odds API (task 27)
+    odds_api_key: str = ""
+
     # Application
     environment: str = "development"
     log_level: str = "DEBUG"
