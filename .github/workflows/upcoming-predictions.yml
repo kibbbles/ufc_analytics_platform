@@ -32,6 +32,15 @@ jobs:
           cd backend
           python scraper/run_upcoming.py
 
+      - name: Fetch Vegas odds
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          cd backend
+          python scraper/fetch_odds.py
+
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
