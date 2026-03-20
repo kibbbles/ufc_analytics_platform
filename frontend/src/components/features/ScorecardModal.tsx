@@ -28,11 +28,14 @@ function ModalFightRow({ item }: { item: PastPredictionItem }) {
   const isUpset   = item.is_upset
   const isCorrect = item.is_correct
 
+  const hasPrediction = item.predicted_winner_id != null
+
   let indicator: string
   let indicatorColor: string
-  if (isUpset)        { indicator = '~'; indicatorColor = 'text-amber-500' }
-  else if (isCorrect) { indicator = '✓'; indicatorColor = 'text-green-500' }
-  else                { indicator = '✗'; indicatorColor = 'text-[var(--color-primary)]' }
+  if (!hasPrediction)  { indicator = '·'; indicatorColor = 'text-[var(--color-text-muted)]' }
+  else if (isUpset)    { indicator = '~'; indicatorColor = 'text-amber-500' }
+  else if (isCorrect)  { indicator = '✓'; indicatorColor = 'text-green-500' }
+  else                 { indicator = '✗'; indicatorColor = 'text-[var(--color-primary)]' }
 
   const rowBg = isUpset
     ? 'bg-amber-500/5'

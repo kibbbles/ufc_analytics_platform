@@ -128,12 +128,15 @@ function ActualResultCard({ item }: { item: PastPredictionItem }) {
   const isUpset   = item.is_upset
   const isCorrect = item.is_correct
 
+  const hasPrediction = item.predicted_winner_id != null
+
   let badge: string
   let bgClass: string
   let badgeClass: string
-  if (isUpset)        { badge = '~ Upset';     bgClass = 'bg-amber-500/10 border-amber-500/30'; badgeClass = 'text-amber-600 dark:text-amber-400' }
-  else if (isCorrect) { badge = '✓ Correct';   bgClass = 'bg-green-500/10 border-green-500/30'; badgeClass = 'text-green-600 dark:text-green-400' }
-  else                { badge = '✗ Incorrect'; bgClass = 'bg-red-500/10 border-red-500/30';     badgeClass = 'text-red-600 dark:text-red-400' }
+  if (!hasPrediction) { badge = '· No prediction'; bgClass = 'bg-[var(--color-border)]/20 border-[var(--color-border)]'; badgeClass = 'text-[var(--color-text-muted)]' }
+  else if (isUpset)   { badge = '~ Upset';          bgClass = 'bg-amber-500/10 border-amber-500/30';                     badgeClass = 'text-amber-600 dark:text-amber-400' }
+  else if (isCorrect) { badge = '✓ Correct';        bgClass = 'bg-green-500/10 border-green-500/30';                     badgeClass = 'text-green-600 dark:text-green-400' }
+  else                { badge = '✗ Incorrect';       bgClass = 'bg-red-500/10 border-red-500/30';                         badgeClass = 'text-red-600 dark:text-red-400' }
 
   return (
     <div className={`rounded-lg border p-4 ${bgClass}`}>

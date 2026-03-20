@@ -31,11 +31,14 @@ function FightRow({ item }: { item: PastPredictionItem }) {
   const isUpset   = item.is_upset
   const isCorrect = item.is_correct
 
+  const hasPrediction = item.predicted_winner_id != null
+
   let indicator: string
   let indicatorColor: string
-  if (isUpset)        { indicator = '~'; indicatorColor = 'text-amber-500' }
-  else if (isCorrect) { indicator = '✓'; indicatorColor = 'text-green-500' }
-  else                { indicator = '✗'; indicatorColor = 'text-[var(--color-primary)]' }
+  if (!hasPrediction)  { indicator = '·'; indicatorColor = 'text-[var(--color-text-muted)]' }
+  else if (isUpset)    { indicator = '~'; indicatorColor = 'text-amber-500' }
+  else if (isCorrect)  { indicator = '✓'; indicatorColor = 'text-green-500' }
+  else                 { indicator = '✗'; indicatorColor = 'text-[var(--color-primary)]' }
 
   const predWinner   = winnerName(item, item.predicted_winner_id)
   const actualWinner = winnerName(item, item.actual_winner_id)
@@ -85,15 +88,23 @@ function FightRow({ item }: { item: PastPredictionItem }) {
       {/* Predicted vs actual — centered */}
       <div className="flex flex-col items-center gap-0.5">
         <p className="text-xs text-center">
-          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Predicted{' '}
-          </span>
-          <span className={isCorrect ? 'font-medium text-[var(--color-primary)]' : ''}>
-            {predWinner}
-          </span>
-          {item.predicted_method && (
-            <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {' '}via {item.predicted_method}
+          {hasPrediction ? (
+            <>
+              <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                Predicted{' '}
+              </span>
+              <span className={isCorrect ? 'font-medium text-[var(--color-primary)]' : ''}>
+                {predWinner}
+              </span>
+              {item.predicted_method && (
+                <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  {' '}via {item.predicted_method}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] italic">
+              No prediction
             </span>
           )}
         </p>
