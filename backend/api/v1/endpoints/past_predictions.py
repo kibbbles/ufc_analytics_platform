@@ -54,11 +54,11 @@ def get_past_predictions(
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
         SELECT
-            COUNT(*)                                                          AS total_fights,
+            COUNT(*) FILTER (WHERE is_correct IS NOT NULL)                    AS total_fights,
             SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)                      AS correct,
             SUM(CASE WHEN confidence >= 0.65 THEN 1 ELSE 0 END)              AS high_conf_fights,
             SUM(CASE WHEN is_correct AND confidence >= 0.65 THEN 1 ELSE 0 END) AS high_conf_correct,
-            AVG(confidence)                                                   AS avg_confidence,
+            AVG(confidence) FILTER (WHERE is_correct IS NOT NULL)             AS avg_confidence,
             MIN(event_date)                                                   AS date_from,
             MAX(event_date)                                                   AS date_to
         FROM best
@@ -93,6 +93,7 @@ def get_past_predictions(
             SUM(CASE WHEN is_correct AND confidence >= 0.65 THEN 1 ELSE 0 END) AS high_conf_correct
         FROM past_predictions
         WHERE prediction_source = 'pre_fight_archive'
+          AND is_correct IS NOT NULL
     """)).mappings().first()
 
     pf_total          = int(pf_row["total"] or 0)
@@ -202,8 +203,8 @@ def list_past_prediction_events(
             event_id,
             MAX(event_name)   AS event_name,
             MAX(event_date)   AS event_date,
-            COUNT(*)          AS fight_count,
-            SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) AS correct_count
+            COUNT(*) FILTER (WHERE is_correct IS NOT NULL) AS fight_count,
+            SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)  AS correct_count
         FROM best
         {where}
         GROUP BY event_id
@@ -277,16 +278,17 @@ def get_past_prediction_event(
         raise HTTPException(status_code=404, detail=f"No predictions found for event '{event_id}'")
 
     fights = [PastPredictionItem(**dict(r)) for r in rows]
-    correct_count = sum(1 for f in fights if f.is_correct)
+    predicted = [f for f in fights if f.is_correct is not None]
+    correct_count = sum(1 for f in predicted if f.is_correct)
     sample = fights[0]
 
     return PastPredictionEventDetail(
         event_id=event_id,
         event_name=sample.event_name,
         event_date=sample.event_date,
-        fight_count=len(fights),
+        fight_count=len(predicted),
         correct_count=correct_count,
-        accuracy=correct_count / len(fights) if fights else 0.0,
+        accuracy=correct_count / len(predicted) if predicted else 0.0,
         fights=fights,
     )
 

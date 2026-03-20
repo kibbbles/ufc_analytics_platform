@@ -4,20 +4,33 @@ import Layout from '@components/layout/Layout'
 import LoadingSpinner from '@components/common/LoadingSpinner'
 import NotFoundPage from '@pages/NotFoundPage'
 
+// Wrap lazy imports so stale-chunk errors (after a new deploy) trigger a hard
+// reload instead of showing the React Router error boundary.
+function lazyWithReload<T extends React.ComponentType>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(() =>
+    factory().catch(() => {
+      window.location.reload()
+      return new Promise<{ default: T }>(() => {})
+    })
+  )
+}
+
 // Lazy-loaded pages — each becomes its own JS chunk
-const HomePage            = lazy(() => import('@pages/HomePage'))
-const PredictionsPage     = lazy(() => import('@pages/PredictionsPage'))
-const FightersPage        = lazy(() => import('@pages/FightersPage'))
-const FighterDetailPage   = lazy(() => import('@pages/FighterDetailPage'))
-const EventsPage          = lazy(() => import('@pages/EventsPage'))
-const EventDetailPage     = lazy(() => import('@pages/EventDetailPage'))
-const UpcomingPage        = lazy(() => import('@pages/UpcomingPage'))
-const UpcomingFightPage   = lazy(() => import('@pages/UpcomingFightPage'))
-const StyleEvolutionPage  = lazy(() => import('@pages/StyleEvolutionPage'))
-const EndurancePage       = lazy(() => import('@pages/EndurancePage'))
-const AboutPage                  = lazy(() => import('@pages/AboutPage'))
-const PastPredictionEventPage    = lazy(() => import('@pages/PastPredictionEventPage'))
-const PastPredictionFightPage    = lazy(() => import('@pages/PastPredictionFightPage'))
+const HomePage            = lazyWithReload(() => import('@pages/HomePage'))
+const PredictionsPage     = lazyWithReload(() => import('@pages/PredictionsPage'))
+const FightersPage        = lazyWithReload(() => import('@pages/FightersPage'))
+const FighterDetailPage   = lazyWithReload(() => import('@pages/FighterDetailPage'))
+const EventsPage          = lazyWithReload(() => import('@pages/EventsPage'))
+const EventDetailPage     = lazyWithReload(() => import('@pages/EventDetailPage'))
+const UpcomingPage        = lazyWithReload(() => import('@pages/UpcomingPage'))
+const UpcomingFightPage   = lazyWithReload(() => import('@pages/UpcomingFightPage'))
+const StyleEvolutionPage  = lazyWithReload(() => import('@pages/StyleEvolutionPage'))
+const EndurancePage       = lazyWithReload(() => import('@pages/EndurancePage'))
+const AboutPage                  = lazyWithReload(() => import('@pages/AboutPage'))
+const PastPredictionEventPage    = lazyWithReload(() => import('@pages/PastPredictionEventPage'))
+const PastPredictionFightPage    = lazyWithReload(() => import('@pages/PastPredictionFightPage'))
 
 const fallback = <LoadingSpinner fullScreen />
 
