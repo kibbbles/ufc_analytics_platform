@@ -132,11 +132,7 @@ def run(dry_run: bool = False) -> None:
               AND (uf.archived IS NULL OR uf.archived = FALSE)
         """)).mappings().all()
 
-    if not rows:
-        logger.info("No completed upcoming fights found to archive.")
-        return
-
-    logger.info("Found %d fight(s) eligible for archiving.", len(rows))
+    logger.info("Found %d predicted fight(s) eligible for archiving.", len(rows))
 
     existing_ids = _load_existing_ids()
     archived_count = 0
@@ -266,15 +262,127 @@ def run(dry_run: bool = False) -> None:
         )
         archived_count += 1
 
+    # ------------------------------------------------------------------
+    # 5. Archive upcoming fights with NO prediction (debut fighters etc.)
+    #    so they still appear in the scorecard event pages as "no prediction".
+    # ------------------------------------------------------------------
+    logger.info("Querying completed upcoming fights WITHOUT predictions...")
+
+    with engine.connect() as conn:
+        no_pred_rows = conn.execute(text("""
+            SELECT
+                uf.id                AS upcoming_fight_id,
+                uf.fighter_a_id,
+                uf.fighter_b_id,
+                uf.fighter_a_name,
+                uf.fighter_b_name,
+                uf.weight_class      AS uf_weight_class,
+                uf.odds_a,
+                uf.odds_b,
+                uf.implied_prob_a,
+                uf.implied_prob_b,
+                fd.id                AS fight_id,
+                fd.event_id,
+                e."EVENT"            AS event_name,
+                e.date_proper        AS event_date,
+                fr."METHOD"          AS actual_method,
+                fr.fighter_id        AS actual_winner_id,
+                fr.weight_class      AS fr_weight_class
+            FROM upcoming_fights uf
+            JOIN upcoming_events ue ON ue.id = uf.event_id
+            -- Fights with no prediction row
+            LEFT JOIN upcoming_predictions up ON up.fight_id = uf.id
+            JOIN fight_details fd ON (
+                (fd.fighter_a_id = uf.fighter_a_id AND fd.fighter_b_id = uf.fighter_b_id)
+                OR
+                (fd.fighter_a_id = uf.fighter_b_id AND fd.fighter_b_id = uf.fighter_a_id)
+            )
+            JOIN event_details e ON e.id = fd.event_id
+                AND ABS(e.date_proper - ue.date_proper) <= 14
+            LEFT JOIN fight_results fr ON fr.fight_id = fd.id
+            WHERE ue.date_proper < CURRENT_DATE
+              AND uf.fighter_a_id IS NOT NULL
+              AND uf.fighter_b_id IS NOT NULL
+              AND (uf.archived IS NULL OR uf.archived = FALSE)
+              AND up.fight_id IS NULL
+        """)).mappings().all()
+
+    no_pred_count = 0
+    for r in no_pred_rows:
+        fight_id    = r["fight_id"]
+        upcoming_id = r["upcoming_fight_id"]
+        weight_class = r["fr_weight_class"] or r["uf_weight_class"]
+
+        with engine.connect() as conn:
+            exists = conn.execute(text("""
+                SELECT 1 FROM past_predictions
+                WHERE fight_id = :fight_id
+                LIMIT 1
+            """), {"fight_id": fight_id}).first()
+
+        if exists:
+            skipped_count += 1
+            continue
+
+        no_pred_row = {
+            "id":            _new_id(existing_ids),
+            "fight_id":      fight_id,
+            "event_id":      r["event_id"],
+            "event_name":    r["event_name"],
+            "event_date":    r["event_date"],
+            "fighter_a_id":  r["fighter_a_id"],
+            "fighter_b_id":  r["fighter_b_id"],
+            "fighter_a_name": r["fighter_a_name"],
+            "fighter_b_name": r["fighter_b_name"],
+            "weight_class":  weight_class,
+            "actual_winner_id": r["actual_winner_id"],
+            "actual_method": r["actual_method"],
+            "odds_a":        r.get("odds_a"),
+            "odds_b":        r.get("odds_b"),
+            "implied_prob_a": r.get("implied_prob_a"),
+            "implied_prob_b": r.get("implied_prob_b"),
+            "prediction_source": "pre_fight_archive",
+        }
+
+        if dry_run:
+            logger.info("[DRY RUN] Would archive no-pred fight %s", fight_id)
+            no_pred_count += 1
+            continue
+
+        with engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO past_predictions (
+                    id, fight_id, event_id, event_name, event_date,
+                    fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
+                    weight_class, actual_winner_id, actual_method,
+                    odds_a, odds_b, implied_prob_a, implied_prob_b,
+                    prediction_source
+                ) VALUES (
+                    :id, :fight_id, :event_id, :event_name, :event_date,
+                    :fighter_a_id, :fighter_b_id, :fighter_a_name, :fighter_b_name,
+                    :weight_class, :actual_winner_id, :actual_method,
+                    :odds_a, :odds_b, :implied_prob_a, :implied_prob_b,
+                    :prediction_source
+                )
+                ON CONFLICT (fight_id, prediction_source) DO NOTHING
+            """), no_pred_row)
+
+            conn.execute(text("""
+                UPDATE upcoming_fights SET archived = TRUE WHERE id = :id
+            """), {"id": upcoming_id})
+
+        no_pred_count += 1
+
     suffix = " [DRY RUN]" if dry_run else ""
     logger.info(
-        "Archive complete%s: %d archived, %d skipped (already done).",
-        suffix, archived_count, skipped_count,
+        "Archive complete%s: %d archived, %d no-prediction, %d skipped.",
+        suffix, archived_count, no_pred_count, skipped_count,
     )
     print(
         f"\n=== Prediction Archive Complete{suffix} ===\n"
-        f"  Archived : {archived_count}\n"
-        f"  Skipped  : {skipped_count} (already archived)\n"
+        f"  Archived (predicted)    : {archived_count}\n"
+        f"  Archived (no prediction): {no_pred_count}\n"
+        f"  Skipped                 : {skipped_count} (already archived)\n"
     )
 
 
