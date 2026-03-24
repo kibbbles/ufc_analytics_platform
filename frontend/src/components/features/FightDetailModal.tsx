@@ -177,6 +177,16 @@ export default function FightDetailModal({ fight, onClose }: Props) {
           {!features ? (
             <p className="text-center text-sm text-[var(--color-text-muted)]">No feature data available.</p>
           ) : (
+            <>
+              <p className="mb-3 text-center text-sm">
+                <span className="font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+                  {aWins ? favA.length : favB.length} of {favA.length + favB.length}
+                </span>
+                <span className="text-[var(--color-text-muted)]"> metrics favour </span>
+                <span className="font-semibold text-[var(--color-primary)]">
+                  {(aWins ? fighter_a_name : fighter_b_name)?.split(' ').pop()}
+                </span>
+              </p>
             <div className="grid grid-cols-2 gap-4">
               {/* Fighter A advantages */}
               <div>
@@ -214,6 +224,7 @@ export default function FightDetailModal({ fight, onClose }: Props) {
                 )}
               </div>
             </div>
+            </>
           )}
           <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
             Values are per-fight averages (Fighter A − Fighter B). Sorted by magnitude. Model: {prediction?.model_version ?? 'win_loss_v1'}.
