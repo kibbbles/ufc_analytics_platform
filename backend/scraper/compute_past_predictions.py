@@ -261,6 +261,7 @@ def run(date_from: str = "2022-01-01") -> None:
             "confidence":          confidence,
             "is_upset":            is_upset,
             "prediction_source":   "backfill",
+            "features_json":       json.dumps(feat, default=lambda x: x.item() if hasattr(x, 'item') else None),
         })
 
         if i % 50 == 0:
@@ -279,7 +280,7 @@ def run(date_from: str = "2022-01-01") -> None:
             predicted_winner_id, predicted_method,
             actual_winner_id, actual_method,
             is_correct, confidence, is_upset,
-            prediction_source
+            prediction_source, features_json
         ) VALUES (
             :id, :fight_id, :event_id, :event_name, :event_date,
             :fighter_a_id, :fighter_b_id, :fighter_a_name, :fighter_b_name,
@@ -289,7 +290,7 @@ def run(date_from: str = "2022-01-01") -> None:
             :predicted_winner_id, :predicted_method,
             :actual_winner_id, :actual_method,
             :is_correct, :confidence, :is_upset,
-            :prediction_source
+            :prediction_source, :features_json
         )
         ON CONFLICT (fight_id, prediction_source) DO UPDATE SET
             event_id            = EXCLUDED.event_id,
@@ -313,6 +314,7 @@ def run(date_from: str = "2022-01-01") -> None:
             is_correct          = EXCLUDED.is_correct,
             confidence          = EXCLUDED.confidence,
             is_upset            = EXCLUDED.is_upset,
+            features_json       = EXCLUDED.features_json,
             computed_at         = now()
     """)
 
