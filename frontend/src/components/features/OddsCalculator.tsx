@@ -146,9 +146,9 @@ export default function OddsCalculator({
 
             {/* Fighter rows */}
             {([
-              { label: lastA, oddsStr: oddsAStr, setOdds: setOddsAStr, result: rowA, modelProb: modelProbA },
-              { label: lastB, oddsStr: oddsBStr, setOdds: setOddsBStr, result: rowB, modelProb: modelProbB },
-            ] as const).map(({ label, oddsStr, setOdds, result, modelProb }) => (
+              { label: lastA, oddsStr: oddsAStr, setOdds: setOddsAStr, result: rowA, modelProb: modelProbA, parsedOdds: oddsA },
+              { label: lastB, oddsStr: oddsBStr, setOdds: setOddsBStr, result: rowB, modelProb: modelProbB, parsedOdds: oddsB },
+            ] as const).map(({ label, oddsStr, setOdds, result, modelProb, parsedOdds }) => (
               <div key={label} className="rounded-lg border border-[var(--color-border)] p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="w-16 shrink-0 truncate text-xs font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
@@ -196,6 +196,9 @@ export default function OddsCalculator({
                         {result.ev >= 0 ? `+$${result.ev.toFixed(2)}` : `-$${Math.abs(result.ev).toFixed(2)}`}
                       </span>
                       <span className="text-[10px] text-[var(--color-text-muted)]"> on ${stake.toFixed(0)}</span>
+                    </div>
+                    <div className="text-center text-[10px] text-[var(--color-text-muted)] mt-1">
+                      Collect <span className="font-mono tabular-nums text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">${(stake + americanToPayout(parsedOdds!, stake)).toFixed(2)}</span> if correct
                     </div>
                   </>
                 ) : (

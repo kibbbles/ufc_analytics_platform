@@ -8,12 +8,25 @@ Routes:
 
 from __future__ import annotations
 
+import json
 import logging
 import math
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+_METRICS_PATH = Path(__file__).parent.parent.parent.parent / "models" / "metrics.json"
+
+
+def _test_date_from() -> str:
+    """Return the test-set start date from the latest model metrics, or empty string."""
+    try:
+        m = json.loads(_METRICS_PATH.read_text())
+        return m["test_date_range"][0]
+    except Exception:
+        return ""
 
 from api.dependencies import get_db
 from schemas.past_prediction import (
@@ -59,7 +72,6 @@ def get_past_predictions(
             SUM(CASE WHEN confidence >= 0.65 THEN 1 ELSE 0 END)              AS high_conf_fights,
             SUM(CASE WHEN is_correct AND confidence >= 0.65 THEN 1 ELSE 0 END) AS high_conf_correct,
             AVG(confidence) FILTER (WHERE is_correct IS NOT NULL)             AS avg_confidence,
-            MIN(event_date)                                                   AS date_from,
             MAX(event_date)                                                   AS date_to
         FROM best
     """)).mappings().first()
@@ -73,7 +85,7 @@ def get_past_predictions(
     accuracy          = correct / total_fights if total_fights > 0 else 0.0
     high_conf_accuracy= high_conf_correct / high_conf_fights if high_conf_fights > 0 else 0.0
 
-    date_from_val = summary_row["date_from"]
+    date_from_val = _test_date_from()
     date_to_val   = summary_row["date_to"]
 
     years_rows = db.execute(text("""
@@ -112,7 +124,7 @@ def get_past_predictions(
         high_conf_fights=high_conf_fights,
         high_conf_correct=high_conf_correct,
         high_conf_accuracy=high_conf_accuracy,
-        date_from=str(date_from_val) if date_from_val else "",
+        date_from=date_from_val,
         date_to=str(date_to_val) if date_to_val else "",
         available_years=[int(y) for y in years_rows],
         pre_fight_total=pf_total,

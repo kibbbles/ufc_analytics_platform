@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = ""
 
+    # Supabase REST API
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+
     # The Odds API (task 27)
     odds_api_key: str = ""
 
