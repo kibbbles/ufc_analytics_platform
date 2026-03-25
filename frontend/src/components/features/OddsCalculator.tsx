@@ -33,7 +33,7 @@ function parseOdds(raw: string): number | null {
   return n
 }
 
-const EDGE_THRESHOLD = 0.02
+const EDGE_THRESHOLD = 0.05
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -217,7 +217,7 @@ export default function OddsCalculator({
             )}
 
             <p className="text-center text-[10px] text-[var(--color-text-muted)]">
-              Edge = model prob − Vegas implied prob. &gt;2% edge = value, 0–2% = thin edge, negative = no value.
+              &gt;5% edge = value, 0–5% = thin edge, negative = no value.
             </p>
           </div>
         </div>
