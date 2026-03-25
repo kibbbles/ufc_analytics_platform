@@ -310,12 +310,12 @@ export default function UpcomingFightPage() {
         </div>
       )}
 
-      {fight && pred && (
+      {fight && (
         <OddsCalculator
           nameA={nameA}
           nameB={nameB}
-          modelProbA={pred.win_prob_a}
-          modelProbB={pred.win_prob_b}
+          modelProbA={pred?.win_prob_a ?? null}
+          modelProbB={pred?.win_prob_b ?? null}
           initialOddsA={fight.odds_a}
           initialOddsB={fight.odds_b}
         />
