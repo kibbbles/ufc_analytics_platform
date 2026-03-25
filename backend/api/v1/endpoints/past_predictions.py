@@ -336,8 +336,8 @@ def get_past_prediction_stats(
 ) -> PastPredictionModalStats:
     _BUCKET_CASE = """
         CASE
-            WHEN confidence >= 0.30 THEN '30%+'
-            WHEN confidence >= 0.20 THEN '20-30%'
+            WHEN confidence >= 0.65 THEN '30%+'
+            WHEN confidence >= 0.60 THEN '20-30%'
             ELSE 'Under 20%'
         END
     """
