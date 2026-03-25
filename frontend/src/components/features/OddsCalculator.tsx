@@ -193,7 +193,7 @@ export default function OddsCalculator({
                     <div className="mt-2 border-t border-[var(--color-border)] pt-2 text-center">
                       <span className="text-[10px] text-[var(--color-text-muted)]">EV </span>
                       <span className={`font-mono text-sm font-bold tabular-nums ${result.ev > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {result.ev >= 0 ? '+' : ''}${result.ev.toFixed(2)}
+                        {result.ev >= 0 ? `+$${result.ev.toFixed(2)}` : `-$${Math.abs(result.ev).toFixed(2)}`}
                       </span>
                       <span className="text-[10px] text-[var(--color-text-muted)]"> on ${stake.toFixed(0)}</span>
                     </div>
