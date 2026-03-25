@@ -426,6 +426,38 @@ export default function PastPredictionFightPage() {
             </Card>
           )}
 
+          {/* Recent fights */}
+          {(item.fighter_a_id || item.fighter_b_id) && (
+            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Recent Fights</span>}>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameA}</p>
+                  {!item.fighter_a_id ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : !fightsA ? (
+                    <LoadingSkeleton lines={3} />
+                  ) : fightsA.data.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : (
+                    <RecentFightMini fights={fightsA.data} viewingFighterId={item.fighter_a_id} />
+                  )}
+                </div>
+                <div>
+                  <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameB}</p>
+                  {!item.fighter_b_id ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : !fightsB ? (
+                    <LoadingSkeleton lines={3} />
+                  ) : fightsB.data.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
+                  ) : (
+                    <RecentFightMini fights={fightsB.data} viewingFighterId={item.fighter_b_id} />
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Model Breakdown */}
           {item.features_json && (() => {
             const favA: { label: string; display: string }[] = []
@@ -490,38 +522,6 @@ export default function PastPredictionFightPage() {
               </Card>
             )
           })()}
-
-          {/* Recent fights */}
-          {(item.fighter_a_id || item.fighter_b_id) && (
-            <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Recent Fights</span>}>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameA}</p>
-                  {!item.fighter_a_id ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
-                  ) : !fightsA ? (
-                    <LoadingSkeleton lines={3} />
-                  ) : fightsA.data.length === 0 ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
-                  ) : (
-                    <RecentFightMini fights={fightsA.data} viewingFighterId={item.fighter_a_id} />
-                  )}
-                </div>
-                <div>
-                  <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameB}</p>
-                  {!item.fighter_b_id ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
-                  ) : !fightsB ? (
-                    <LoadingSkeleton lines={3} />
-                  ) : fightsB.data.length === 0 ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">No history</p>
-                  ) : (
-                    <RecentFightMini fights={fightsB.data} viewingFighterId={item.fighter_b_id} />
-                  )}
-                </div>
-              </div>
-            </Card>
-          )}
         </div>
       )}
     </div>
