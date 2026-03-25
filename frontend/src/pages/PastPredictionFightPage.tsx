@@ -7,6 +7,48 @@ import { Card, LoadingSkeleton } from '@components/common'
 import { inchesToFeet, formatDate } from '@utils/format'
 import type { FighterResponse, FightListItem, PastPredictionItem } from '@t/api'
 
+// ── Feature breakdown constants ───────────────────────────────────────────────
+
+const FEATURE_META: Record<string, { label: string; higherIsBetter: boolean }> = {
+  diff_ko_rate:                { label: 'KO/TKO finish rate',                      higherIsBetter: true  },
+  diff_ewa_kd:                 { label: 'Knockdowns — recent (weighted)',           higherIsBetter: true  },
+  diff_career_avg_kd:          { label: 'Knockdowns per fight (career)',            higherIsBetter: true  },
+  diff_td_def_rate:            { label: 'Takedown defense %',                       higherIsBetter: true  },
+  diff_roll3_sig_str_landed:   { label: 'Avg sig. strikes landed (last 3 fights)',  higherIsBetter: true  },
+  diff_roll7_total_str_landed: { label: 'Avg total strikes landed (last 7 fights)', higherIsBetter: true  },
+  diff_roll7_sig_str_pct:      { label: 'Avg sig. strike accuracy (last 7 fights)', higherIsBetter: true  },
+  diff_career_avg_ctrl_s:      { label: 'Avg control time per fight (career)',      higherIsBetter: true  },
+  diff_roll3_ctrl_s:           { label: 'Avg control time (last 3 fights)',         higherIsBetter: true  },
+  diff_days_in_weight_class:   { label: 'Experience in weight class',               higherIsBetter: true  },
+  diff_career_length_days:     { label: 'Career length',                            higherIsBetter: true  },
+  diff_roll5_td_pct:           { label: 'Avg takedown accuracy (last 5 fights)',    higherIsBetter: true  },
+  diff_roll7_td_landed:        { label: 'Avg takedowns landed (last 7 fights)',     higherIsBetter: true  },
+  diff_aggression_score:       { label: 'Aggression score',                         higherIsBetter: true  },
+  diff_defense_score:          { label: 'Defense score',                            higherIsBetter: true  },
+  diff_grappling_ratio:        { label: 'Grappling ratio',                          higherIsBetter: true  },
+  diff_roll7_sig_str_att:      { label: 'Avg sig. strike volume (last 7 fights)',   higherIsBetter: true  },
+  diff_career_avg_td_attempted:{ label: 'Avg takedown attempts per fight (career)', higherIsBetter: true  },
+  win_streak_diff:             { label: 'Win streak',                               higherIsBetter: true  },
+  win_rate_diff:               { label: 'Overall win rate',                         higherIsBetter: true  },
+  reach_diff_inches:           { label: 'Reach advantage (in)',                     higherIsBetter: true  },
+  diff_sapm:                   { label: 'Strikes absorbed per min',                 higherIsBetter: false },
+  diff_age_at_fight:           { label: 'Age (younger is better)',                  higherIsBetter: false },
+  loss_streak_diff:            { label: 'Loss streak',                              higherIsBetter: false },
+  diff_decision_rate:          { label: 'Decision rate',                            higherIsBetter: false },
+}
+
+const FEAT_SKIP = new Set(['is_title_fight', 'is_women_division', 'weight_class'])
+
+function fmtFeat(label: string, raw: number): string {
+  if (label.includes('%') || label.includes('rate') || label.includes('accuracy') || label.includes('win rate'))
+    return `${(Math.abs(raw) * 100).toFixed(1)}%`
+  if (label.includes('(in)')) return `${Math.abs(raw).toFixed(1)} in`
+  if (label.includes('control time') || label.includes('Control time')) return `${Math.abs(raw).toFixed(0)}s`
+  if (label.includes('Experience') || label.includes('Career length') || label.includes('younger'))
+    return `${(Math.abs(raw) / 365).toFixed(1)} yrs`
+  return Math.abs(raw).toFixed(2)
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function pct(v: number | null | undefined): string {
@@ -383,6 +425,71 @@ export default function PastPredictionFightPage() {
               </table>
             </Card>
           )}
+
+          {/* Model Breakdown */}
+          {item.features_json && (() => {
+            const favA: { label: string; display: string }[] = []
+            const favB: { label: string; display: string }[] = []
+            Object.entries(item.features_json)
+              .filter(([k, v]) => !FEAT_SKIP.has(k) && v != null && k in FEATURE_META)
+              .map(([k, v]) => {
+                const meta = FEATURE_META[k]
+                const adjusted = meta.higherIsBetter ? (v as number) : -(v as number)
+                return { key: k, raw: v as number, adjusted, meta }
+              })
+              .filter(e => Math.abs(e.adjusted) > 0.001)
+              .sort((a, b) => Math.abs(b.adjusted) - Math.abs(a.adjusted))
+              .forEach(e => {
+                const item2 = { label: e.meta.label, display: fmtFeat(e.meta.label, e.raw) }
+                if (e.adjusted > 0) favA.push(item2)
+                else favB.push(item2)
+              })
+            const total = favA.length + favB.length
+            if (total === 0) return null
+            const winnerLastName = (aWins ? nameA : nameB).split(' ').pop()
+            const winnerCount = aWins ? favA.length : favB.length
+            return (
+              <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Model Breakdown</span>}>
+                <p className="mb-4 text-center text-sm text-[var(--color-text-muted)]">
+                  <span className="font-semibold">{winnerCount} of {total}</span>
+                  {' metrics favoured '}
+                  <span className="font-semibold">{winnerLastName}</span>
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Favoured {nameA.split(' ').pop()}
+                    </h3>
+                    {favA.length === 0 ? (
+                      <p className="text-xs text-[var(--color-text-muted)]">No clear advantages</p>
+                    ) : favA.slice(0, 8).map(({ label, display }) => (
+                      <div key={label} className="mb-2">
+                        <div className="text-xs font-semibold text-[var(--color-primary)]">+{display}</div>
+                        <div className="text-[11px] leading-snug text-[var(--color-text-muted)]">{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Favoured {nameB.split(' ').pop()}
+                    </h3>
+                    {favB.length === 0 ? (
+                      <p className="text-xs text-[var(--color-text-muted)]">No clear advantages</p>
+                    ) : favB.slice(0, 8).map(({ label, display }) => (
+                      <div key={label} className="mb-2">
+                        <div className="text-xs font-semibold text-[var(--color-primary)]">+{display}</div>
+                        <div className="text-[11px] leading-snug text-[var(--color-text-muted)]">{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
+                  Pre-fight feature snapshot. Values are Fighter A − Fighter B, sorted by magnitude.{' '}
+                  The metric count shows how many of the model's input features pointed in the predicted winner's favour.
+                </p>
+              </Card>
+            )
+          })()}
 
           {/* Recent fights */}
           {(item.fighter_a_id || item.fighter_b_id) && (

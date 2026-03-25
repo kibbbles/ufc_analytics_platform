@@ -301,6 +301,7 @@ _FIGHT_COLS = """
     predicted_winner_id, predicted_method,
     actual_winner_id, actual_method,
     is_correct, confidence, is_upset,
+    features_json,
     prediction_source, pre_fight_predicted_at
 """
 
@@ -316,6 +317,7 @@ _DEDUP_CTE = """
             predicted_winner_id, predicted_method,
             actual_winner_id, actual_method,
             is_correct, confidence, is_upset,
+            features_json,
             prediction_source, pre_fight_predicted_at
         FROM past_predictions
         ORDER BY fight_id,

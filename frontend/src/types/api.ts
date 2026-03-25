@@ -243,6 +243,7 @@ export interface PastPredictionItem {
   is_correct: boolean | null
   confidence: number | null
   is_upset: boolean | null
+  features_json: Record<string, number | null> | null
   // Data quality provenance
   prediction_source: 'pre_fight_archive' | 'backfill' | null
   pre_fight_predicted_at: string | null
