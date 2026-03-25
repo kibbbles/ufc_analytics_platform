@@ -220,7 +220,7 @@ export default function OddsCalculator({
             )}
 
             <p className="text-center text-[10px] text-[var(--color-text-muted)]">
-              EV = (model win% × payout) − (model loss% × stake). Positive EV means the model thinks you're getting better odds than the risk warrants.
+              EV = (model win% × payout) − (model loss% × stake). Positive EV means the model thinks Vegas is undervaluing this fighter — you're being paid as if they're less likely to win than our model believes.
             </p>
           </div>
         </div>
