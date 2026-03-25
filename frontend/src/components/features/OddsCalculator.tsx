@@ -217,7 +217,7 @@ export default function OddsCalculator({
             )}
 
             <p className="text-center text-[10px] text-[var(--color-text-muted)]">
-              Edge = model prob − Vegas implied prob
+              Edge = model prob − Vegas implied prob. &gt;2% edge = value, 0–2% = thin edge, negative = no value.
             </p>
           </div>
         </div>
