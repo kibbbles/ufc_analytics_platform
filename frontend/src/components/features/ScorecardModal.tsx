@@ -311,23 +311,27 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                         <thead>
                           <tr className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-border)]/10">
                             <th className="text-left px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]"> </th>
+                            <th className="text-right px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Record</th>
                             <th className="text-right px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Accuracy</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)]">
                             <td className="px-3 py-2">Model</td>
+                            <td className="px-3 py-2 font-mono tabular-nums text-right text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">{Math.round(v.model_accuracy * v.sample_size)}/{v.sample_size}</td>
                             <td className="px-3 py-2 font-mono tabular-nums text-right font-semibold">{formatPct(v.model_accuracy)}</td>
                           </tr>
                           <tr className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)]">
                             <td className="px-3 py-2">Vegas</td>
+                            <td className="px-3 py-2 font-mono tabular-nums text-right text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">{Math.round(v.vegas_accuracy * v.sample_size)}/{v.sample_size}</td>
                             <td className="px-3 py-2 font-mono tabular-nums text-right font-semibold">{formatPct(v.vegas_accuracy)}</td>
                           </tr>
                           {v.disagree_count > 0 && v.disagree_accuracy != null && (
                             <tr>
                               <td className="px-3 py-2 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                                Model when disagreeing <span className="opacity-60">({v.disagree_count})</span>
+                                Model when disagreeing
                               </td>
+                              <td className="px-3 py-2 font-mono tabular-nums text-right text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">{Math.round(v.disagree_accuracy * v.disagree_count)}/{v.disagree_count}</td>
                               <td className="px-3 py-2 font-mono tabular-nums text-right font-semibold">{formatPct(v.disagree_accuracy)}</td>
                             </tr>
                           )}
