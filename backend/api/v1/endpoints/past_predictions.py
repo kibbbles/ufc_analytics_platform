@@ -296,7 +296,7 @@ def get_past_prediction_event(
 _FIGHT_COLS = """
     fight_id, event_id, event_name, event_date,
     fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
-    weight_class, win_prob_a, win_prob_b,
+    weight_class, model_version, win_prob_a, win_prob_b,
     pred_method_ko_tko, pred_method_sub, pred_method_dec,
     predicted_winner_id, predicted_method,
     actual_winner_id, actual_method,
@@ -312,7 +312,7 @@ _DEDUP_CTE = """
         SELECT DISTINCT ON (fight_id)
             fight_id, event_id, event_name, event_date,
             fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
-            weight_class, win_prob_a, win_prob_b,
+            weight_class, model_version, win_prob_a, win_prob_b,
             pred_method_ko_tko, pred_method_sub, pred_method_dec,
             predicted_winner_id, predicted_method,
             actual_winner_id, actual_method,

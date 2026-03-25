@@ -516,8 +516,8 @@ export default function PastPredictionFightPage() {
                   </div>
                 </div>
                 <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
-                  Pre-fight feature snapshot. Values are Fighter A − Fighter B, sorted by magnitude.{' '}
-                  The metric count shows how many of the model's input features pointed in the predicted winner's favour.
+                  Values are per-fight averages (Fighter A − Fighter B), sorted by magnitude. Model: {item.model_version ?? 'win_loss_v1'}.{' '}
+                  The metric count shows how many of the model's input features point in the predicted winner's favour — a higher share means the prediction is backed by broader evidence, not just one or two stats.
                 </p>
               </Card>
             )
