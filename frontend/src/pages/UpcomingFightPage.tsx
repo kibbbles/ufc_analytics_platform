@@ -198,14 +198,10 @@ function FeatureBreakdown({ fight }: { fight: UpcomingFight }) {
 
   return (
     <>
-      <p className="mb-4 text-center text-sm">
-        <span className="font-bold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-          {aWins ? favA.length : favB.length} of {favA.length + favB.length}
-        </span>
-        <span className="text-[var(--color-text-muted)]"> metrics favour </span>
-        <span className="font-semibold text-[var(--color-primary)]">
-          {aWins ? nameA : nameB}
-        </span>
+      <p className="mb-4 text-center text-sm text-[var(--color-text-muted)]">
+        <span className="font-semibold">{aWins ? favA.length : favB.length} of {favA.length + favB.length}</span>
+        {' metrics favour '}
+        <span className="font-semibold">{aWins ? nameA : nameB}</span>
       </p>
     <div className="grid grid-cols-2 gap-4">
       <div>
@@ -543,7 +539,8 @@ export default function UpcomingFightPage() {
             <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Model Breakdown</span>}>
               <FeatureBreakdown fight={fight} />
               <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
-                Values are per-fight averages (Fighter A − Fighter B), sorted by magnitude. Model: {pred.model_version ?? 'win_loss_v1'}.
+                Values are per-fight averages (Fighter A − Fighter B), sorted by magnitude. Model: {pred.model_version ?? 'win_loss_v1'}.{' '}
+                The metric count shows how many of the model's input features point in the predicted winner's favour — a higher share means the prediction is backed by broader evidence, not just one or two stats.
               </p>
             </Card>
           )}
