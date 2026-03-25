@@ -220,7 +220,7 @@ export default function OddsCalculator({
             )}
 
             <p className="text-center text-[10px] text-[var(--color-text-muted)]">
-              &gt;5% edge = value, 0–5% = thin edge, negative = no value.
+              EV = (model win% × payout) − (model loss% × stake). Positive EV means the model thinks you're getting better odds than the risk warrants.
             </p>
           </div>
         </div>
