@@ -4,6 +4,7 @@ import { upcomingService } from '@services/upcomingService'
 import { fightersService } from '@services/fightersService'
 import { fightsService } from '@services/fightsService'
 import { Card, LoadingSkeleton } from '@components/common'
+import OddsCalculator from '@components/features/OddsCalculator'
 import type { FighterResponse, FightListItem, UpcomingFight } from '@t/api'
 import { inchesToFeet, formatDate } from '@utils/format'
 
@@ -307,6 +308,17 @@ export default function UpcomingFightPage() {
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-600 dark:text-red-400">
           {error}
         </div>
+      )}
+
+      {fight && pred && (
+        <OddsCalculator
+          nameA={nameA}
+          nameB={nameB}
+          modelProbA={pred.win_prob_a}
+          modelProbB={pred.win_prob_b}
+          initialOddsA={fight.odds_a}
+          initialOddsB={fight.odds_b}
+        />
       )}
 
       {fight && !loading && (
