@@ -329,7 +329,7 @@ def run(date_from: str = "2022-01-01") -> None:
 
     correct   = sum(1 for u in upserts if u["is_correct"])
     accuracy  = correct / len(upserts) * 100 if upserts else 0.0
-    hc        = [u for u in upserts if u["confidence"] >= 0.65]
+    hc        = [u for u in upserts if u["confidence"] >= 0.30]
     hc_correct= sum(1 for u in hc if u["is_correct"])
     hc_acc    = hc_correct / len(hc) * 100 if hc else 0.0
 
@@ -337,7 +337,7 @@ def run(date_from: str = "2022-01-01") -> None:
     print(f"  Date range : >= {date_from}")
     print(f"  Total rows : {len(upserts)}  (skipped {skipped})")
     print(f"  Accuracy   : {correct}/{len(upserts)} = {accuracy:.1f}%")
-    print(f"  High-conf  : {hc_correct}/{len(hc)} = {hc_acc:.1f}% (confidence >= 65%)")
+    print(f"  High-conf  : {hc_correct}/{len(hc)} = {hc_acc:.1f}% (conviction >= 30%)")
 
 
 # ---------------------------------------------------------------------------
