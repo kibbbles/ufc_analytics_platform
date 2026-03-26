@@ -124,6 +124,33 @@ export interface FightListResponse {
   meta: PaginationMeta
 }
 
+export interface FightSearchItem {
+  fight_id: string
+  event_id: string | null
+  event_name: string | null
+  event_date: string | null
+  fighter_a_id: string | null
+  fighter_b_id: string | null
+  fighter_a_name: string | null
+  fighter_b_name: string | null
+  weight_class: string | null
+  method: string | null
+  winner_id: string | null
+  winner_name: string | null
+  round: number | null
+  is_title_fight: boolean | null
+  // null when no past_prediction exists
+  win_prob_a: number | null
+  win_prob_b: number | null
+  predicted_winner_id: string | null
+  conviction: number | null
+}
+
+export interface FightSearchResponse {
+  data: FightSearchItem[]
+  meta: PaginationMeta
+}
+
 export interface FightResponse {
   id: string
   event_id: string | null

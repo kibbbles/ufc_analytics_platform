@@ -4,10 +4,12 @@ DB sources:
     fight_details   — id, event_id, bout, fighter_a_id, fighter_b_id
     fight_results   — method, round, time, weight_class, is_title_fight, etc.
     fight_stats     — per-round typed integer columns (sig_str_landed, etc.)
+    past_predictions — optional prediction data joined on fight_id
 """
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -85,4 +87,36 @@ class FightListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
     data: list[FightListItem]
+    meta: PaginationMeta
+
+
+class FightSearchItem(BaseModel):
+    """One row returned by GET /fights/search — enriched with names + optional prediction."""
+    model_config = ConfigDict(from_attributes=False)
+
+    fight_id: str
+    event_id: Optional[str] = None
+    event_name: Optional[str] = None
+    event_date: Optional[date] = None
+    fighter_a_id: Optional[str] = None
+    fighter_b_id: Optional[str] = None
+    fighter_a_name: Optional[str] = None
+    fighter_b_name: Optional[str] = None
+    weight_class: Optional[str] = None
+    method: Optional[str] = None
+    winner_id: Optional[str] = None
+    winner_name: Optional[str] = None
+    round: Optional[int] = None
+    is_title_fight: Optional[bool] = None
+    # Prediction fields — null when no past_prediction row exists
+    win_prob_a: Optional[float] = None
+    win_prob_b: Optional[float] = None
+    predicted_winner_id: Optional[str] = None
+    conviction: Optional[float] = None
+
+
+class FightSearchResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    data: list[FightSearchItem]
     meta: PaginationMeta

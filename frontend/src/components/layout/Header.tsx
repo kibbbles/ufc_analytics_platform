@@ -5,7 +5,7 @@ import { useTheme } from './ThemeProvider'
 const navLinks = [
   { to: '/',           label: 'Home',           end: true },
   { to: '/upcoming',   label: 'Upcoming' },
-  { to: '/events',     label: 'Events' },
+  { to: '/events',     label: 'Fight Database' },
   { to: '/fighters',   label: 'Fighter Lookup' },
   { to: '/about',      label: 'About' },
 ]

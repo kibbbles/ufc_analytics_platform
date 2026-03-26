@@ -17,7 +17,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from api.dependencies import get_db
-from schemas.fight import FightListItem, FightListResponse, FightResponse, FightStatsResponse
+from schemas.fight import (
+    FightListItem, FightListResponse, FightResponse, FightStatsResponse,
+    FightSearchItem, FightSearchResponse,
+)
 from schemas.shared import PaginationMeta
 
 logger = logging.getLogger(__name__)
@@ -100,6 +103,93 @@ def list_fights(
 
     return FightListResponse(
         data=[FightListItem(**dict(r)) for r in rows],
+        meta=PaginationMeta(
+            page=page,
+            page_size=page_size,
+            total=total,
+            total_pages=math.ceil(total / page_size) if total else 0,
+        ),
+    )
+
+
+@router.get("/search", response_model=FightSearchResponse, summary="Search all fights with optional prediction data")
+def search_fights(
+    fighter_name: str | None = Query(None, description="Partial match on either fighter name"),
+    event_name: str | None = Query(None, description="Partial match on event name"),
+    weight_class: str | None = Query(None, description="Exact weight class"),
+    method: str | None = Query(None, description="Partial match on finish method"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    offset = (page - 1) * page_size
+    conditions: list[str] = []
+    params: dict = {"limit": page_size, "offset": offset}
+
+    if fighter_name:
+        conditions.append('fd."BOUT" ILIKE :fighter_name')
+        params["fighter_name"] = f"%{fighter_name}%"
+    if event_name:
+        conditions.append('ed."EVENT" ILIKE :event_name')
+        params["event_name"] = f"%{event_name}%"
+    if weight_class:
+        conditions.append("fr.weight_class = :weight_class")
+        params["weight_class"] = weight_class
+    if method:
+        conditions.append('fr."METHOD" ILIKE :method')
+        params["method"] = f"%{method}%"
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+    base_joins = """
+        FROM fight_details fd
+        LEFT JOIN fight_results fr  ON fr.fight_id   = fd.id
+        LEFT JOIN event_details ed  ON ed.id          = fd.event_id
+        LEFT JOIN fighter_details fa ON fa.id          = fd.fighter_a_id
+        LEFT JOIN fighter_details fb ON fb.id          = fd.fighter_b_id
+        LEFT JOIN fighter_details fw ON fw.id          = fr.fighter_id
+        LEFT JOIN LATERAL (
+            SELECT win_prob_a, win_prob_b, predicted_winner_id, confidence
+            FROM past_predictions
+            WHERE fight_id = fd.id
+            ORDER BY CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+            LIMIT 1
+        ) pp ON TRUE
+    """
+
+    total = db.execute(
+        text(f"SELECT COUNT(*) {base_joins} {where}"),
+        params,
+    ).scalar() or 0
+
+    rows = db.execute(text(f"""
+        SELECT
+            fd.id                                                           AS fight_id,
+            ed.id                                                           AS event_id,
+            ed."EVENT"                                                      AS event_name,
+            ed.date_proper                                                  AS event_date,
+            fd.fighter_a_id,
+            fd.fighter_b_id,
+            TRIM(COALESCE(fa."FIRST", '') || ' ' || COALESCE(fa."LAST", '')) AS fighter_a_name,
+            TRIM(COALESCE(fb."FIRST", '') || ' ' || COALESCE(fb."LAST", '')) AS fighter_b_name,
+            fr.weight_class,
+            fr."METHOD"                                                     AS method,
+            fr.fighter_id                                                   AS winner_id,
+            TRIM(COALESCE(fw."FIRST", '') || ' ' || COALESCE(fw."LAST", '')) AS winner_name,
+            fr."ROUND"::int                                                 AS round,
+            fr.is_title_fight,
+            pp.win_prob_a,
+            pp.win_prob_b,
+            pp.predicted_winner_id,
+            pp.confidence                                                   AS conviction
+        {base_joins}
+        {where}
+        ORDER BY ed.date_proper DESC NULLS LAST, fd.id
+        LIMIT :limit OFFSET :offset
+    """), params).mappings().all()
+
+    return FightSearchResponse(
+        data=[FightSearchItem(**dict(r)) for r in rows],
         meta=PaginationMeta(
             page=page,
             page_size=page_size,

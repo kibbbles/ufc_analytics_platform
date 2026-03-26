@@ -5,6 +5,7 @@ export interface GetEventsParams {
   page?: number
   page_size?: number
   year?: number
+  name?: string
 }
 
 export const eventsService = {
