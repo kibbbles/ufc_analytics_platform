@@ -214,8 +214,8 @@ def run(date_from: str = "2022-01-01") -> None:
         actual_winner_id    = fa_id if fighter_a_wins == 1 else fb_id
         predicted_winner_id = fa_id if win_prob_a >= 0.5 else fb_id
         is_correct          = (predicted_winner_id == actual_winner_id)
-        confidence          = max(win_prob_a, win_prob_b)
-        is_upset            = (not is_correct) and (confidence >= 0.65)
+        confidence          = (max(win_prob_a, win_prob_b) - 0.5) * 2
+        is_upset            = (not is_correct) and (confidence >= 0.30)
 
         methods = {
             'KO/TKO':     result['ko_tko'],
