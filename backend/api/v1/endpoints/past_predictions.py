@@ -58,11 +58,13 @@ def get_past_predictions(
     limit: int = Query(default=20, ge=1, le=200, description="Number of recent predictions to return"),
     db: Session = Depends(get_db),
 ) -> PastPredictionsResponse:
-    # ---- Summary row --------------------------------------------------------
+    # ---- Summary row (test-set only: event_date >= model test start) -------
+    test_from = _test_date_from()   # e.g. "2023-12-16" from metrics.json
     summary_row = db.execute(text("""
         WITH best AS (
             SELECT DISTINCT ON (fight_id) *
             FROM past_predictions
+            WHERE (:test_from = '' OR event_date >= CAST(:test_from AS date))
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -74,7 +76,7 @@ def get_past_predictions(
             AVG(confidence) FILTER (WHERE is_correct IS NOT NULL)             AS avg_confidence,
             MAX(event_date)                                                   AS date_to
         FROM best
-    """)).mappings().first()
+    """), {"test_from": test_from}).mappings().first()
 
     total_fights     = int(summary_row["total_fights"] or 0)
     correct          = int(summary_row["correct"] or 0)
@@ -85,17 +87,18 @@ def get_past_predictions(
     accuracy          = correct / total_fights if total_fights > 0 else 0.0
     high_conf_accuracy= high_conf_correct / high_conf_fights if high_conf_fights > 0 else 0.0
 
-    date_from_val = _test_date_from()
+    date_from_val = test_from
     date_to_val   = summary_row["date_to"]
 
     years_rows = db.execute(text("""
         SELECT DISTINCT EXTRACT(YEAR FROM event_date)::int AS yr
         FROM past_predictions
         WHERE event_date IS NOT NULL
+          AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
         ORDER BY yr DESC
-    """)).scalars().all()  # all rows fine here — just listing years
+    """), {"test_from": test_from}).scalars().all()
 
-    # ---- Pre-fight only stats (prediction_source = 'pre_fight_archive') ------
+    # ---- Pre-fight only stats (test-set window, prediction_source = 'pre_fight_archive') --
     pf_row = db.execute(text("""
         SELECT
             COUNT(*)                                                            AS total,
@@ -106,7 +109,8 @@ def get_past_predictions(
         FROM past_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND is_correct IS NOT NULL
-    """)).mappings().first()
+          AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
+    """), {"test_from": test_from}).mappings().first()
 
     pf_total          = int(pf_row["total"] or 0)
     pf_correct        = int(pf_row["correct"] or 0)
