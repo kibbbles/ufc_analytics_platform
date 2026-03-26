@@ -39,13 +39,7 @@ function FightCard({ fight }: { fight: FightSearchItem }) {
   const winnerIsA = fight.winner_id === fight.fighter_a_id
   const predWinnerIsA = fight.predicted_winner_id === fight.fighter_a_id
 
-  const probForWinner = hasPred
-    ? winnerIsA
-      ? fight.win_prob_a!
-      : fight.win_prob_b!
-    : null
-
-  return (
+return (
     <div className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 space-y-1.5">
       {/* Fighter names + winner */}
       <div className="flex items-start justify-between gap-3">
