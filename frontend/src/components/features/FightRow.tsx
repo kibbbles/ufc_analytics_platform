@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { FightListItem } from '@t/api'
 import { Badge } from '@components/common'
 
@@ -16,7 +17,10 @@ function ResultBadge({ fight, fighterId }: { fight: FightListItem; fighterId?: s
 
 export default function FightRow({ fight, viewingFighterId }: FightRowProps) {
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-[var(--color-border)] last:border-0">
+    <Link
+      to={`/past-predictions/fights/${fight.id}`}
+      className="flex items-center gap-3 py-3 border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border)]/10 transition-colors"
+    >
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{fight.bout ?? '—'}</p>
         {fight.weight_class && (
@@ -35,6 +39,6 @@ export default function FightRow({ fight, viewingFighterId }: FightRowProps) {
         )}
         <ResultBadge fight={fight} fighterId={viewingFighterId} />
       </div>
-    </div>
+    </Link>
   )
 }

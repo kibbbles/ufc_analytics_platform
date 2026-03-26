@@ -252,8 +252,19 @@ export default function PastPredictionFightPage() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-600 dark:text-red-400">
-          {error}
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
+          {error.toLowerCase().includes('not found') || error.toLowerCase().includes('404') ? (
+            <>
+              <p className="text-sm font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+                No prediction available for this fight
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                Model predictions are available for fights from Dec 2023 onwards.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
         </div>
       )}
 

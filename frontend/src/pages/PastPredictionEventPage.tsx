@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import LoadingSkeleton from '@components/common/LoadingSkeleton'
@@ -27,108 +27,98 @@ function winnerName(item: PastPredictionItem, id: string | null | undefined): st
 // ---------------------------------------------------------------------------
 
 function FightRow({ item }: { item: PastPredictionItem }) {
-  const navigate  = useNavigate()
-  const isUpset   = item.is_upset
-  const isCorrect = item.is_correct
+  const isUpset      = item.is_upset
+  const isCorrect    = item.is_correct
+  const hasPred      = item.predicted_winner_id != null
+  const winnerIsA    = item.actual_winner_id === item.fighter_a_id
+  const predWinnerIsA = item.predicted_winner_id === item.fighter_a_id
 
-  const hasPrediction = item.predicted_winner_id != null
+  const resultBadge = !hasPred
+    ? { label: '·', cls: 'bg-[var(--color-border)]/40 text-[var(--color-text-muted)]' }
+    : isUpset
+    ? { label: '~ Upset', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' }
+    : isCorrect
+    ? { label: '✓', cls: 'bg-green-500/15 text-green-600 dark:text-green-400' }
+    : { label: '✗', cls: 'bg-red-500/15 text-red-600 dark:text-red-400' }
 
-  let indicator: string
-  let indicatorColor: string
-  if (!hasPrediction)  { indicator = '·'; indicatorColor = 'text-[var(--color-text-muted)]' }
-  else if (isUpset)    { indicator = '~'; indicatorColor = 'text-amber-500' }
-  else if (isCorrect)  { indicator = '✓'; indicatorColor = 'text-green-500' }
-  else                 { indicator = '✗'; indicatorColor = 'text-[var(--color-primary)]' }
-
-  const predWinner   = winnerName(item, item.predicted_winner_id)
-  const actualWinner = winnerName(item, item.actual_winner_id)
+  const methodClr = (m: string | null | undefined) => {
+    if (!m) return 'text-[var(--color-text-muted)]'
+    const u = m.toUpperCase()
+    if (u.includes('KO') || u.includes('TKO')) return 'text-[var(--color-primary)]'
+    if (u.includes('SUB')) return 'text-amber-500 dark:text-amber-400'
+    return 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]'
+  }
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => navigate(`/past-predictions/fights/${item.fight_id}`)}
-      onKeyDown={(e) => e.key === 'Enter' && navigate(`/past-predictions/fights/${item.fight_id}`)}
-      className="py-4 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border-light)]/30 dark:hover:bg-[var(--color-border)]/20 cursor-pointer transition-colors"
+    <Link
+      to={`/past-predictions/fights/${item.fight_id}`}
+      className="block py-3 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border)]/10 transition-colors space-y-1.5"
     >
-      {/* Indicator + matchup — centered */}
-      <div className="flex flex-col items-center text-center gap-1 mb-2">
-        <span
-          className={`font-mono font-bold text-lg ${indicatorColor}`}
-          aria-label={isUpset ? 'upset' : isCorrect ? 'correct' : 'incorrect'}
-        >
-          {indicator}
-        </span>
-        <p className="text-sm font-semibold leading-tight">
-          <Link
-            to={`/fighters/${item.fighter_a_id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="hover:text-[var(--color-primary)] transition-colors"
-          >
+      {/* Fighter names + result badge */}
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-semibold leading-snug text-sm">
+          <span className={winnerIsA ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}>
             {item.fighter_a_name ?? '?'}
-          </Link>
-          <span className="font-normal text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            {' vs '}
           </span>
-          <Link
-            to={`/fighters/${item.fighter_b_id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="hover:text-[var(--color-primary)] transition-colors"
-          >
+          <span className="mx-1.5 font-normal text-[var(--color-text-muted)]">vs</span>
+          <span className={!winnerIsA && item.actual_winner_id ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : !item.actual_winner_id ? '' : 'text-[var(--color-text-muted)]'}>
             {item.fighter_b_name ?? '?'}
-          </Link>
+          </span>
         </p>
-        {item.weight_class && (
-          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            {item.weight_class}
-          </p>
-        )}
+        <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded ${resultBadge.cls}`}>
+          {resultBadge.label}
+        </span>
       </div>
 
-      {/* Predicted vs actual — centered */}
-      <div className="flex flex-col items-center gap-0.5">
-        <p className="text-xs text-center">
-          {hasPrediction ? (
-            <>
-              <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                Predicted{' '}
-              </span>
-              <span className={isCorrect ? 'font-medium text-[var(--color-primary)]' : ''}>
-                {predWinner}
-              </span>
-              {item.predicted_method && (
-                <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  {' '}via {item.predicted_method}
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] italic">
-              No prediction
-            </span>
-          )}
-        </p>
-        <p className="text-xs text-center">
-          <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Actual{' '}
+      {/* Actual result */}
+      {item.actual_winner_id && (
+        <p className="text-xs">
+          <span className="text-[var(--color-text-muted)]">Actual: </span>
+          <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+            {winnerName(item, item.actual_winner_id)}
           </span>
-          <span className="font-medium">{actualWinner}</span>
           {item.actual_method && (
-            <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {' '}via {item.actual_method}
+            <span className={`ml-1.5 font-medium ${methodClr(item.actual_method)}`}>
+              · {item.actual_method}
             </span>
           )}
         </p>
-        {item.confidence != null && (
-          <p className="text-xs text-center text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
-            conviction{' '}
-            <span className="font-mono tabular-nums font-semibold">
-              {formatPct(item.confidence)}
+      )}
+
+      {/* Event + date + weight class */}
+      <p className="text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+        {item.event_name ?? '—'}
+        {item.event_date ? ` · ${formatDate(item.event_date)}` : ''}
+        {item.weight_class ? ` · ${item.weight_class}` : ''}
+      </p>
+
+      {/* Prediction row */}
+      {hasPred && item.win_prob_a != null && item.win_prob_b != null && (
+        <div className="flex items-center gap-2 pt-0.5">
+          <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
+            Model
+          </span>
+          <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+            {item.fighter_a_name?.split(' ').pop()} {formatPct(item.win_prob_a)}
+            <span className="mx-1 text-[var(--color-text-muted)]">/</span>
+            {item.fighter_b_name?.split(' ').pop()} {formatPct(item.win_prob_b)}
+          </span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+            isCorrect
+              ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+              : 'bg-red-500/15 text-red-600 dark:text-red-400'
+          }`}>
+            {isCorrect ? '✓' : '✗'}{' '}
+            {predWinnerIsA ? item.fighter_a_name?.split(' ').pop() : item.fighter_b_name?.split(' ').pop()}
+          </span>
+          {item.confidence != null && (
+            <span className="text-[10px] text-[var(--color-text-muted)] font-mono tabular-nums">
+              · {formatPct(item.confidence)} conviction
             </span>
-          </p>
-        )}
-      </div>
-    </div>
+          )}
+        </div>
+      )}
+    </Link>
   )
 }
 

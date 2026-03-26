@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { useDebounce } from '@hooks/useDebounce'
 import { fightsService } from '@services/fightsService'
@@ -39,8 +40,11 @@ function FightCard({ fight }: { fight: FightSearchItem }) {
   const winnerIsA = fight.winner_id === fight.fighter_a_id
   const predWinnerIsA = fight.predicted_winner_id === fight.fighter_a_id
 
-return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 space-y-1.5">
+  return (
+    <Link
+      to={`/past-predictions/fights/${fight.fight_id}`}
+      className="block rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 space-y-1.5 hover:border-[var(--color-primary)]/60 transition-colors"
+    >
       {/* Fighter names + winner */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -105,7 +109,7 @@ return (
           </span>
         </div>
       )}
-    </div>
+    </Link>
   )
 }
 
