@@ -52,17 +52,32 @@ def predict(
     categorical        = sel["categorical_features"]
     all_cols           = feature_names + categorical
 
-    # Build single-row DataFrame matching the column order the pipeline expects
-    row = pd.DataFrame([{c: feat.get(c) for c in all_cols}])
+    # Build single-row DataFrames for both perspectives.
+    # fighter_a / fighter_b can change between scraper runs if UFCStats reorders
+    # the page, which flips all diff_* features and produces a different (wrong)
+    # answer.  Averaging both directions guarantees order-invariant predictions:
+    #   P(A wins) = (model(A as fighter_a) + (1 - model(B as fighter_a))) / 2
+    diff_cols = [c for c in all_cols if "diff" in c]
 
-    # ---- Win / loss prediction -------------------------------------------
-    win_proba = store.win_pipeline.predict_proba(row)[0]
-    # Class order: [0=fighter_b_wins, 1=fighter_a_wins]
+    feat_ab = {c: feat.get(c) for c in all_cols}
+    feat_ba = dict(feat_ab)
+    for c in diff_cols:
+        if feat_ba[c] is not None:
+            feat_ba[c] = -feat_ba[c]
+
+    row_ab = pd.DataFrame([feat_ab])
+    row_ba = pd.DataFrame([feat_ba])
+
+    # ---- Win / loss prediction (symmetrized) -----------------------------
     classes = list(store.win_pipeline.classes_)
-    win_prob = float(win_proba[classes.index(1)] if 1 in classes else win_proba[1])
+    idx1 = classes.index(1) if 1 in classes else 1
 
-    # ---- Method prediction -----------------------------------------------
-    method_proba   = store.method_pipeline.predict_proba(row)[0]
+    prob_ab = float(store.win_pipeline.predict_proba(row_ab)[0][idx1])
+    prob_ba = float(store.win_pipeline.predict_proba(row_ba)[0][idx1])
+    win_prob = (prob_ab + (1.0 - prob_ba)) / 2.0
+
+    # ---- Method prediction (perspective A only — method is symmetric by nature)
+    method_proba   = store.method_pipeline.predict_proba(row_ab)[0]
     method_classes = list(store.method_pipeline.classes_)
     method_map     = dict(zip(method_classes, method_proba.tolist()))
 
