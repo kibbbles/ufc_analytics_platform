@@ -67,13 +67,6 @@ function fmtTime(seconds: number | null | undefined): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function winnerName(item: PastPredictionItem, id: string | null | undefined): string {
-  if (!id) return '—'
-  if (id === item.fighter_a_id) return item.fighter_a_name ?? '—'
-  if (id === item.fighter_b_id) return item.fighter_b_name ?? '—'
-  return '—'
-}
-
 // ── TaleOfTape ────────────────────────────────────────────────────────────────
 
 function TaleOfTape({
@@ -164,75 +157,74 @@ function RecentFightMini({
   )
 }
 
-// ── Actual result card ────────────────────────────────────────────────────────
-
-function ActualResultCard({ item }: { item: PastPredictionItem }) {
-  const isUpset   = item.is_upset
-  const isCorrect = item.is_correct
-
-  const hasPrediction = item.predicted_winner_id != null
-
-  let badge: string
-  let bgClass: string
-  let badgeClass: string
-  if (!hasPrediction) { badge = '· No prediction'; bgClass = 'bg-[var(--color-border)]/20 border-[var(--color-border)]'; badgeClass = 'text-[var(--color-text-muted)]' }
-  else if (isUpset)   { badge = '~ Upset';          bgClass = 'bg-amber-500/10 border-amber-500/30';                     badgeClass = 'text-amber-600 dark:text-amber-400' }
-  else if (isCorrect) { badge = '✓ Correct';        bgClass = 'bg-green-500/10 border-green-500/30';                     badgeClass = 'text-green-600 dark:text-green-400' }
-  else                { badge = '✗ Incorrect';       bgClass = 'bg-red-500/10 border-red-500/30';                         badgeClass = 'text-red-600 dark:text-red-400' }
-
-  return (
-    <div className={`rounded-lg border p-4 ${bgClass}`}>
-      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${badgeClass}`}>{badge}</p>
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-semibold">{winnerName(item, item.actual_winner_id)}</span>
-        <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          {item.actual_method ?? '—'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PastPredictionFightPage() {
   const { fight_id } = useParams<{ fight_id: string }>()
   const navigate     = useNavigate()
 
-  const { data: item, loading, error } = useApi(
-    () => pastPredictionsService.getFight(fight_id!),
+  // Base fight data — always loaded, drives the entire page
+  const { data: fightDetail, loading, error } = useApi(
+    () => fightsService.getById(fight_id!),
     [fight_id],
   )
 
+  // Prediction — optional; 404 silently becomes null
+  const { data: predItem } = useApi(
+    () => pastPredictionsService.getFight(fight_id!).catch((): PastPredictionItem | null => null),
+    [fight_id],
+  )
+
+  const faId = fightDetail?.fighter_a_id ?? null
+  const fbId = fightDetail?.fighter_b_id ?? null
+
   const { data: fighterA } = useApi(
-    () => item?.fighter_a_id ? fightersService.getById(item.fighter_a_id) : Promise.resolve(null),
-    [item?.fighter_a_id],
+    () => faId ? fightersService.getById(faId) : Promise.resolve(null),
+    [faId],
   )
   const { data: fighterB } = useApi(
-    () => item?.fighter_b_id ? fightersService.getById(item.fighter_b_id) : Promise.resolve(null),
-    [item?.fighter_b_id],
+    () => fbId ? fightersService.getById(fbId) : Promise.resolve(null),
+    [fbId],
   )
   const { data: fightsA } = useApi(
-    () => item?.fighter_a_id ? fightsService.getList({ fighter_id: item.fighter_a_id, page_size: 5 }) : Promise.resolve(null),
-    [item?.fighter_a_id],
+    () => faId ? fightsService.getList({ fighter_id: faId, page_size: 5 }) : Promise.resolve(null),
+    [faId],
   )
   const { data: fightsB } = useApi(
-    () => item?.fighter_b_id ? fightsService.getList({ fighter_id: item.fighter_b_id, page_size: 5 }) : Promise.resolve(null),
-    [item?.fighter_b_id],
+    () => fbId ? fightsService.getList({ fighter_id: fbId, page_size: 5 }) : Promise.resolve(null),
+    [fbId],
   )
 
-  const nameA  = item?.fighter_a_name ?? '—'
-  const nameB  = item?.fighter_b_name ?? '—'
-  const probA  = item?.win_prob_a ?? 0
-  const probB  = item?.win_prob_b ?? 0
-  const aWins  = probA >= probB
+  // Resolve names: prediction has clean full names; fall back to parsing bout string
+  const boutParts = (fightDetail?.bout ?? '').split(' vs. ')
+  const nameA = predItem?.fighter_a_name ?? boutParts[0]?.trim() ?? '—'
+  const nameB = predItem?.fighter_b_name ?? boutParts[1]?.trim() ?? '—'
+
+  // Win probability (prediction only)
+  const hasPred   = predItem?.win_prob_a != null && predItem?.win_prob_b != null
+  const probA     = predItem?.win_prob_a ?? 0
+  const probB     = predItem?.win_prob_b ?? 0
+  const predAWins = probA >= probB
+
+  // Actual result from base fight data
+  const winnerId        = fightDetail?.winner_id
+  const actualWinnerName = winnerId === faId ? nameA : winnerId === fbId ? nameB : '—'
 
   const methods = [
-    { label: 'KO/TKO', value: item?.pred_method_ko_tko },
-    { label: 'Sub',    value: item?.pred_method_sub },
-    { label: 'Dec',    value: item?.pred_method_dec },
+    { label: 'KO/TKO', value: predItem?.pred_method_ko_tko },
+    { label: 'Sub',    value: predItem?.pred_method_sub },
+    { label: 'Dec',    value: predItem?.pred_method_dec },
   ]
   const topLabel = methods.reduce((a, b) => ((a.value ?? 0) > (b.value ?? 0) ? a : b)).label
+
+  // Actual result card styling
+  const isCorrect = predItem?.is_correct ?? null
+  const isUpset   = predItem?.is_upset   ?? null
+  let resultBadge: string, resultBg: string, resultBadgeCls: string
+  if (isCorrect === null)  { resultBadge = 'Result';      resultBg = 'bg-[var(--color-border)]/20 border-[var(--color-border)]'; resultBadgeCls = 'text-[var(--color-text-muted)]' }
+  else if (isUpset)        { resultBadge = '~ Upset';     resultBg = 'bg-amber-500/10 border-amber-500/30';                     resultBadgeCls = 'text-amber-600 dark:text-amber-400' }
+  else if (isCorrect)      { resultBadge = '✓ Correct';   resultBg = 'bg-green-500/10 border-green-500/30';                     resultBadgeCls = 'text-green-600 dark:text-green-400' }
+  else                     { resultBadge = '✗ Incorrect'; resultBg = 'bg-red-500/10 border-red-500/30';                         resultBadgeCls = 'text-red-600 dark:text-red-400' }
 
   return (
     <div className="mx-auto max-w-[640px]">
@@ -252,76 +244,75 @@ export default function PastPredictionFightPage() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
-          {error.toLowerCase().includes('not found') || error.toLowerCase().includes('404') ? (
-            <>
-              <p className="text-sm font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-                No prediction available for this fight
-              </p>
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                Model predictions are available for fights from Dec 2023 onwards.
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          )}
-        </div>
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
-      {item && !loading && (
+      {fightDetail && !loading && (
         <div className="space-y-4">
           {/* Header: fighter names */}
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 flex-wrap">
-              {item.fighter_a_id ? (
+              {faId ? (
                 <Link
-                  to={`/fighters/${item.fighter_a_id}`}
+                  to={`/fighters/${faId}`}
                   className={`text-xl font-bold hover:text-[var(--color-primary)] transition-colors ${
-                    aWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'
+                    hasPred
+                      ? predAWins
+                        ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                        : 'text-[var(--color-text-muted)]'
+                      : winnerId === faId
+                        ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                        : winnerId ? 'text-[var(--color-text-muted)]' : ''
                   }`}
                 >
                   {nameA}
                 </Link>
               ) : (
-                <span className={`text-xl font-bold ${aWins ? '' : 'text-[var(--color-text-muted)]'}`}>{nameA}</span>
+                <span className="text-xl font-bold">{nameA}</span>
               )}
               <span className="text-sm text-[var(--color-text-muted)]">vs</span>
-              {item.fighter_b_id ? (
+              {fbId ? (
                 <Link
-                  to={`/fighters/${item.fighter_b_id}`}
+                  to={`/fighters/${fbId}`}
                   className={`text-xl font-bold hover:text-[var(--color-primary)] transition-colors ${
-                    !aWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'
+                    hasPred
+                      ? !predAWins
+                        ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                        : 'text-[var(--color-text-muted)]'
+                      : winnerId === fbId
+                        ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'
+                        : winnerId ? 'text-[var(--color-text-muted)]' : ''
                   }`}
                 >
                   {nameB}
                 </Link>
               ) : (
-                <span className={`text-xl font-bold ${!aWins ? '' : 'text-[var(--color-text-muted)]'}`}>{nameB}</span>
+                <span className="text-xl font-bold">{nameB}</span>
               )}
             </div>
             <div className="mt-2 flex justify-center gap-2 flex-wrap">
-              {item.weight_class && (
-                <span className="text-xs text-[var(--color-text-muted)]">{item.weight_class}</span>
+              {fightDetail.weight_class && (
+                <span className="text-xs text-[var(--color-text-muted)]">{fightDetail.weight_class}</span>
               )}
-              {item.event_name && (
+              {predItem?.event_name && (
                 <span className="text-xs text-[var(--color-text-muted)]">
-                  · {item.event_name}
-                  {item.event_date ? ` · ${formatDate(item.event_date)}` : ''}
+                  · {predItem.event_name}
+                  {predItem.event_date ? ` · ${formatDate(predItem.event_date)}` : ''}
                 </span>
               )}
             </div>
           </div>
 
-          {/* Prediction card — same layout as UpcomingFightPage */}
-          {item.win_prob_a != null && item.win_prob_b != null && (
+          {/* Prediction card */}
+          {hasPred && (
             <Card>
               <div className="flex items-center justify-between gap-4">
-                <span className={`font-mono text-3xl font-bold tabular-nums ${aWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
-                  {pct(item.win_prob_a)}
+                <span className={`font-mono text-3xl font-bold tabular-nums ${predAWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                  {pct(predItem!.win_prob_a)}
                 </span>
                 <span className="text-xs text-[var(--color-text-muted)]">win prob</span>
-                <span className={`font-mono text-3xl font-bold tabular-nums ${!aWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
-                  {pct(item.win_prob_b)}
+                <span className={`font-mono text-3xl font-bold tabular-nums ${!predAWins ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                  {pct(predItem!.win_prob_b)}
                 </span>
               </div>
               <div className="mt-2 flex justify-center gap-4 font-mono text-sm tabular-nums">
@@ -337,11 +328,11 @@ export default function PastPredictionFightPage() {
                   </span>
                 ))}
               </div>
-              {item.confidence != null && (
+              {predItem!.confidence != null && (
                 <div className="mt-2 text-center text-xs text-[var(--color-text-muted)]">
                   conviction{' '}
                   <span className="font-mono tabular-nums font-semibold">
-                    {pct(item.confidence)}
+                    {pct(predItem!.confidence)}
                   </span>
                 </div>
               )}
@@ -349,9 +340,9 @@ export default function PastPredictionFightPage() {
           )}
 
           {/* Prediction provenance badge */}
-          {item.prediction_source && (
+          {predItem?.prediction_source && (
             <div className="flex justify-center">
-              {item.prediction_source === 'pre_fight_archive' ? (
+              {predItem.prediction_source === 'pre_fight_archive' ? (
                 <span
                   title="Prediction was frozen before this fight occurred — no post-fight data was used"
                   className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20"
@@ -370,7 +361,18 @@ export default function PastPredictionFightPage() {
           )}
 
           {/* Actual result */}
-          <ActualResultCard item={item} />
+          {winnerId && (
+            <div className={`rounded-lg border p-4 ${resultBg}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${resultBadgeCls}`}>{resultBadge}</p>
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold">{actualWinnerName}</span>
+                <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  {fightDetail.method ?? '—'}
+                  {fightDetail.round != null ? ` · R${fightDetail.round}` : ''}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Tale of the Tape */}
           {(fighterA || fighterB) && (
@@ -438,42 +440,42 @@ export default function PastPredictionFightPage() {
           )}
 
           {/* Recent fights */}
-          {(item.fighter_a_id || item.fighter_b_id) && (
+          {(faId || fbId) && (
             <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Recent Fights</span>}>
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameA}</p>
-                  {!item.fighter_a_id ? (
+                  {!faId ? (
                     <p className="text-xs text-[var(--color-text-muted)]">No history</p>
                   ) : !fightsA ? (
                     <LoadingSkeleton lines={3} />
                   ) : fightsA.data.length === 0 ? (
                     <p className="text-xs text-[var(--color-text-muted)]">No history</p>
                   ) : (
-                    <RecentFightMini fights={fightsA.data} viewingFighterId={item.fighter_a_id} />
+                    <RecentFightMini fights={fightsA.data} viewingFighterId={faId} />
                   )}
                 </div>
                 <div>
                   <p className="mb-3 text-xs font-semibold text-[var(--color-text-muted)]">{nameB}</p>
-                  {!item.fighter_b_id ? (
+                  {!fbId ? (
                     <p className="text-xs text-[var(--color-text-muted)]">No history</p>
                   ) : !fightsB ? (
                     <LoadingSkeleton lines={3} />
                   ) : fightsB.data.length === 0 ? (
                     <p className="text-xs text-[var(--color-text-muted)]">No history</p>
                   ) : (
-                    <RecentFightMini fights={fightsB.data} viewingFighterId={item.fighter_b_id} />
+                    <RecentFightMini fights={fightsB.data} viewingFighterId={fbId} />
                   )}
                 </div>
               </div>
             </Card>
           )}
 
-          {/* Model Breakdown */}
-          {item.features_json && (() => {
+          {/* Model Breakdown — only when prediction + features available */}
+          {predItem?.features_json && (() => {
             const favA: { label: string; display: string }[] = []
             const favB: { label: string; display: string }[] = []
-            Object.entries(item.features_json)
+            Object.entries(predItem.features_json)
               .filter(([k, v]) => !FEAT_SKIP.has(k) && v != null && k in FEATURE_META)
               .map(([k, v]) => {
                 const meta = FEATURE_META[k]
@@ -483,14 +485,14 @@ export default function PastPredictionFightPage() {
               .filter(e => Math.abs(e.adjusted) > 0.001)
               .sort((a, b) => Math.abs(b.adjusted) - Math.abs(a.adjusted))
               .forEach(e => {
-                const item2 = { label: e.meta.label, display: fmtFeat(e.meta.label, e.raw) }
-                if (e.adjusted > 0) favA.push(item2)
-                else favB.push(item2)
+                const entry = { label: e.meta.label, display: fmtFeat(e.meta.label, e.raw) }
+                if (e.adjusted > 0) favA.push(entry)
+                else favB.push(entry)
               })
             const total = favA.length + favB.length
             if (total === 0) return null
-            const winnerLastName = (aWins ? nameA : nameB).split(' ').pop()
-            const winnerCount = aWins ? favA.length : favB.length
+            const winnerLastName = (predAWins ? nameA : nameB).split(' ').pop()
+            const winnerCount = predAWins ? favA.length : favB.length
             return (
               <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Model Breakdown</span>}>
                 <p className="mb-4 text-center text-sm text-[var(--color-text-muted)]">
@@ -527,7 +529,7 @@ export default function PastPredictionFightPage() {
                   </div>
                 </div>
                 <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
-                  Values are per-fight averages (Fighter A − Fighter B), sorted by magnitude. Model: {item.model_version ?? 'win_loss_v1'}.{' '}
+                  Values are per-fight averages (Fighter A − Fighter B), sorted by magnitude. Model: {predItem.model_version ?? 'win_loss_v1'}.{' '}
                   The metric count shows how many of the model's input features point in the predicted winner's favour — a higher share means the prediction is backed by broader evidence, not just one or two stats.
                 </p>
               </Card>
