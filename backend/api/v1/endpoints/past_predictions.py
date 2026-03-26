@@ -350,6 +350,9 @@ _DEDUP_CTE = """
 def get_past_prediction_stats(
     db: Session = Depends(get_db),
 ) -> PastPredictionModalStats:
+    test_from = _test_date_from()
+    _DATE_FILTER = "AND (:test_from = '' OR event_date >= CAST(:test_from AS date))"
+    _params: dict = {"test_from": test_from}
     _BUCKET_CASE = """
         CASE
             WHEN confidence >= 0.65 THEN '30%+'
@@ -363,6 +366,7 @@ def get_past_prediction_stats(
         WITH best AS (
             SELECT DISTINCT ON (fight_id) confidence, is_correct, weight_class
             FROM past_predictions
+            WHERE TRUE {_DATE_FILTER}
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -373,7 +377,7 @@ def get_past_prediction_stats(
         WHERE confidence IS NOT NULL AND is_correct IS NOT NULL
         GROUP BY bucket
         ORDER BY MIN(confidence) DESC
-    """)).mappings().all()
+    """), _params).mappings().all()
 
     _WC_ORDER = """
         CASE weight_class
@@ -397,6 +401,7 @@ def get_past_prediction_stats(
         WITH best AS (
             SELECT DISTINCT ON (fight_id) weight_class, is_correct
             FROM past_predictions
+            WHERE TRUE {_DATE_FILTER}
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -407,7 +412,7 @@ def get_past_prediction_stats(
         WHERE weight_class IS NOT NULL AND is_correct IS NOT NULL
         GROUP BY weight_class
         ORDER BY {_WC_ORDER}
-    """)).mappings().all()
+    """), _params).mappings().all()
 
     # ── Pre-fight only ───────────────────────────────────────────────────────
     pf_bucket_rows = db.execute(text(f"""
@@ -417,9 +422,10 @@ def get_past_prediction_stats(
         FROM past_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND confidence IS NOT NULL AND is_correct IS NOT NULL
+          {_DATE_FILTER}
         GROUP BY bucket
         ORDER BY MIN(confidence) DESC
-    """)).mappings().all()
+    """), _params).mappings().all()
 
     pf_wc_rows = db.execute(text(f"""
         SELECT weight_class,
@@ -428,9 +434,10 @@ def get_past_prediction_stats(
         FROM past_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND weight_class IS NOT NULL AND is_correct IS NOT NULL
+          {_DATE_FILTER}
         GROUP BY weight_class
         ORDER BY {_WC_ORDER}
-    """)).mappings().all()
+    """), _params).mappings().all()
 
     # ── Raw rows for Python-computed metrics (calibration, Brier, ROC-AUC) ────
     all_raw = db.execute(text("""
@@ -439,6 +446,7 @@ def get_past_prediction_stats(
                 confidence, is_correct, win_prob_a, win_prob_b,
                 actual_winner_id, fighter_a_id
             FROM past_predictions
+            WHERE (:test_from = '' OR event_date >= CAST(:test_from AS date))
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -446,7 +454,7 @@ def get_past_prediction_stats(
         WHERE confidence IS NOT NULL AND is_correct IS NOT NULL
           AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
           AND actual_winner_id IS NOT NULL AND fighter_a_id IS NOT NULL
-    """)).mappings().all()
+    """), _params).mappings().all()
 
     pf_raw = db.execute(text("""
         SELECT confidence, is_correct, win_prob_a, win_prob_b,
@@ -456,7 +464,8 @@ def get_past_prediction_stats(
           AND confidence IS NOT NULL AND is_correct IS NOT NULL
           AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
           AND actual_winner_id IS NOT NULL AND fighter_a_id IS NOT NULL
-    """)).mappings().all()
+          AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
+    """), _params).mappings().all()
 
     def _roc_auc(y_true: list, y_score: list) -> float | None:
         n_pos = sum(y_true)
