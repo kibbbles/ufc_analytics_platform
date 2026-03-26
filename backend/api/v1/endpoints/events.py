@@ -71,7 +71,7 @@ def list_events(
             ed."LOCATION"    AS location
         FROM event_details ed
         {where}
-        ORDER BY ed.date_proper DESC
+        ORDER BY ed.date_proper DESC NULLS LAST
         LIMIT :limit OFFSET :offset
     """), params).mappings().all()
 
