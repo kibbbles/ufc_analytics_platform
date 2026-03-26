@@ -73,7 +73,7 @@ def get_past_predictions(
             SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)                      AS correct,
             SUM(CASE WHEN confidence >= 0.65 THEN 1 ELSE 0 END)              AS high_conf_fights,
             SUM(CASE WHEN is_correct AND confidence >= 0.65 THEN 1 ELSE 0 END) AS high_conf_correct,
-            AVG(confidence) FILTER (WHERE is_correct IS NOT NULL)             AS avg_confidence,
+            AVG((confidence - 0.5) * 2) FILTER (WHERE is_correct IS NOT NULL) AS avg_confidence,
             MAX(event_date)                                                   AS date_to
         FROM best
     """), {"test_from": test_from}).mappings().first()
@@ -103,7 +103,7 @@ def get_past_predictions(
         SELECT
             COUNT(*)                                                            AS total,
             SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)                        AS correct,
-            AVG(confidence)                                                     AS avg_confidence,
+            AVG((confidence - 0.5) * 2)                                         AS avg_confidence,
             SUM(CASE WHEN confidence >= 0.65 THEN 1 ELSE 0 END)               AS high_conf_fights,
             SUM(CASE WHEN is_correct AND confidence >= 0.65 THEN 1 ELSE 0 END) AS high_conf_correct
         FROM past_predictions
@@ -491,7 +491,7 @@ def get_past_prediction_stats(
         conf_correct, conf_incorrect, brier_vals, y_true, y_score = [], [], [], [], []
         for r in rows:
             is_correct = bool(r["is_correct"])
-            conf = float(r["confidence"])
+            conf = (float(r["confidence"]) - 0.5) * 2   # convert to conviction scale (0–1)
             (conf_correct if is_correct else conf_incorrect).append(conf)
             a_won = str(r["actual_winner_id"]) == str(r["fighter_a_id"])
             y_true.append(1 if a_won else 0)
