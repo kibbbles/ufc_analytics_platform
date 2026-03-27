@@ -22,7 +22,7 @@ class FightStatsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
     fighter_id: Optional[str] = None
-    round: Optional[str] = None
+    round: Optional[int] = None
     kd_int: Optional[int] = None
     sig_str_landed: Optional[int] = None
     sig_str_attempted: Optional[int] = None
