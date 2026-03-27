@@ -116,7 +116,7 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
         FROM fight_details fd
         LEFT JOIN fight_results fr ON fr.fight_id = fd.id
         WHERE fd.event_id = :event_id
-        ORDER BY fr.is_title_fight DESC NULLS LAST, fr.is_championship_rounds DESC NULLS LAST, fd.id
+        ORDER BY fd.position ASC NULLS LAST, fd.id
     """), {"event_id": event_id}).mappings().all()
 
     return EventWithFightsResponse(
