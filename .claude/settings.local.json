@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(rm:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:www.ufcbetcompanion.com)",
+      "WebFetch(domain:webcache.googleusercontent.com)",
+      "WebFetch(domain:www.ufcstats.com)",
+      "Bash(task-master show:*)"
     ],
     "deny": [],
     "ask": []
