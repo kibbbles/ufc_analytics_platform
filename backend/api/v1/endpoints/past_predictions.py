@@ -636,10 +636,14 @@ def search_past_prediction_fights(
         params["offset"] = (page - 1) * page_size
 
         rows = db.execute(text(f"""
-            SELECT {_FIGHT_COLS}
-            FROM past_predictions
-            {where}
-            ORDER BY event_date DESC
+            SELECT pp.*
+            FROM (
+                SELECT {_FIGHT_COLS}
+                FROM past_predictions
+                {where}
+            ) pp
+            LEFT JOIN fight_details fd ON fd.id = pp.fight_id
+            ORDER BY pp.event_date DESC, COALESCE(fd.position, 999) ASC
             LIMIT :limit OFFSET :offset
         """), params).mappings().all()
     else:
