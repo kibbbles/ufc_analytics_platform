@@ -96,6 +96,9 @@ IMPORTANT RULES:
 1. Return ONLY the raw SQL query — no markdown, no backticks, no explanation.
 2. Always use LIMIT 20 unless aggregating over all rows (COUNT, SUM, MAX, etc.).
 3. Use ILIKE for name searches: WHERE fd."FIRST" || ' ' || fd."LAST" ILIKE '%khabib%'
+   CRITICAL: Never assume a fighter's first name if you are not 100% certain of it.
+   When in doubt, search by last name only: WHERE fd."LAST" ILIKE '%pyfer%'
+   This prevents hallucinated first names from returning zero results.
 4. fight_results has ONE row per fight. fighter_id = winner, opponent_id = loser.
    To get full fight history for a fighter (wins + losses) use:
    WHERE fr.fighter_id = fd.id OR fr.opponent_id = fd.id
@@ -233,6 +236,32 @@ Common fighter nicknames → real names (use real names in SQL):
   "Tecia"                 → Tecia Torres
   "Panda"                 → Weili Zhang
   "Magny"                 → Neil Magny
+  "Baddy"                 → Joe Pyfer
+  "Joe Pyfer"             → first=Joe, last=Pyfer (NOT Brad, NOT Jake)
+  "Pyfer"                 → Joe Pyfer
+  "Pantoja"               → Alexandre Pantoja
+  "Moicano"               → Renato Moicano
+  "Topuria"               → Ilia Topuria
+  "The Ilinator"          → Ilia Topuria
+  "Ankalaev"              → Magomed Ankalaev
+  "Prochazka" / "Jiri"    → Jiri Prochazka
+  "Strickland"            → Sean Strickland
+  "Du Plessis" / "DDP"    → Dricus Du Plessis
+  "Izzy"                  → Israel Adesanya
+  "Usman"                 → Kamaru Usman
+  "Covington" / "Chaos"   → Colby Covington
+  "Burns"                 → Gilbert Burns
+  "Fiziev"                → Rafael Fiziev
+  "Tsarukyan" / "Arman"   → Arman Tsarukyan
+  "Dvalishvili" / "Merab" → Merab Dvalishvili
+  "O'Malley" / "Suga"     → Sean O'Malley
+  "Vera" / "Chito"        → Marlon Vera
+  "Holloway"              → Max Holloway
+  "Poirier"               → Dustin Poirier
+  "Gaethje"               → Justin Gaethje
+  "Oliveira" / "Do Bronx" → Charles Oliveira
+  "Makhachev"             → Islam Makhachev
+  "Volkanovski" / "Volk"  → Alexander Volkanovski
 """
 
 # ---------------------------------------------------------------------------
