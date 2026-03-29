@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # The Odds API (task 27)
     odds_api_key: str = ""
 
+    # Groq AI (task 30 — text-to-SQL chat)
+    groq_api_key: str = ""
+
     # Application
     environment: str = "development"
     log_level: str = "DEBUG"

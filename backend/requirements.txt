@@ -39,3 +39,6 @@ isort==5.13.2
 
 # Parquet support
 pyarrow==23.0.1
+
+# AI / Chat
+groq==0.13.0

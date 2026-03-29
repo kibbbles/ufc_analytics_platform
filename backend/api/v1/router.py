@@ -11,7 +11,7 @@ Included in api/main.py under the prefix /api/v1, so final paths are:
 
 from fastapi import APIRouter
 
-from api.v1.endpoints import analytics, events, fighters, fights, past_predictions, predictions, upcoming
+from api.v1.endpoints import analytics, chat, events, fighters, fights, past_predictions, predictions, upcoming
 
 v1_router = APIRouter()
 
@@ -22,3 +22,4 @@ v1_router.include_router(predictions.router,     prefix="/predictions",      tag
 v1_router.include_router(analytics.router,       prefix="/analytics",        tags=["analytics"])
 v1_router.include_router(upcoming.router,        prefix="/upcoming",         tags=["upcoming"])
 v1_router.include_router(past_predictions.router, prefix="/past-predictions", tags=["past-predictions"])
+v1_router.include_router(chat.router,            prefix="/chat",             tags=["chat"])

@@ -69,7 +69,7 @@ def list_upcoming_events(db: Session = Depends(get_db)):
         LEFT JOIN upcoming_fights uf
             ON uf.event_id = ue.id
             AND (uf.archived IS NULL OR uf.archived = FALSE)
-        WHERE ue.date_proper >= CURRENT_DATE
+        WHERE ue.date_proper >= CURRENT_DATE - INTERVAL '1 day'
         GROUP BY ue.id
         ORDER BY ue.date_proper ASC
     """)).mappings().all()
