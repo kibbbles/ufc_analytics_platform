@@ -428,7 +428,7 @@ export default function HomePage() {
           ML-powered fight predictions and historical analysis
         </p>
         <p className="mt-1 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          Fight results and stats scraped every Sunday at 2 PM ET · Upcoming predictions refreshed every Friday at 8 AM ET
+          Fight results and stats scraped every Sunday at 9 AM EST · Upcoming predictions refreshed every Saturday at 10 AM EST
         </p>
       </div>
 

@@ -1,10 +1,10 @@
 name: Upcoming Predictions
 
-# Scrapes upcoming UFC events and computes ML predictions every Friday
-# Runs at 12:00 UTC (8 AM ET) — in time for weekend fight cards
+# Scrapes upcoming UFC events and computes ML predictions every Saturday
+# Runs at 15:00 UTC (10 AM EST) — in time for Saturday fight cards
 on:
   schedule:
-    - cron: '0 12 * * 5'  # Every Friday at 12:00 UTC
+    - cron: '0 15 * * 6'  # Every Saturday at 15:00 UTC (10 AM EST)
   workflow_dispatch:       # Allow manual trigger
 
 jobs:

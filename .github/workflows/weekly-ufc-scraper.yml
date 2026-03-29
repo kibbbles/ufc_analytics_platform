@@ -1,10 +1,10 @@
 name: Weekly UFC Scraper
 
 # Scrapes new UFC events every Sunday
-# Runs at 6 PM UTC (1 PM ET / 10 AM PT)
+# Runs at 14:00 UTC (9 AM EST)
 on:
   schedule:
-    - cron: '0 18 * * 0'  # Every Sunday at 6 PM UTC
+    - cron: '0 14 * * 0'  # Every Sunday at 14:00 UTC (9 AM EST)
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
