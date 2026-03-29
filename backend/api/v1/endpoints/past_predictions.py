@@ -162,7 +162,13 @@ def get_past_predictions(
         SELECT best.*
         FROM best
         LEFT JOIN fight_details fd ON fd.id = best.fight_id
-        ORDER BY event_date DESC, COALESCE(fd.position, 999) ASC
+        LEFT JOIN LATERAL (
+            SELECT uf.position FROM upcoming_fights uf
+            WHERE (uf.fighter_a_id = best.fighter_a_id AND uf.fighter_b_id = best.fighter_b_id)
+               OR (uf.fighter_a_id = best.fighter_b_id AND uf.fighter_b_id = best.fighter_a_id)
+            ORDER BY uf.scraped_at DESC LIMIT 1
+        ) uf_pos ON TRUE
+        ORDER BY event_date DESC, COALESCE(fd.position, uf_pos.position, 999) ASC
         LIMIT :limit
     """), {"limit": limit}).mappings().all()
 
@@ -643,7 +649,13 @@ def search_past_prediction_fights(
                 {where}
             ) pp
             LEFT JOIN fight_details fd ON fd.id = pp.fight_id
-            ORDER BY pp.event_date DESC, COALESCE(fd.position, 999) ASC
+            LEFT JOIN LATERAL (
+                SELECT uf.position FROM upcoming_fights uf
+                WHERE (uf.fighter_a_id = pp.fighter_a_id AND uf.fighter_b_id = pp.fighter_b_id)
+                   OR (uf.fighter_a_id = pp.fighter_b_id AND uf.fighter_b_id = pp.fighter_a_id)
+                ORDER BY uf.scraped_at DESC LIMIT 1
+            ) uf_pos ON TRUE
+            ORDER BY pp.event_date DESC, COALESCE(fd.position, uf_pos.position, 999) ASC
             LIMIT :limit OFFSET :offset
         """), params).mappings().all()
     else:
@@ -680,8 +692,14 @@ def search_past_prediction_fights(
             SELECT best.*
             FROM best
             LEFT JOIN fight_details fd ON fd.id = best.fight_id
+            LEFT JOIN LATERAL (
+                SELECT uf.position FROM upcoming_fights uf
+                WHERE (uf.fighter_a_id = best.fighter_a_id AND uf.fighter_b_id = best.fighter_b_id)
+                   OR (uf.fighter_a_id = best.fighter_b_id AND uf.fighter_b_id = best.fighter_a_id)
+                ORDER BY uf.scraped_at DESC LIMIT 1
+            ) uf_pos ON TRUE
             {where}
-            ORDER BY best.event_date DESC, COALESCE(fd.position, 999) ASC
+            ORDER BY best.event_date DESC, COALESCE(fd.position, uf_pos.position, 999) ASC
             LIMIT :limit OFFSET :offset
         """), params).mappings().all()
 
