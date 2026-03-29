@@ -159,8 +159,10 @@ def get_past_predictions(
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
-        SELECT * FROM best
-        ORDER BY event_date DESC, fight_id
+        SELECT best.*
+        FROM best
+        LEFT JOIN fight_details fd ON fd.id = best.fight_id
+        ORDER BY event_date DESC, COALESCE(fd.position, 999) ASC
         LIMIT :limit
     """), {"limit": limit}).mappings().all()
 
