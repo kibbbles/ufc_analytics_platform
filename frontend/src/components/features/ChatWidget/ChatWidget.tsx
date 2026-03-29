@@ -1,11 +1,23 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ChatPanel from './ChatPanel'
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+    <div ref={containerRef} className="fixed bottom-4 right-3 sm:bottom-5 sm:right-5 z-50 flex flex-col items-end gap-3">
       {open && <ChatPanel onClose={() => setOpen(false)} />}
       <button
         onClick={() => setOpen((o) => !o)}

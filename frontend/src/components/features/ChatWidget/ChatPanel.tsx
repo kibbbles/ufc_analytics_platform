@@ -89,7 +89,7 @@ export default function ChatPanel({ onClose }: Props) {
     : undefined
 
   return (
-    <div className="flex flex-col w-[340px] sm:w-[380px] h-[520px] rounded-xl border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] shadow-2xl overflow-hidden">
+    <div className="flex flex-col w-[calc(100vw-24px)] max-w-[360px] h-[520px] rounded-xl border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] shadow-2xl overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] shrink-0">
