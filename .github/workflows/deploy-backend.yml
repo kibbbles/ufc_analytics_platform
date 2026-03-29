@@ -41,6 +41,11 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          gcloud run services update kabes-maybes-api \
+            --region us-central1 \
+            --project kabes-maybes \
+            --remove-secrets GROQ_API_KEY \
+            --quiet || true
           gcloud run deploy kabes-maybes-api \
             --image us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api:latest \
             --region us-central1 \
