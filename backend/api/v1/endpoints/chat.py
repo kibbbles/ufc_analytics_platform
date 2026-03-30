@@ -444,10 +444,16 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             max_tokens=512,
         )
         sql = _clean_sql(sql_resp.choices[0].message.content)
-    except RateLimitError:
+    except RateLimitError as e:
+        msg = str(e).lower()
+        if "day" in msg or "daily" in msg:
+            return ChatResponse(
+                answer="Daily request limit reached. The chat resets tomorrow.",
+                status="limit_reached",
+            )
         return ChatResponse(
-            answer="The chat assistant has reached its daily limit. Please try again tomorrow.",
-            status="limit_reached",
+            answer="Too many requests — please wait a moment and try again.",
+            status="rate_limited",
         )
     except Exception as e:
         logger.error("SQL generation failed: %s", e)

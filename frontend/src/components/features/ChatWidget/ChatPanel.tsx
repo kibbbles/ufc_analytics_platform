@@ -22,10 +22,11 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 export default function ChatPanel({ onClose }: Props) {
-  const [messages, setMessages]   = useState<Message[]>([])
-  const [input, setInput]         = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [messages, setMessages]     = useState<Message[]>([])
+  const [input, setInput]           = useState('')
+  const [isLoading, setIsLoading]   = useState(false)
   const [cooldownSecs, setCooldownSecs] = useState(0)
+  const [dailyLimitHit, setDailyLimitHit] = useState(false)
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLTextAreaElement>(null)
@@ -61,7 +62,7 @@ export default function ChatPanel({ onClose }: Props) {
 
   async function send() {
     const question = input.trim()
-    if (!question || isLoading || cooldownSecs > 0) return
+    if (!question || isLoading || cooldownSecs > 0 || dailyLimitHit) return
 
     const userMsg: Message = { role: 'user', content: question }
     const history: ChatMessage[] = messages
@@ -84,6 +85,7 @@ export default function ChatPanel({ onClose }: Props) {
         },
       ])
       if (resp.status === 'rate_limited') startCooldown(60)
+      if (resp.status === 'limit_reached') setDailyLimitHit(true)
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -101,8 +103,10 @@ export default function ChatPanel({ onClose }: Props) {
     }
   }
 
-  const sendDisabled = isLoading || cooldownSecs > 0 || !input.trim()
-  const sendTitle    = cooldownSecs > 0
+  const sendDisabled = isLoading || cooldownSecs > 0 || dailyLimitHit || !input.trim()
+  const sendTitle    = dailyLimitHit
+    ? 'Daily limit reached. Try again tomorrow.'
+    : cooldownSecs > 0
     ? `Too many requests — retry in ${cooldownSecs}s`
     : isLoading
     ? 'Waiting for response…'
@@ -201,6 +205,11 @@ export default function ChatPanel({ onClose }: Props) {
 
       {/* Input area */}
       <div className="px-3 pb-3 pt-2 shrink-0 border-t border-[var(--color-border-light)] dark:border-[var(--color-border)]">
+        {dailyLimitHit && (
+          <p className="text-[11px] text-amber-500 mb-1.5">
+            Daily limit reached. Chat resets tomorrow.
+          </p>
+        )}
         {cooldownSecs > 0 && (
           <p className="text-[11px] text-amber-500 mb-1.5">
             Too many requests — retry in {cooldownSecs}s
@@ -214,7 +223,7 @@ export default function ChatPanel({ onClose }: Props) {
             onKeyDown={handleKeyDown}
             placeholder="Ask about any fighter or fight…"
             rows={1}
-            disabled={cooldownSecs > 0}
+            disabled={cooldownSecs > 0 || dailyLimitHit}
             className="flex-1 resize-none rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-sm placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 max-h-24 overflow-y-auto"
             style={{ fieldSizing: 'content' } as React.CSSProperties}
           />
