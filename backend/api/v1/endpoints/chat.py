@@ -387,7 +387,8 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sql: str | None = None
-    status: str  # "ok" | "limit_reached" | "no_results" | "error"
+    status: str        # "ok" | "rate_limited" | "no_results" | "error"
+    retry_after: int | None = None  # seconds to wait before retrying
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -445,15 +446,16 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         )
         sql = _clean_sql(sql_resp.choices[0].message.content)
     except RateLimitError as e:
-        msg = str(e).lower()
-        if "day" in msg or "daily" in msg:
-            return ChatResponse(
-                answer="Daily request limit reached. The chat resets tomorrow.",
-                status="limit_reached",
-            )
+        retry_after = 60
+        try:
+            retry_after = int(e.response.headers.get("retry-after", 60))
+        except (AttributeError, ValueError, TypeError):
+            pass
+        wait_msg = f"{retry_after // 60} min" if retry_after >= 60 else f"{retry_after}s"
         return ChatResponse(
-            answer="Too many requests — please wait a moment and try again.",
+            answer=f"Rate limit reached — please try again in {wait_msg}.",
             status="rate_limited",
+            retry_after=retry_after,
         )
     except Exception as e:
         logger.error("SQL generation failed: %s", e)
