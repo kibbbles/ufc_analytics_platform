@@ -32,8 +32,8 @@ function fmtOdds(o: number | null): string {
 
 export default function UpcomingFightRow({ fight }: Props) {
   const navigate = useNavigate()
-  const { fighter_a_name, fighter_b_name, weight_class, is_title_fight, prediction,
-          implied_prob_a, implied_prob_b, odds_a, odds_b } = fight
+  const { fighter_a_name, fighter_b_name, weight_class, is_title_fight, is_interim_title,
+          prediction, implied_prob_a, implied_prob_b, odds_a, odds_b } = fight
 
   const hasPrediction =
     prediction !== null &&
@@ -62,7 +62,8 @@ export default function UpcomingFightRow({ fight }: Props) {
             {weight_class}
           </span>
         )}
-        {is_title_fight && <Badge variant="warning">Title</Badge>}
+        {is_title_fight && !is_interim_title && <Badge variant="warning">Title</Badge>}
+        {is_interim_title && <Badge variant="warning">Interim</Badge>}
       </div>
 
       {/* Fighter names + probabilities */}

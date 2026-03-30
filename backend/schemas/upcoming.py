@@ -33,7 +33,8 @@ class UpcomingFightResponse(BaseModel):
     fighter_a_id:   Optional[str]  = None
     fighter_b_id:   Optional[str]  = None
     weight_class:   Optional[str]   = None
-    is_title_fight: bool            = False
+    is_title_fight:  bool            = False
+    is_interim_title: bool           = False
     odds_a:         Optional[int]   = None
     odds_b:         Optional[int]   = None
     implied_prob_a: Optional[float] = None

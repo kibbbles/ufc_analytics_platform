@@ -237,6 +237,7 @@ export interface UpcomingFight {
   fighter_b_id: string | null
   weight_class: string | null
   is_title_fight: boolean
+  is_interim_title: boolean
   odds_a: number | null
   odds_b: number | null
   implied_prob_a: number | null

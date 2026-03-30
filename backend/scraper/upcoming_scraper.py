@@ -277,11 +277,15 @@ class UpcomingScraper:
                 if not fighter_a_name or not fighter_b_name:
                     continue
 
-                # Weight class — cell[6] on upcoming event pages (10-col layout)
-                # Fallback: scan all cells for weight/championship keywords
-                weight_class   = ''
-                is_title_fight = False
+                # Title fight detection — scan full row text (UFCStats may put
+                # "championship"/"title bout" in any cell, or show a belt icon)
+                row_text       = row.get_text(separator=' ', strip=True).lower()
+                is_title_fight = any(kw in row_text for kw in ['championship', 'title bout'])
+                is_interim     = is_title_fight and 'interim' in row_text
 
+                # Weight class — scan cells for weight class keywords
+                # Strip title/interim/ufc prefixes to get clean weight class name
+                weight_class = ''
                 for idx in [6, 7, 8, 9, 10, len(cells) - 1]:
                     if idx < len(cells):
                         raw = cells[idx].get_text(separator=' ', strip=True)
@@ -289,24 +293,26 @@ class UpcomingScraper:
                             kw in raw.lower()
                             for kw in ['weight', 'championship', 'title', 'pound', 'catch', 'women']
                         ):
-                            weight_class   = raw
-                            is_title_fight = any(
-                                kw in raw.lower()
-                                for kw in ['championship', 'title']
+                            # Normalize: strip "UFC", "Interim", "Championship", "Title Bout"
+                            cleaned = re.sub(
+                                r'\b(UFC|Interim|Championship|Title\s+Bout|Title)\b',
+                                '', raw, flags=re.IGNORECASE
                             )
+                            weight_class = ' '.join(cleaned.split())
                             break
 
                 # fight detail URL (data-link) — may be empty for upcoming fights
                 fight_url = row.get('data-link', '').strip()
 
                 fights.append({
-                    'fighter_a_name': fighter_a_name,
-                    'fighter_a_url':  fighter_a_url,
-                    'fighter_b_name': fighter_b_name,
-                    'fighter_b_url':  fighter_b_url,
-                    'weight_class':   weight_class,
-                    'is_title_fight': is_title_fight,
-                    'ufcstats_url':   fight_url,
+                    'fighter_a_name':  fighter_a_name,
+                    'fighter_a_url':   fighter_a_url,
+                    'fighter_b_name':  fighter_b_name,
+                    'fighter_b_url':   fighter_b_url,
+                    'weight_class':    weight_class,
+                    'is_title_fight':  is_title_fight,
+                    'is_interim_title': is_interim,
+                    'ufcstats_url':    fight_url,
                 })
 
             except Exception as e:
@@ -384,22 +390,24 @@ class UpcomingScraper:
         if row:
             conn.execute(text("""
                 UPDATE upcoming_fights
-                SET weight_class   = :wc,
-                    is_title_fight = :title,
-                    fighter_a_id   = :fa_id,
-                    fighter_b_id   = :fb_id,
-                    ufcstats_url   = :url,
-                    position       = :pos,
-                    scraped_at     = now()
+                SET weight_class    = :wc,
+                    is_title_fight  = :title,
+                    is_interim_title = :interim,
+                    fighter_a_id    = :fa_id,
+                    fighter_b_id    = :fb_id,
+                    ufcstats_url    = :url,
+                    position        = :pos,
+                    scraped_at      = now()
                 WHERE id = :id
             """), {
-                'wc':    fight['weight_class'],
-                'title': fight['is_title_fight'],
-                'fa_id': fight.get('fighter_a_id'),
-                'fb_id': fight.get('fighter_b_id'),
-                'url':   fight['ufcstats_url'],
-                'pos':   position,
-                'id':    row[0],
+                'wc':      fight['weight_class'],
+                'title':   fight['is_title_fight'],
+                'interim': fight.get('is_interim_title', False),
+                'fa_id':   fight.get('fighter_a_id'),
+                'fb_id':   fight.get('fighter_b_id'),
+                'url':     fight['ufcstats_url'],
+                'pos':     position,
+                'id':      row[0],
             })
             return row[0]
 
@@ -409,12 +417,12 @@ class UpcomingScraper:
                 (id, event_id, fighter_a_name, fighter_b_name,
                  fighter_a_id, fighter_b_id,
                  fighter_a_url, fighter_b_url,
-                 weight_class, is_title_fight, ufcstats_url, position)
+                 weight_class, is_title_fight, is_interim_title, ufcstats_url, position)
             VALUES
                 (:id, :eid, :fa_name, :fb_name,
                  :fa_id, :fb_id,
                  :fa_url, :fb_url,
-                 :wc, :title, :url, :pos)
+                 :wc, :title, :interim, :url, :pos)
         """), {
             'id':      fight_id,
             'eid':     event_id,
@@ -426,6 +434,7 @@ class UpcomingScraper:
             'fb_url':  fight['fighter_b_url'],
             'wc':      fight['weight_class'],
             'title':   fight['is_title_fight'],
+            'interim': fight.get('is_interim_title', False),
             'url':     fight['ufcstats_url'],
             'pos':     position,
         })
@@ -498,7 +507,7 @@ class UpcomingScraper:
                         f'  [{matched_a}] {fight["fighter_a_name"]} vs '
                         f'[{matched_b}] {fight["fighter_b_name"]}'
                         + (f'  ({fight["weight_class"]})' if fight['weight_class'] else '')
-                        + (' [TITLE]' if fight['is_title_fight'] else '')
+                        + (' [INTERIM TITLE]' if fight.get('is_interim_title') else ' [TITLE]' if fight['is_title_fight'] else '')
                     )
 
                 if dry_run:
