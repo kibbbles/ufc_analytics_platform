@@ -69,8 +69,12 @@ RULES:
    ROUND format varies ('1' or 'Round 1') — never filter by exact format or regex.
 7. Ratio calculations: CAST(SUM(x) AS FLOAT) / NULLIF(SUM(y), 0)
 8. fight_stats mainly covers 2015+. Older fights may have no stats rows.
-   When aggregating stats BY weight_class, always add HAVING COUNT(*) >= 20 to exclude
-   obscure/historical classes (e.g. Super Heavyweight) with too few fights to be meaningful.
+   When aggregating stats BY weight_class, always filter to current UFC weight classes AND
+   add HAVING COUNT(*) >= 20. Use:
+   WHERE fr.weight_class IN ('Heavyweight','Light Heavyweight','Middleweight','Welterweight',
+     'Lightweight','Featherweight','Bantamweight','Flyweight','Strawweight',
+     "Women's Strawweight","Women's Flyweight","Women's Bantamweight","Women's Featherweight")
+   This excludes historical non-divisions like 'Open Weight' and 'Super Heavyweight'.
 9. Always qualify ALL column names with table alias.
 10. UPCOMING vs HISTORICAL: event_details has ONLY past events — never query for future dates.
     For "next card"/"upcoming"/"this weekend"/"scheduled" use upcoming_events/upcoming_fights.
