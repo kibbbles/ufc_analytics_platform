@@ -126,6 +126,20 @@ IMPORTANT RULES:
 8. fight_stats coverage is mainly 2015+. Older fights may have no stats rows.
 9. To get winner name: JOIN fighter_details fw ON fw.id = fight_results.fighter_id
 10. Always qualify ALL column names with table alias to avoid ambiguity.
+11. NEVER use id columns (fight_id, fighter_id, event_id, fr.id) for chronological
+    ordering. IDs are alphanumeric and have no time ordering.
+    ALWAYS use event_details.date_proper (DATE) for time-based ordering.
+    For "first", "earliest", "oldest" queries:
+      ORDER BY e.date_proper ASC LIMIT 1
+    For "most recent", "latest" queries:
+      ORDER BY e.date_proper DESC LIMIT 1
+    Example — first UFC fighter:
+      SELECT DISTINCT fd."FIRST", fd."LAST", e.date_proper
+      FROM fighter_details fd
+      JOIN fight_results fr ON fd.id = fr.fighter_id OR fd.id = fr.opponent_id
+      JOIN event_details e ON e.id = fr.event_id
+      ORDER BY e.date_proper ASC
+      LIMIT 1
 
 TERMINOLOGY & ALIASES:
 -----------------------
