@@ -92,6 +92,26 @@ fight_stats (
     leg_landed INTEGER
 )
 
+-- UPCOMING EVENTS (future cards not yet completed)
+upcoming_events (
+    id VARCHAR,
+    event_name TEXT,       -- e.g. 'UFC 315: Muhammad vs. Della Maddalena'
+    date_proper DATE,
+    location TEXT,
+    is_numbered BOOLEAN    -- TRUE for numbered PPV events e.g. 'UFC 315'
+)
+
+upcoming_fights (
+    id VARCHAR,
+    event_id VARCHAR,      -- FK → upcoming_events.id
+    fighter_a_name TEXT,   -- fighter name as text
+    fighter_b_name TEXT,
+    fighter_a_id VARCHAR,  -- FK → fighter_details.id (NULL for debuting fighters)
+    fighter_b_id VARCHAR,  -- FK → fighter_details.id (NULL for debuting fighters)
+    weight_class TEXT,
+    is_title_fight BOOLEAN
+)
+
 IMPORTANT RULES:
 1. Return ONLY the raw SQL query — no markdown, no backticks, no explanation.
 2. Always use LIMIT 20 unless aggregating over all rows (COUNT, SUM, MAX, etc.).
@@ -126,7 +146,23 @@ IMPORTANT RULES:
 8. fight_stats coverage is mainly 2015+. Older fights may have no stats rows.
 9. To get winner name: JOIN fighter_details fw ON fw.id = fight_results.fighter_id
 10. Always qualify ALL column names with table alias to avoid ambiguity.
-11. NEVER use id columns (fight_id, fighter_id, event_id, fr.id) for chronological
+11. UPCOMING vs HISTORICAL events:
+    - event_details contains ONLY completed past events. Querying it for future
+      dates will ALWAYS return zero rows.
+    - For "next card", "upcoming event", "this weekend", "next fight", "scheduled"
+      queries, ALWAYS use upcoming_events / upcoming_fights, NOT event_details.
+    Example — next upcoming card:
+      SELECT ue.event_name, ue.date_proper, ue.location
+      FROM upcoming_events ue
+      ORDER BY ue.date_proper ASC
+      LIMIT 1
+    Example — fights on the next card:
+      SELECT uf.fighter_a_name, uf.fighter_b_name, uf.weight_class, uf.is_title_fight
+      FROM upcoming_fights uf
+      JOIN upcoming_events ue ON ue.id = uf.event_id
+      WHERE ue.date_proper = (SELECT MIN(date_proper) FROM upcoming_events)
+      ORDER BY uf.is_title_fight DESC
+12. NEVER use id columns (fight_id, fighter_id, event_id, fr.id) for chronological
     ordering. IDs are alphanumeric and have no time ordering.
     ALWAYS use event_details.date_proper (DATE) for time-based ordering.
     For "first", "earliest", "oldest" queries:
