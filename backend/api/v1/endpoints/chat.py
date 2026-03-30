@@ -63,6 +63,8 @@ RULES:
    CRITICAL: Never assume a first name. When unsure, search last name only: WHERE fd."LAST" ILIKE '%pyfer%'
 4. fight_results: ONE row per fight. fighter_id=winner, opponent_id=loser.
    Full history: WHERE fr.fighter_id=fd.id OR fr.opponent_id=fd.id
+   ALWAYS use the OR join for ANY query about a specific fighter (wins, losses, dates, stats):
+     JOIN fighter_details fd ON (fr.fighter_id=fd.id OR fr.opponent_id=fd.id)
    Fight count example ("how many UFC fights does X have?"):
      SELECT COUNT(*) FROM fight_results fr
      JOIN fighter_details fd ON (fr.fighter_id=fd.id OR fr.opponent_id=fd.id)
@@ -326,7 +328,8 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             "4. Lists 2 features that favor the other fighter for balance\n"
             "5. One sentence concluding why the model leans the way it does\n"
             "Use fighter names throughout (not 'fighter_a'/'fighter_b'). "
-            "Be specific with numbers. Do not mention SQL, databases, or feature names literally."
+            "Be specific with numbers. Do not mention SQL, databases, or feature names literally. "
+            "Do not use gendered pronouns (he/she/him/her/his/hers) — refer to fighters by name only."
         )
         max_tokens = 600
     elif is_card_overview:
@@ -336,7 +339,8 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             "Write a fight card preview. For each fight, one line:\n"
             "'Fighter A vs Fighter B — [favored fighter] favored at X% (most likely: METHOD)'\n"
             "List title fights first. Use fighter names only (not 'fighter_a'/'fighter_b'). "
-            "Do not mention SQL or databases. Keep it concise."
+            "Do not mention SQL or databases. Keep it concise. "
+            "Do not use gendered pronouns (he/she/him/her/his/hers) — refer to fighters by name only."
         )
         max_tokens = 400
     else:
@@ -345,7 +349,8 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             f"Database results:\n{_rows_to_text(rows)}\n\n"
             "Write a clear, concise answer in 1-3 sentences. "
             "Include specific names, numbers, and fight details from the results. "
-            "Do not mention SQL or databases."
+            "Do not mention SQL or databases. "
+            "Do not use gendered pronouns (he/she/him/her/his/hers) — refer to fighters by name only."
         )
         max_tokens = 256
 
