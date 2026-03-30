@@ -73,7 +73,7 @@ RULES:
    UFC weight classes to exclude historical non-divisions like 'Open Weight'/'Super Heavyweight':
    WHERE fr.weight_class IN ('Heavyweight','Light Heavyweight','Middleweight','Welterweight',
      'Lightweight','Featherweight','Bantamweight','Flyweight','Strawweight',
-     "Women's Strawweight","Women's Flyweight","Women's Bantamweight","Women's Featherweight")
+     'Women''s Strawweight','Women''s Flyweight','Women''s Bantamweight','Women''s Featherweight')
 9. Always qualify ALL column names with table alias.
 10. UPCOMING vs HISTORICAL: event_details has ONLY past events — never query for future dates.
     For "next card"/"upcoming"/"this weekend"/"scheduled" use upcoming_events/upcoming_fights.
