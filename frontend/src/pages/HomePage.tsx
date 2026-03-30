@@ -452,9 +452,7 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="lg:max-w-2xl lg:mx-auto">
-        <ModelScorecard />
-      </div>
+      <ModelScorecard />
     </div>
   )
 }
