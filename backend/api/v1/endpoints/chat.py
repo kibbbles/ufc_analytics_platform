@@ -195,11 +195,24 @@ IMPORTANT RULES:
       ORDER BY e.date_proper ASC
       LIMIT 1
 
-13. For "what are the chances X beats Y", "win probability", "model prediction",
-    "who does the model favor" for an UPCOMING fight, use upcoming_predictions.
-    ALWAYS include features_json in the SELECT so the features can be explained.
-    Search fighter names with ILIKE on upcoming_fights.fighter_a_name / fighter_b_name.
-    Example — Ewing vs Estevam:
+13. For win probability / model prediction questions, use upcoming_predictions.
+    Choose based on whether the user asks about the WHOLE CARD or a SPECIFIC FIGHT:
+
+    a) CARD OVERVIEW — "what are the chances on the next card?", "model picks for this weekend",
+       "who does the model favor on Saturday?": omit features_json, LIMIT 6.
+      SELECT uf.fighter_a_name, uf.fighter_b_name, uf.weight_class, uf.is_title_fight,
+             up.win_prob_a, up.win_prob_b,
+             up.method_ko_tko, up.method_sub, up.method_dec
+      FROM upcoming_predictions up
+      JOIN upcoming_fights uf ON uf.id = up.fight_id
+      JOIN upcoming_events ue ON ue.id = uf.event_id
+      WHERE ue.date_proper >= CURRENT_DATE
+        AND ue.date_proper = (SELECT MIN(date_proper) FROM upcoming_events WHERE date_proper >= CURRENT_DATE)
+      ORDER BY uf.is_title_fight DESC
+      LIMIT 6
+
+    b) SPECIFIC FIGHT — "what are the chances X beats Y?", "who does the model favor in [fight]?":
+       include features_json for the full breakdown.
       SELECT uf.fighter_a_name, uf.fighter_b_name,
              up.win_prob_a, up.win_prob_b,
              up.method_ko_tko, up.method_sub, up.method_dec,
@@ -209,6 +222,7 @@ IMPORTANT RULES:
       WHERE (uf.fighter_a_name ILIKE '%ewing%' OR uf.fighter_b_name ILIKE '%ewing%')
         AND (uf.fighter_a_name ILIKE '%estevam%' OR uf.fighter_b_name ILIKE '%estevam%')
       LIMIT 1
+
     features_json key glossary (all = fighter_a minus fighter_b):
       reach_diff_inches          reach advantage (positive = fighter_a longer reach)
       diff_age_at_fight          age diff in days (NEGATIVE favors fighter_a = younger)
@@ -504,6 +518,11 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
 
     # ── Step 3: Format answer ───────────────────────────────────────────────
     has_features = any('features_json' in row and row['features_json'] for row in rows)
+    is_card_overview = (
+        len(rows) > 1
+        and 'win_prob_a' in rows[0]
+        and not has_features
+    )
 
     if has_features:
         format_prompt = (
@@ -525,6 +544,16 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             "Be specific with numbers. Do not mention SQL, databases, or feature names literally."
         )
         max_tokens = 600
+    elif is_card_overview:
+        format_prompt = (
+            f"The user asked: {request.question}\n\n"
+            f"Database results:\n{_rows_to_text(rows)}\n\n"
+            "Write a fight card preview. For each fight, one line:\n"
+            "'Fighter A vs Fighter B — [favored fighter] favored at X% (most likely: METHOD)'\n"
+            "List title fights first. Use fighter names only (not 'fighter_a'/'fighter_b'). "
+            "Do not mention SQL or databases. Keep it concise."
+        )
+        max_tokens = 400
     else:
         format_prompt = (
             f"The user asked: {request.question}\n\n"
@@ -535,6 +564,21 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         )
         max_tokens = 256
 
+    def _card_fallback(rows: list[dict]) -> str:
+        """Clean fallback for card overview when LLM formatting fails."""
+        lines = []
+        for row in rows:
+            a = row.get('fighter_a_name', '')
+            b = row.get('fighter_b_name', '')
+            prob_a = row.get('win_prob_a')
+            prob_b = row.get('win_prob_b')
+            if a and b and prob_a is not None:
+                pct_a = round(float(prob_a) * 100, 1)
+                pct_b = round(float(prob_b) * 100, 1) if prob_b is not None else round(100 - pct_a, 1)
+                favored, pct = (a, pct_a) if pct_a >= pct_b else (b, pct_b)
+                lines.append(f"{a} vs {b} — {favored} favored at {pct}%")
+        return "\n".join(lines) if lines else _rows_to_text(rows)
+
     try:
         answer_resp = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -543,11 +587,22 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             max_tokens=max_tokens,
         )
         answer = answer_resp.choices[0].message.content.strip()
-    except RateLimitError:
-        # Return raw rows as fallback if formatting hits rate limit
-        answer = _rows_to_text(rows)
+    except RateLimitError as e:
+        retry_after = 60
+        try:
+            retry_after = int(e.response.headers.get("retry-after", 60))
+        except (AttributeError, ValueError, TypeError):
+            pass
+        if is_card_overview:
+            answer = _card_fallback(rows)
+        else:
+            return ChatResponse(
+                answer=f"Rate limit reached — please try again in {retry_after // 60} min." if retry_after >= 60 else f"Rate limit reached — please try again in {retry_after}s.",
+                status="rate_limited",
+                retry_after=retry_after,
+            )
     except Exception as e:
         logger.error("Answer formatting failed: %s", e)
-        answer = _rows_to_text(rows)
+        answer = _card_fallback(rows) if is_card_overview else _rows_to_text(rows)
 
     return ChatResponse(answer=answer, sql=sql, status="ok")
