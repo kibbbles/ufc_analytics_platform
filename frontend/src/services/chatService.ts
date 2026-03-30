@@ -13,7 +13,7 @@ export interface ChatRequest {
 export interface ChatResponse {
   answer: string
   sql: string | null
-  status: 'ok' | 'limit_reached' | 'no_results' | 'error'
+  status: 'ok' | 'limit_reached' | 'rate_limited' | 'no_results' | 'error'
 }
 
 export const chatService = {
