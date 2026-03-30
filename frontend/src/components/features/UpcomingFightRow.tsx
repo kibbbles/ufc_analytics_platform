@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import type { UpcomingFight } from '@t/api'
+import { Badge } from '@components/common'
 
 interface Props {
   fight: UpcomingFight
@@ -61,11 +62,7 @@ export default function UpcomingFightRow({ fight }: Props) {
             {weight_class}
           </span>
         )}
-        {is_title_fight && (
-          <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-            Title
-          </span>
-        )}
+        {is_title_fight && <Badge variant="warning">Title</Badge>}
       </div>
 
       {/* Fighter names + probabilities */}
