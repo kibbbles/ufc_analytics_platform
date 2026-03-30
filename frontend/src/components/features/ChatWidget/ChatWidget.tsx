@@ -17,7 +17,7 @@ export default function ChatWidget() {
   }, [open])
 
   return (
-    <div ref={containerRef} className="fixed bottom-4 right-3 sm:bottom-5 sm:right-5 z-50 flex flex-col items-end gap-3">
+    <div ref={containerRef} className="fixed bottom-4 right-3 sm:right-5 z-50 flex flex-col items-end gap-3">
       {open && <ChatPanel onClose={() => setOpen(false)} />}
       <button
         onClick={() => setOpen((o) => !o)}
