@@ -431,7 +431,7 @@ def _rows_to_text(rows: list[dict[str, Any]]) -> str:
 def _get_groq_client() -> Groq:
     if not settings.groq_api_key:
         raise RuntimeError("GROQ_API_KEY is not configured")
-    return Groq(api_key=settings.groq_api_key)
+    return Groq(api_key=settings.groq_api_key, max_retries=0)
 
 
 # ---------------------------------------------------------------------------
@@ -455,7 +455,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
 
     try:
         sql_resp = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="llama-3.3-70b-versatile",
             messages=messages,
             temperature=0,       # deterministic SQL generation
             max_tokens=512,
@@ -476,6 +476,10 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error("SQL generation failed: %s", e)
         return ChatResponse(answer="Failed to generate a query for your question.", status="error")
+
+    if not sql:
+        logger.warning("Model returned empty SQL for question: %s", request.question)
+        return ChatResponse(answer="I couldn't generate a query for that question. Try rephrasing it.", status="error")
 
     logger.info("Generated SQL: %s", sql)
 
@@ -533,7 +537,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
 
     try:
         answer_resp = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": format_prompt}],
             temperature=0.3,
             max_tokens=max_tokens,

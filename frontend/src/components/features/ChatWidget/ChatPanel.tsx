@@ -231,7 +231,7 @@ export default function ChatPanel({ onClose }: Props) {
           </button>
         </div>
         <p className="mt-1.5 text-[10px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] text-center">
-          Powered by gpt-oss-120b
+          Powered by Llama 3.3 70B
         </p>
       </div>
     </div>
