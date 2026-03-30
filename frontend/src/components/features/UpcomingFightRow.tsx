@@ -57,13 +57,13 @@ export default function UpcomingFightRow({ fight }: Props) {
     >
       {/* Weight class + title badge */}
       <div className="mb-1.5 flex items-center justify-center gap-2">
+        {is_title_fight && !is_interim_title && <Badge variant="warning">Title</Badge>}
+        {is_interim_title && <Badge variant="warning">Interim</Badge>}
         {weight_class && (
           <span className="text-xs text-[var(--color-text-muted)]">
             {weight_class}
           </span>
         )}
-        {is_title_fight && !is_interim_title && <Badge variant="warning">Title</Badge>}
-        {is_interim_title && <Badge variant="warning">Interim</Badge>}
       </div>
 
       {/* Fighter names + probabilities */}

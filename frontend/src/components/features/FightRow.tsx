@@ -23,15 +23,19 @@ export default function FightRow({ fight, viewingFighterId }: FightRowProps) {
     >
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{fight.bout ?? '—'}</p>
-        {fight.weight_class && (
-          <p className="mt-0.5 text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-            {fight.weight_class}
-          </p>
+        {(fight.is_title_fight || fight.weight_class) && (
+          <div className="mt-0.5 flex items-center gap-1.5">
+            {fight.is_title_fight && !fight.is_interim_title && <Badge variant="warning">Title</Badge>}
+            {fight.is_interim_title && <Badge variant="warning">Interim</Badge>}
+            {fight.weight_class && (
+              <span className="text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+                {fight.weight_class}
+              </span>
+            )}
+          </div>
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-        {fight.is_title_fight && !fight.is_interim_title && <Badge variant="warning">Title</Badge>}
-        {fight.is_interim_title && <Badge variant="warning">Interim</Badge>}
         {fight.method && (
           <span className="text-xs">
             {fight.method}

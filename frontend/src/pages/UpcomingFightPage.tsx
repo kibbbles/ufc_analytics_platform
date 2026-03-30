@@ -3,7 +3,7 @@ import { useApi } from '@hooks/useApi'
 import { upcomingService } from '@services/upcomingService'
 import { fightersService } from '@services/fightersService'
 import { fightsService } from '@services/fightsService'
-import { Card, LoadingSkeleton } from '@components/common'
+import { Badge, Card, LoadingSkeleton } from '@components/common'
 import OddsCalculator from '@components/features/OddsCalculator'
 import type { FighterResponse, FightListItem, UpcomingFight } from '@t/api'
 import { inchesToFeet, formatDate } from '@utils/format'
@@ -361,14 +361,11 @@ export default function UpcomingFightPage() {
               )}
             </div>
             {(fight.weight_class || fight.is_title_fight) && (
-              <div className="mt-2 flex justify-center gap-2">
+              <div className="mt-2 flex items-center justify-center gap-2">
+                {fight.is_title_fight && !fight.is_interim_title && <Badge variant="warning">Title</Badge>}
+                {fight.is_interim_title && <Badge variant="warning">Interim</Badge>}
                 {fight.weight_class && (
                   <span className="text-xs text-[var(--color-text-muted)]">{fight.weight_class}</span>
-                )}
-                {fight.is_title_fight && (
-                  <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                    Title
-                  </span>
                 )}
               </div>
             )}
