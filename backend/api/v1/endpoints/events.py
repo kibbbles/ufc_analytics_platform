@@ -112,7 +112,8 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
             fr.weight_class,
             fr."METHOD"     AS method,
             fr."ROUND"::int AS round,
-            fr.is_title_fight
+            fr.is_title_fight,
+            fr.is_interim_title
         FROM fight_details fd
         LEFT JOIN fight_results fr ON fr.fight_id = fd.id
         WHERE fd.event_id = :event_id

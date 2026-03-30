@@ -58,9 +58,14 @@ function FightCard({ fight }: { fight: FightSearchItem }) {
             </span>
           </p>
         </div>
-        {fight.is_title_fight && (
+        {fight.is_title_fight && !fight.is_interim_title && (
           <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-600 dark:text-amber-400">
             Title
+          </span>
+        )}
+        {fight.is_interim_title && (
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-600 dark:text-amber-400">
+            Interim
           </span>
         )}
       </div>

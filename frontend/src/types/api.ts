@@ -117,6 +117,7 @@ export interface FightListItem {
   round: number | null
   winner_id: string | null
   is_title_fight: boolean | null
+  is_interim_title: boolean | null
 }
 
 export interface FightListResponse {
@@ -139,6 +140,7 @@ export interface FightSearchItem {
   winner_name: string | null
   round: number | null
   is_title_fight: boolean | null
+  is_interim_title: boolean | null
   // null when no past_prediction exists
   win_prob_a: number | null
   win_prob_b: number | null

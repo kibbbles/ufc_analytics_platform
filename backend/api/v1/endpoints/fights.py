@@ -178,6 +178,7 @@ def search_fights(
             TRIM(COALESCE(fw."FIRST", '') || ' ' || COALESCE(fw."LAST", '')) AS winner_name,
             fr."ROUND"::int                                                 AS round,
             fr.is_title_fight,
+            fr.is_interim_title,
             pp.win_prob_a,
             pp.win_prob_b,
             pp.predicted_winner_id,

@@ -30,7 +30,8 @@ export default function FightRow({ fight, viewingFighterId }: FightRowProps) {
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-        {fight.is_title_fight && <Badge variant="warning">Title</Badge>}
+        {fight.is_title_fight && !fight.is_interim_title && <Badge variant="warning">Title</Badge>}
+        {fight.is_interim_title && <Badge variant="warning">Interim</Badge>}
         {fight.method && (
           <span className="text-xs">
             {fight.method}

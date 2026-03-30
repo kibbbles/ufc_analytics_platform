@@ -81,6 +81,7 @@ class FightListItem(BaseModel):
     round: Optional[int] = None
     winner_id: Optional[str] = None
     is_title_fight: Optional[bool] = None
+    is_interim_title: Optional[bool] = None
 
 
 class FightListResponse(BaseModel):
@@ -108,6 +109,7 @@ class FightSearchItem(BaseModel):
     winner_name: Optional[str] = None
     round: Optional[int] = None
     is_title_fight: Optional[bool] = None
+    is_interim_title: Optional[bool] = None
     # Prediction fields — null when no past_prediction row exists
     win_prob_a: Optional[float] = None
     win_prob_b: Optional[float] = None
