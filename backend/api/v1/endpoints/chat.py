@@ -31,6 +31,10 @@ router = APIRouter()
 SCHEMA = """
 You are an expert PostgreSQL assistant for a UFC fight database. Write a single valid PostgreSQL SELECT query answering the user's question.
 
+CRITICAL RULE — output exactly NO_SQL (nothing else) when the question:
+- asks about a hypothetical or unscheduled matchup (e.g. "who would win a trilogy", "if X fought Y")
+- cannot be answered from the tables below (general MMA knowledge, style opinions, etc.)
+
 DATABASE SCHEMA:
 event_details      (id VARCHAR, "EVENT" TEXT, date_proper DATE, "LOCATION" TEXT)
 fighter_details    (id VARCHAR, "FIRST" TEXT, "LAST" TEXT, "NICKNAME" TEXT)
@@ -147,6 +151,7 @@ class ChatResponse(BaseModel):
     answer: str
     sql: str | None = None
     status: str        # "ok" | "rate_limited" | "no_results" | "error"
+    source: str | None = None  # "model_data" | "general_knowledge"
     retry_after: int | None = None  # seconds to wait before retrying
 
 # ---------------------------------------------------------------------------
@@ -223,6 +228,46 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     if not sql:
         logger.warning("Model returned empty SQL for question: %s", request.question)
         return ChatResponse(answer="I couldn't generate a query for that question. Try rephrasing it.", status="error")
+
+    # ── NO_SQL path: hypothetical / general knowledge ───────────────────────
+    if sql.strip().upper() == "NO_SQL":
+        logger.info("Model signalled NO_SQL — answering from general knowledge")
+        freeform_messages: list[dict] = [
+            {"role": "system", "content": (
+                "You are a knowledgeable UFC analyst. Answer the user's question using your general MMA knowledge. "
+                "Be concise (2-4 sentences). If asked about a hypothetical matchup, give a thoughtful analysis "
+                "based on fighting styles and known history. "
+                "Do not invent specific statistics you cannot verify. "
+                "Do not mention databases, SQL, or prediction models."
+            )},
+        ]
+        for turn in history_turns:
+            freeform_messages.append({"role": turn.role, "content": turn.content})
+        freeform_messages.append({"role": "user", "content": request.question})
+        try:
+            freeform_resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=freeform_messages,
+                temperature=0.5,
+                max_tokens=300,
+            )
+            answer = freeform_resp.choices[0].message.content.strip()
+            return ChatResponse(answer=answer, sql=None, status="ok", source="general_knowledge")
+        except RateLimitError as e:
+            retry_after = 60
+            try:
+                retry_after = int(e.response.headers.get("retry-after", 60))
+            except (AttributeError, ValueError, TypeError):
+                pass
+            wait_msg = f"{retry_after // 60} min" if retry_after >= 60 else f"{retry_after}s"
+            return ChatResponse(
+                answer=f"Rate limit reached — please try again in {wait_msg}.",
+                status="rate_limited",
+                retry_after=retry_after,
+            )
+        except Exception as e:
+            logger.error("Free-form answer failed: %s", e)
+            return ChatResponse(answer="I couldn't answer that question right now.", status="error")
 
     logger.info("Generated SQL: %s", sql)
 
@@ -334,4 +379,4 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         logger.error("Answer formatting failed: %s", e)
         answer = _card_fallback(rows) if is_card_overview else _rows_to_text(rows)
 
-    return ChatResponse(answer=answer, sql=sql, status="ok")
+    return ChatResponse(answer=answer, sql=sql, status="ok", source="model_data")

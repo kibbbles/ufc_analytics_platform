@@ -11,6 +11,7 @@ interface Message {
   content: string
   sql?: string | null
   status?: string
+  source?: string | null
 }
 
 interface Props {
@@ -81,6 +82,7 @@ export default function ChatPanel({ onClose }: Props) {
           content: resp.answer,
           sql: resp.sql,
           status: resp.status,
+          source: resp.source,
         },
       ])
       if (resp.status === 'rate_limited') startCooldown(resp.retry_after ?? 60)
@@ -164,7 +166,12 @@ export default function ChatPanel({ onClose }: Props) {
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
 
-              {/* Collapsible SQL */}
+              {/* Source label or collapsible SQL */}
+              {msg.role === 'assistant' && msg.source === 'general_knowledge' && (
+                <p className="mt-2 text-[11px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] italic">
+                  Based on general MMA knowledge
+                </p>
+              )}
               {msg.role === 'assistant' && msg.sql && (
                 <details className="mt-2">
                   <summary className="text-[11px] cursor-pointer text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary-light)] dark:hover:text-[var(--color-text-secondary)] select-none">

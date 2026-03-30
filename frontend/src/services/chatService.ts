@@ -14,6 +14,7 @@ export interface ChatResponse {
   answer: string
   sql: string | null
   status: 'ok' | 'rate_limited' | 'no_results' | 'error'
+  source?: 'model_data' | 'general_knowledge' | null
   retry_after?: number
 }
 
