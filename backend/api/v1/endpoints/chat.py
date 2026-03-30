@@ -455,7 +455,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
 
     try:
         sql_resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0,       # deterministic SQL generation
             max_tokens=512,
@@ -533,7 +533,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
 
     try:
         answer_resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": format_prompt}],
             temperature=0.3,
             max_tokens=max_tokens,
