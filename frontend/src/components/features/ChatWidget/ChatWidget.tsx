@@ -8,7 +8,10 @@ export default function ChatWidget() {
   useEffect(() => {
     if (!open) return
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Element
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        // Stay open if clicking an interactive element (links, buttons, inputs, etc.)
+        if (target.closest('a, button, input, textarea, select, [role="button"], [role="tab"], [role="link"]')) return
         setOpen(false)
       }
     }

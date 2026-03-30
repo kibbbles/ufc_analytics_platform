@@ -445,6 +445,33 @@ class UpcomingScraper:
         print('=' * 60)
 
         try:
+            # Purge past events (and their fights/predictions) before scraping
+            if not dry_run:
+                with engine.connect() as conn:
+                    result = conn.execute(text("""
+                        DELETE FROM upcoming_predictions
+                        WHERE fight_id IN (
+                            SELECT uf.id FROM upcoming_fights uf
+                            JOIN upcoming_events ue ON ue.id = uf.event_id
+                            WHERE ue.date_proper < CURRENT_DATE
+                        )
+                    """))
+                    preds_deleted = result.rowcount
+                    result = conn.execute(text("""
+                        DELETE FROM upcoming_fights
+                        WHERE event_id IN (
+                            SELECT id FROM upcoming_events WHERE date_proper < CURRENT_DATE
+                        )
+                    """))
+                    fights_deleted = result.rowcount
+                    result = conn.execute(text(
+                        "DELETE FROM upcoming_events WHERE date_proper < CURRENT_DATE"
+                    ))
+                    events_deleted = result.rowcount
+                    conn.commit()
+                if events_deleted:
+                    print(f'Purged {events_deleted} past event(s), {fights_deleted} fight(s), {preds_deleted} prediction(s)')
+
             events = self.scrape_upcoming_events()
             if not events:
                 print('No upcoming events found.')
