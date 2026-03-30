@@ -169,7 +169,7 @@ export default function ChatPanel({ onClose }: Props) {
               {/* Source label or collapsible SQL */}
               {msg.role === 'assistant' && msg.source === 'general_knowledge' && (
                 <p className="mt-2 text-[11px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] italic">
-                  Based on general MMA knowledge
+                  Based on LLM training data
                 </p>
               )}
               {msg.role === 'assistant' && msg.sql && (
