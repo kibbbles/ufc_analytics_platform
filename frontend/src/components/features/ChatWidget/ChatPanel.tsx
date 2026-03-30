@@ -211,7 +211,7 @@ export default function ChatPanel({ onClose }: Props) {
           </button>
         </div>
         <p className="mt-1.5 text-[10px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] text-center">
-          Powered by Groq · Data through last Sunday
+          Powered by Groq
         </p>
       </div>
     </div>
