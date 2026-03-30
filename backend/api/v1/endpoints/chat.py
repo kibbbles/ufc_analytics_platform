@@ -112,6 +112,20 @@ upcoming_fights (
     is_title_fight BOOLEAN
 )
 
+upcoming_predictions (
+    id VARCHAR,
+    fight_id VARCHAR,      -- FK → upcoming_fights.id (UNIQUE)
+    win_prob_a FLOAT,      -- P(fighter_a wins), e.g. 0.537 = 53.7%
+    win_prob_b FLOAT,      -- P(fighter_b wins), e.g. 0.463 = 46.3%
+    method_ko_tko FLOAT,   -- probability of KO/TKO
+    method_sub FLOAT,      -- probability of submission
+    method_dec FLOAT,      -- probability of decision
+    features_json JSONB    -- model feature differentials: each value = (fighter_a) - (fighter_b)
+                           -- POSITIVE = favors fighter_a, NEGATIVE = favors fighter_b
+                           -- EXCEPTION: diff_age_at_fight, diff_sapm, loss_streak_diff
+                           --   are reversed (lower is better, so negative favors fighter_a)
+)
+
 IMPORTANT RULES:
 1. Return ONLY the raw SQL query — no markdown, no backticks, no explanation.
 2. Always use LIMIT 20 unless aggregating over all rows (COUNT, SUM, MAX, etc.).
@@ -180,6 +194,46 @@ IMPORTANT RULES:
       JOIN event_details e ON e.id = fr.event_id
       ORDER BY e.date_proper ASC
       LIMIT 1
+
+13. For "what are the chances X beats Y", "win probability", "model prediction",
+    "who does the model favor" for an UPCOMING fight, use upcoming_predictions.
+    ALWAYS include features_json in the SELECT so the features can be explained.
+    Search fighter names with ILIKE on upcoming_fights.fighter_a_name / fighter_b_name.
+    Example — Ewing vs Estevam:
+      SELECT uf.fighter_a_name, uf.fighter_b_name,
+             up.win_prob_a, up.win_prob_b,
+             up.method_ko_tko, up.method_sub, up.method_dec,
+             up.features_json
+      FROM upcoming_predictions up
+      JOIN upcoming_fights uf ON uf.id = up.fight_id
+      WHERE (uf.fighter_a_name ILIKE '%ewing%' OR uf.fighter_b_name ILIKE '%ewing%')
+        AND (uf.fighter_a_name ILIKE '%estevam%' OR uf.fighter_b_name ILIKE '%estevam%')
+      LIMIT 1
+    features_json key glossary (all = fighter_a minus fighter_b):
+      reach_diff_inches          reach advantage (positive = fighter_a longer reach)
+      diff_age_at_fight          age diff in days (NEGATIVE favors fighter_a = younger)
+      win_streak_diff            current win streak gap (positive = fighter_a on longer streak)
+      loss_streak_diff           loss streak gap (NEGATIVE favors fighter_a = shorter loss streak)
+      win_rate_diff              career win rate gap
+      diff_ko_rate               KO finish rate gap (positive = fighter_a finishes more by KO)
+      diff_decision_rate         decision rate (positive = fighter_a goes to decisions more)
+      diff_career_avg_kd         career knockdowns per fight
+      diff_ewa_kd                recent knockdowns (exponentially weighted)
+      diff_aggression_score      striking aggression / volume
+      diff_defense_score         defensive ability (positive = fighter_a absorbs fewer shots relative to output)
+      diff_sapm                  strikes absorbed per minute (NEGATIVE favors fighter_a = absorbs fewer)
+      diff_roll3_sig_str_landed  last-3-fight avg significant strikes landed
+      diff_roll7_sig_str_att     last-7-fight avg sig strike attempts
+      diff_roll7_sig_str_pct     last-7-fight sig strike accuracy
+      diff_roll7_total_str_landed last-7-fight avg total strikes
+      diff_roll3_ctrl_s          last-3-fight avg ground control time (seconds)
+      diff_roll5_td_pct          last-5-fight takedown success %
+      diff_roll7_td_landed       last-7-fight avg takedowns landed
+      diff_career_avg_ctrl_s     career avg control time per fight
+      diff_career_avg_td_attempted career avg takedown attempts
+      diff_grappling_ratio       grappling-to-striking ratio
+      diff_career_length_days    how long each fighter has been competing
+      diff_avg_opponent_losses   avg losses of opponents faced (proxy for competition quality)
 
 TERMINOLOGY & ALIASES:
 -----------------------
@@ -421,20 +475,44 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         )
 
     # ── Step 3: Format answer ───────────────────────────────────────────────
-    format_prompt = (
-        f"The user asked: {request.question}\n\n"
-        f"Database results:\n{_rows_to_text(rows)}\n\n"
-        "Write a clear, concise answer in 1-3 sentences. "
-        "Include specific names, numbers, and fight details from the results. "
-        "Do not mention SQL or databases."
-    )
+    has_features = any('features_json' in row and row['features_json'] for row in rows)
+
+    if has_features:
+        format_prompt = (
+            f"The user asked: {request.question}\n\n"
+            f"Database results:\n{_rows_to_text(rows)}\n\n"
+            "The results include win probabilities and a features_json dict of model feature differentials.\n"
+            "Each feature value = (fighter_a stat) - (fighter_b stat).\n"
+            "POSITIVE = favors fighter_a. NEGATIVE = favors fighter_b.\n"
+            "EXCEPTIONS where NEGATIVE favors fighter_a: diff_age_at_fight (younger is better), "
+            "diff_sapm (fewer strikes absorbed is better), loss_streak_diff (shorter loss streak is better).\n\n"
+            "Write a response that:\n"
+            "1. States each fighter's win probability as a percentage\n"
+            "2. States the most likely method (KO/TKO, submission, or decision)\n"
+            "3. Lists the 3-4 most significant features that favor the predicted winner, "
+            "with specific numbers and a plain-English explanation of why each matters\n"
+            "4. Lists 2 features that favor the other fighter for balance\n"
+            "5. One sentence concluding why the model leans the way it does\n"
+            "Use fighter names throughout (not 'fighter_a'/'fighter_b'). "
+            "Be specific with numbers. Do not mention SQL, databases, or feature names literally."
+        )
+        max_tokens = 600
+    else:
+        format_prompt = (
+            f"The user asked: {request.question}\n\n"
+            f"Database results:\n{_rows_to_text(rows)}\n\n"
+            "Write a clear, concise answer in 1-3 sentences. "
+            "Include specific names, numbers, and fight details from the results. "
+            "Do not mention SQL or databases."
+        )
+        max_tokens = 256
 
     try:
         answer_resp = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": format_prompt}],
             temperature=0.3,
-            max_tokens=256,
+            max_tokens=max_tokens,
         )
         answer = answer_resp.choices[0].message.content.strip()
     except RateLimitError:
