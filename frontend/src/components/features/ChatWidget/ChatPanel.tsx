@@ -25,7 +25,8 @@ export default function ChatPanel({ onClose }: Props) {
   const [messages, setMessages]   = useState<Message[]>([])
   const [input, setInput]         = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [rateLimited, setRateLimited] = useState(false)
+  const [cooldownSecs, setCooldownSecs] = useState(0)
+  const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLTextAreaElement>(null)
 
@@ -39,9 +40,28 @@ export default function ChatPanel({ onClose }: Props) {
     inputRef.current?.focus()
   }, [])
 
+  // Cooldown countdown
+  function startCooldown(secs: number) {
+    if (cooldownTimer.current) clearInterval(cooldownTimer.current)
+    setCooldownSecs(secs)
+    cooldownTimer.current = setInterval(() => {
+      setCooldownSecs((s) => {
+        if (s <= 1) {
+          clearInterval(cooldownTimer.current!)
+          return 0
+        }
+        return s - 1
+      })
+    }, 1000)
+  }
+
+  useEffect(() => {
+    return () => { if (cooldownTimer.current) clearInterval(cooldownTimer.current) }
+  }, [])
+
   async function send() {
     const question = input.trim()
-    if (!question || isLoading || rateLimited) return
+    if (!question || isLoading || cooldownSecs > 0) return
 
     const userMsg: Message = { role: 'user', content: question }
     const history: ChatMessage[] = messages
@@ -63,7 +83,7 @@ export default function ChatPanel({ onClose }: Props) {
           status: resp.status,
         },
       ])
-      if (resp.status === 'limit_reached') setRateLimited(true)
+      if (resp.status === 'rate_limited') startCooldown(60)
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -81,9 +101,9 @@ export default function ChatPanel({ onClose }: Props) {
     }
   }
 
-  const sendDisabled = isLoading || rateLimited || !input.trim()
-  const sendTitle    = rateLimited
-    ? 'Rate limit reached. Try again tomorrow.'
+  const sendDisabled = isLoading || cooldownSecs > 0 || !input.trim()
+  const sendTitle    = cooldownSecs > 0
+    ? `Too many requests — retry in ${cooldownSecs}s`
     : isLoading
     ? 'Waiting for response…'
     : undefined
@@ -118,9 +138,9 @@ export default function ChatPanel({ onClose }: Props) {
               Try asking:
             </p>
             {[
-              "What is Khabib's UFC record?",
-              'Who has the most KO wins at lightweight?',
-              'How did the Adesanya vs Pyfer fight end?',
+              'Who has the most knockouts in UFC history?',
+              'Which weight class has the highest finish rate?',
+              'What are the chances on the next upcoming card?',
             ].map((q) => (
               <button
                 key={q}
@@ -181,9 +201,9 @@ export default function ChatPanel({ onClose }: Props) {
 
       {/* Input area */}
       <div className="px-3 pb-3 pt-2 shrink-0 border-t border-[var(--color-border-light)] dark:border-[var(--color-border)]">
-        {rateLimited && (
+        {cooldownSecs > 0 && (
           <p className="text-[11px] text-amber-500 mb-1.5">
-            Daily limit reached. Chat resets tomorrow.
+            Too many requests — retry in {cooldownSecs}s
           </p>
         )}
         <div className="flex items-end gap-2">
@@ -194,7 +214,7 @@ export default function ChatPanel({ onClose }: Props) {
             onKeyDown={handleKeyDown}
             placeholder="Ask about any fighter or fight…"
             rows={1}
-            disabled={rateLimited}
+            disabled={cooldownSecs > 0}
             className="flex-1 resize-none rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-sm placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 max-h-24 overflow-y-auto"
             style={{ fieldSizing: 'content' } as React.CSSProperties}
           />
