@@ -94,9 +94,9 @@ export default function ChatPanel({ onClose }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] shrink-0">
         <div>
-          <p className="text-sm font-bold leading-tight">UFC Stats Assistant</p>
+          <p className="text-sm font-bold leading-tight">Ask the Maybe</p>
           <p className="text-[11px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Ask anything about fights, fighters, or records
+            Fights, fighters, records — powered by live data
           </p>
         </div>
         <button
