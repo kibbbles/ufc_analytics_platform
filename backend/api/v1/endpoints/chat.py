@@ -151,16 +151,20 @@ IMPORTANT RULES:
       dates will ALWAYS return zero rows.
     - For "next card", "upcoming event", "this weekend", "next fight", "scheduled"
       queries, ALWAYS use upcoming_events / upcoming_fights, NOT event_details.
+    IMPORTANT: upcoming_events may contain stale past entries. ALWAYS filter
+    with WHERE date_proper >= CURRENT_DATE to get only future events.
     Example — next upcoming card:
       SELECT ue.event_name, ue.date_proper, ue.location
       FROM upcoming_events ue
+      WHERE ue.date_proper >= CURRENT_DATE
       ORDER BY ue.date_proper ASC
       LIMIT 1
     Example — fights on the next card:
       SELECT uf.fighter_a_name, uf.fighter_b_name, uf.weight_class, uf.is_title_fight
       FROM upcoming_fights uf
       JOIN upcoming_events ue ON ue.id = uf.event_id
-      WHERE ue.date_proper = (SELECT MIN(date_proper) FROM upcoming_events)
+      WHERE ue.date_proper >= CURRENT_DATE
+        AND ue.date_proper = (SELECT MIN(date_proper) FROM upcoming_events WHERE date_proper >= CURRENT_DATE)
       ORDER BY uf.is_title_fight DESC
 12. NEVER use id columns (fight_id, fighter_id, event_id, fr.id) for chronological
     ordering. IDs are alphanumeric and have no time ordering.
