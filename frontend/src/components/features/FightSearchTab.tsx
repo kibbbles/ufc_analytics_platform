@@ -43,10 +43,10 @@ function FightCard({ fight }: { fight: FightSearchItem }) {
   return (
     <Link
       to={`/past-predictions/fights/${fight.fight_id}`}
-      className="block rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 space-y-1.5 hover:border-[var(--color-primary)]/60 transition-colors"
+      className="block rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 space-y-1.5 hover:border-[var(--color-primary)]/60 transition-colors lg:text-center"
     >
       {/* Fighter names + winner */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 lg:justify-center">
         <div className="min-w-0">
           <p className="font-semibold leading-snug">
             <span className={winnerIsA ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}>
@@ -90,7 +90,7 @@ function FightCard({ fight }: { fight: FightSearchItem }) {
 
       {/* Prediction badge */}
       {hasPred && (
-        <div className="flex items-center gap-2 pt-0.5">
+        <div className="flex items-center gap-2 pt-0.5 lg:justify-center">
           <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
             Model
           </span>

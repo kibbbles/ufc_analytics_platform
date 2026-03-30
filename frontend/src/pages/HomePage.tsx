@@ -44,12 +44,12 @@ function FightSearchRow({ item }: { item: PastPredictionItem }) {
   return (
     <Link
       to={`/past-predictions/fights/${item.fight_id}`}
-      className="block rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 hover:border-[var(--color-primary)]/50 transition-colors"
+      className="block rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 hover:border-[var(--color-primary)]/50 transition-colors lg:text-center"
     >
       {/* Matchup header */}
-      <div className="flex items-start gap-2 mb-1.5">
+      <div className="flex items-start gap-2 mb-1.5 lg:justify-center">
         <span className={`font-mono font-bold text-sm mt-0.5 w-4 shrink-0 ${color}`}>{indicator}</span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 lg:flex-none">
           <p className="text-sm font-semibold leading-tight truncate">
             {item.fighter_a_name ?? '?'} vs {item.fighter_b_name ?? '?'}
           </p>
@@ -61,7 +61,7 @@ function FightSearchRow({ item }: { item: PastPredictionItem }) {
         </div>
       </div>
       {/* Prediction vs actual */}
-      <div className="ml-6 space-y-0.5">
+      <div className="ml-6 space-y-0.5 lg:ml-0">
         <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
           <span className="w-16 inline-block">Predicted</span>
           <span className={isCorrect ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : ''}>
