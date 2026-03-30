@@ -6,10 +6,11 @@ ML-powered UFC fight analytics. Scrapes every UFC event from UFCStats.com, train
 
 ## What's on the site
 
-- **Upcoming Card** — pre-computed win probability + method breakdown for this weekend's fights, refreshed every Friday
+- **Upcoming Card** — pre-computed win probability + method breakdown for this weekend's fights, refreshed every Saturday
 - **Model Scorecard** — past prediction accuracy with per-event breakdown and fight search; predictions are frozen before each event to prevent data leakage
 - **Fighter Lookup** — search any fighter, view career record, physical stats, and fight history
 - **Completed Events** — browse all historical UFC events and fight cards
+- **UFC Stats Assistant** — floating chat widget on every page; ask natural-language questions about any fighter or fight and get answers powered by live SQL queries against the full database (e.g. "What is Khabib's UFC record?", "Who has the most KO wins at lightweight?", "How did the Adesanya vs Pyfer fight end?")
 
 ## Tech Stack
 
@@ -48,6 +49,7 @@ All endpoints versioned under `/api/v1`. Swagger docs at `/docs`.
 | GET | `/api/v1/events` | Paginated event list (`?year=`) |
 | GET | `/api/v1/events/{id}` | Event detail + full fight card |
 | POST | `/api/v1/predictions/fight-outcome` | Win probability + method breakdown |
+| POST | `/api/v1/chat` | Natural-language Q&A — converts question to SQL, executes, returns formatted answer (Groq/llama-3.3-70b) |
 | GET | `/api/v1/analytics/style-evolution` | Finish rates by year (`?weight_class=`) |
 | GET | `/api/v1/analytics/fighter-endurance/{id}` | Round-by-round performance profile |
 | GET | `/api/v1/upcoming/events` | Upcoming UFC events ordered by date |
@@ -64,16 +66,16 @@ All endpoints versioned under `/api/v1`. Swagger docs at `/docs`.
 7 GitHub Actions workflows keep everything current:
 
 ```
-Daily   03:00 UTC  →  daily-keepalive          ping Supabase to prevent free tier pause
+Daily    03:00 UTC  →  daily-keepalive          ping Supabase to prevent free tier pause
 
-Friday  12:00 UTC  →  upcoming-predictions     scrape announced fights + compute predictions
+Saturday 15:00 UTC  →  upcoming-predictions     scrape announced fights + compute predictions
 
-Sunday  18:00 UTC  →  weekly-ufc-scraper       scrape completed events from UFCStats
-                   →  post-scrape-clean         ETL (FK resolution, type parsing, derived cols)
-                                                + archive pre-fight predictions before features change
-                   →  feature-engineering       rebuild training_data.parquet
-                   →  retrain                   retrain models + commit artefacts
-                   →  deploy-backend            build Docker image + deploy to Cloud Run
+Sunday   14:00 UTC  →  weekly-ufc-scraper       scrape completed events from UFCStats
+                    →  post-scrape-clean         ETL (FK resolution, type parsing, derived cols)
+                                                 + archive pre-fight predictions before features change
+                    →  feature-engineering       rebuild training_data.parquet
+                    →  retrain                   retrain models + commit artefacts
+                    →  deploy-backend            build Docker image + deploy to Cloud Run
 ```
 
 ## ML Model Performance
@@ -142,7 +144,7 @@ ufc_analytics_platform/
 │   │   ├── dependencies.py            # get_db() session dependency
 │   │   ├── routers/health.py          # /health, /health/db
 │   │   └── v1/endpoints/              # fighters, fights, events, predictions, upcoming,
-│   │                                  # past_predictions, analytics
+│   │                                  # past_predictions, analytics, chat
 │   ├── core/                          # config, logging, middleware
 │   ├── db/                            # SQLAlchemy engine + SessionLocal
 │   ├── features/                      # Feature engineering pipeline
@@ -173,7 +175,7 @@ ufc_analytics_platform/
 │       ├── hooks/                     # useApi, useDarkMode, useDebounce
 │       ├── pages/                     # One file per route (lazy-loaded)
 │       ├── router/index.tsx           # createBrowserRouter
-│       ├── services/                  # Axios client + API service classes
+│       ├── services/                  # Axios client + API service classes (chatService, etc.)
 │       ├── types/api.ts               # TypeScript interfaces mirroring Pydantic schemas
 │       └── utils/                     # Pure helpers
 ├── .github/workflows/                 # 7 automation workflows
@@ -188,4 +190,4 @@ ufc_analytics_platform/
 
 ---
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-29

@@ -113,7 +113,7 @@ The backend went through three hosting platforms before settling:
 | Initial | Local only | Development |
 | v1 | **Fly.io** | First deployment attempt; Docker-based, generous free tier |
 | v2 | **Render** | Fly.io free tier was eliminated; Render offers free Web Services |
-| v3 (planned) | **Firebase / Cloud Run** | Render free tier spins down after 15 min inactivity (~30s cold start). Firebase/Cloud Run has faster cold starts and is more production-grade |
+| v3 | **Google Cloud Run** | Render free tier spins down after 15 min inactivity (~30s cold start). Cloud Run has faster cold starts, is more production-grade, and integrates with GCP Secret Manager |
 
 **Frontend**: always Vercel. Connected directly to the GitHub repo — every push to `main` triggers a deploy. Set `Root Directory = frontend` in Vercel settings. One env var: `VITE_API_BASE_URL`.
 
@@ -121,7 +121,7 @@ The backend went through three hosting platforms before settling:
 
 Current production stack:
 ```
-Browser → Vercel (React SPA, CDN) → Render (FastAPI, Docker) → Supabase (PostgreSQL)
+Browser → Vercel (React SPA, CDN) → Google Cloud Run (FastAPI, Docker) → Supabase (PostgreSQL)
 ```
 
 ---
@@ -212,7 +212,7 @@ Personal intro page. Casual tone. Explains the project, the data source, the mod
                            │  HTTP GET (JSON)
                            ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  FASTAPI (Render — Docker container)                                │
+│  FASTAPI (Google Cloud Run — Docker container)                      │
 │                                                                     │
 │  api/v1/endpoints/upcoming.py                                       │
 │  └── get_upcoming_event_detail(event_id, db)                        │
@@ -249,7 +249,7 @@ Personal intro page. Casual tone. Explains the project, the data source, the mod
 ### Deeper: How a Prediction is Generated (Weekly Automation)
 
 ```
-Friday 12:00 UTC
+Saturday 15:00 UTC
        │
        ▼
 GitHub Actions: upcoming-predictions.yml
@@ -273,7 +273,7 @@ GitHub Actions: upcoming-predictions.yml
        │       │   └── UPSERT into upcoming_predictions
        │       └── Fights with NULL fighter FK → skipped (debuting fighters)
        │
-Sunday 18:00 UTC
+Sunday 14:00 UTC
        │
        ▼
 weekly-ufc-scraper.yml → post-scrape-clean.yml → feature-engineering.yml → retrain.yml
@@ -331,6 +331,41 @@ past_predictions   (fight_id VARCHAR(8), event_id VARCHAR(6), all prediction + a
 
 ---
 
+## UFC Stats Assistant — Natural Language Chat (Task 30)
+
+The most technically distinctive feature: a floating chat widget on every page that lets users ask natural-language questions about fighters and fights, answered from live database queries.
+
+**How it works (text-to-SQL pipeline)**:
+1. User types a question (e.g. "How did the Adesanya vs Pyfer fight end?")
+2. Frontend sends `POST /api/v1/chat` with `{ question, history }`
+3. Backend sends the question + conversation history + a detailed `SCHEMA` system prompt to **Groq** (llama-3.3-70b-versatile) — the fastest publicly available LLM, chosen for low latency
+4. LLM returns a SQL query against the UFC database
+5. Backend executes the SQL on Supabase, passes the results back to the LLM
+6. LLM formats a natural-language answer
+7. Response includes the answer, the raw SQL (collapsible in the UI), and a status flag
+
+**Frontend** (`ChatWidget` + `ChatPanel`):
+- Fixed bottom-right bubble on every page (same row as the odds calculator button)
+- Click-outside-to-close, chat history preserved within a session
+- User messages: red right-aligned bubbles. Assistant: grey left-aligned bubbles
+- Collapsible "View SQL" block under each answer for transparency
+- Typing indicator (bouncing dots) while waiting
+- Rate-limit banner + disabled input once daily limit is reached
+- Mobile-first: `w-[calc(100vw-24px)] max-w-[360px]` — fits any phone screen
+
+**Rate limiting**: 20 questions per IP per day (tracked in-memory on the backend), protecting the Groq API key from abuse.
+
+**SCHEMA system prompt engineering**: The hardest part. The LLM needs to know the full table structure, column names (many are quoted uppercase e.g. `fd."LAST"`), join patterns, and dozens of UFC-specific rules. Key rules developed iteratively:
+- Fighter first names: never assume if uncertain — search by `LAST` name only
+- ROUND column: stores both `'1'` and `'Round 1'` formats — filter with `NOT ILIKE '%total%'` not regex
+- fight_results has one row per fight: always use `WHERE fighter_id = :id OR opponent_id = :id`
+- Chronological ordering: NEVER use id columns (alphanumeric, no time ordering) — always use `date_proper`
+- ESPN MMA glossary: ~60 fighter nicknames mapped to real names, weight class aliases, method synonyms
+
+**Production secret management**: GROQ_API_KEY is stored as a GitHub Actions secret and injected into the Cloud Run environment via `--set-env-vars` during deploy. Cloud Run secrets were attempted first (Secret Manager) but the deployer service account lacked the required IAM roles.
+
+---
+
 ## Key Engineering Decisions & Lessons
 
 | Decision | Why |
@@ -350,12 +385,12 @@ past_predictions   (fight_id VARCHAR(8), event_id VARCHAR(6), all prediction + a
 
 ## What's Next (Post-MVP)
 
-1. **Task 25 — Firebase / Cloud Run migration**: Move backend off Render. Firebase Hosting for the React app (same CDN behaviour as Vercel); Cloud Run for FastAPI (faster cold starts, pay-per-request). Motivation: Render's cold start (30s) is the main user-facing pain point.
+1. **Fight Outcome Predictor (Task 8)**: Interactive sliders — adjust fighter attributes and see win probability update in real time.
 
-2. **Fight Outcome Predictor (Task 8)**: Interactive sliders — adjust fighter attributes and see win probability update in real time.
+2. **Style Evolution Timeline (Task 9)**: Finish rate trends by year and weight class. Are KOs getting rarer? Is wrestling dominant now?
 
-3. **Style Evolution Timeline (Task 9)**: Finish rate trends by year and weight class. Are KOs getting rarer? Is wrestling dominant now?
+3. **Fighter Endurance Dashboard (Task 10)**: Round-by-round performance profiles. Which fighters fade in the championship rounds?
 
-4. **Fighter Endurance Dashboard (Task 10)**: Round-by-round performance profiles. Which fighters fade in the championship rounds?
+4. **Chat improvements**: Streaming responses, richer answer formatting (markdown tables), session persistence across page navigation.
 
 5. **Custom domain**: `kabesmaybes.com` or similar.
