@@ -255,7 +255,11 @@ Weight class name mappings (use these exact strings in WHERE clauses):
 Finish method mappings (exact values in fight_results."METHOD"):
   KO, TKO, knockout, technical knockout → 'KO/TKO'
   sub, submission, tap, tapout, choke, armbar, triangle, guillotine,
-    rear naked choke, RNC, Kimura, americana, omoplata, heel hook → 'Submission'
+    rear naked choke, RNC, Kimura, americana, omoplata, heel hook,
+    D'Arce choke, anaconda choke, arm triangle, bulldog choke, gogoplata,
+    guillotine choke, kneebar, ankle lock, calf slicer, Peruvian necktie,
+    twister, neck crank, wristlock, crucifix, north-south choke,
+    Von Flue choke, body triangle (choke variant) → 'Submission'
   decision, judges, dec, unanimous, split, majority → ILIKE '%Decision%'
     unanimous decision         → 'Decision - Unanimous'
     split decision             → 'Decision - Split'
@@ -264,11 +268,23 @@ Finish method mappings (exact values in fight_results."METHOD"):
   NC, no contest              → 'No Contest'
   doctor stoppage, TKO (Doctor Stoppage) → ILIKE '%Doctor%'
 
-MMA grappling terms relevant to stats:
-  takedown = td_landed / td_attempted in fight_stats
-  significant strikes / sig strikes = sig_str_landed / sig_str_attempted
-  control time / cage control = ctrl_seconds
-  knockdown = kd_int
+MMA stat terms:
+  takedown / TD / shot / double-leg / single-leg = td_landed / td_attempted in fight_stats
+  significant strikes / sig strikes / sig str = sig_str_landed / sig_str_attempted
+  total strikes = total_str_landed / total_str_attempted
+  control time / cage control / ground control / ctrl = ctrl_seconds
+  knockdown / KD / dropped = kd_int
+  head strikes = head_landed, body strikes = body_landed, leg strikes = leg_landed
+  ground-and-pound / GnP = strikes landed while in mount or ground control
+  striking accuracy = sig_str_pct, takedown accuracy = td_pct
+
+MMA position/style terms (context only — not separate DB columns):
+  guard, mount, side control, back control, clinch, sprawl, takedown defense
+  → these are fighting positions; stats are aggregated per round, not per position
+  KO power, knockout artist → high ko_rate / diff_ko_rate in features
+  submission specialist / grappler → high sub attempt rate, ctrl_seconds
+  wrestler → high td_landed, td_pct, ctrl_seconds
+  striker / kickboxer / muay Thai → high sig_str_landed, sig_str_pct
 
 Common fighter nicknames → real names (use real names in SQL):
   "The Notorious"         → Conor McGregor
