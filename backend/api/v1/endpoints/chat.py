@@ -31,12 +31,6 @@ router = APIRouter()
 SCHEMA = """
 You are an expert PostgreSQL assistant for a UFC fight database. Write a single valid PostgreSQL SELECT query answering the user's question.
 
-CRITICAL RULE — output exactly NO_SQL (nothing else) ONLY when the question is clearly hypothetical
-and cannot involve a fight in upcoming_fights:
-- explicit hypothetical matchup (e.g. "who would win a trilogy", "if X fought Y someday", "fantasy fight")
-- pure opinion/style question with no factual DB answer (e.g. "who has better technique")
-If there is ANY chance the database can answer the question, write SQL. When in doubt, write SQL.
-
 DATABASE SCHEMA:
 event_details      (id VARCHAR, "EVENT" TEXT, date_proper DATE, "LOCATION" TEXT)
 fighter_details    (id VARCHAR, "FIRST" TEXT, "LAST" TEXT, "NICKNAME" TEXT)
@@ -69,8 +63,18 @@ RULES:
    CRITICAL: Never assume a first name. When unsure, search last name only: WHERE fd."LAST" ILIKE '%pyfer%'
 4. fight_results: ONE row per fight. fighter_id=winner, opponent_id=loser.
    Full history: WHERE fr.fighter_id=fd.id OR fr.opponent_id=fd.id
+   Fight count example ("how many UFC fights does X have?"):
+     SELECT COUNT(*) FROM fight_results fr
+     JOIN fighter_details fd ON (fr.fighter_id=fd.id OR fr.opponent_id=fd.id)
+     WHERE fd."LAST" ILIKE '%x%'
 5. Fighter W-L: wins WHERE fr.fighter_id=fd.id, losses WHERE fr.opponent_id=fd.id.
    Exclude NCs: AND fr."METHOD" NOT ILIKE '%no contest%'
+   Record example ("what is X's record?"):
+     SELECT SUM(CASE WHEN fr.fighter_id=fd.id THEN 1 ELSE 0 END) AS wins,
+            SUM(CASE WHEN fr.opponent_id=fd.id THEN 1 ELSE 0 END) AS losses
+     FROM fight_results fr
+     JOIN fighter_details fd ON (fr.fighter_id=fd.id OR fr.opponent_id=fd.id)
+     WHERE fd."LAST" ILIKE '%x%' AND fr."METHOD" NOT ILIKE '%no contest%'
 6. fight_stats totals: SUM stats GROUP BY fight_id, fighter_id WHERE fs."ROUND" NOT ILIKE '%total%'
    ROUND format varies ('1' or 'Round 1') — never filter by exact format or regex.
 7. Ratio calculations: CAST(SUM(x) AS FLOAT) / NULLIF(SUM(y), 0)
@@ -135,6 +139,11 @@ Nicknames → real names (when unsure of first name, search last name only):
   Tsarukyan/Arman → Arman Tsarukyan; Dvalishvili/Merab → Merab Dvalishvili
   Du Plessis/DDP → Dricus Du Plessis; Prochazka/Jiri → Jiri Prochazka
   Fiziev → Rafael Fiziev; Pantoja → Alexandre Pantoja; Borz → Khamzat Chimaev
+
+FINAL RULE — output exactly NO_SQL (nothing else) ONLY for clearly hypothetical questions
+that cannot involve any table above: explicit fantasy matchups ("who would win a trilogy",
+"if X fought Y someday"), or pure opinion with no factual DB answer ("who has better technique").
+When in doubt, write SQL.
 """
 
 # ---------------------------------------------------------------------------
