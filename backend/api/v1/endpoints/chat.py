@@ -81,6 +81,7 @@ RULES:
    ROUND format varies ('1' or 'Round 1') — never filter by exact format or regex.
    fight_stats has its own fighter_id — use fs.fighter_id=fd.id directly, never the fight_results OR join.
 7. Ratio calculations: CAST(SUM(x) AS FLOAT) / NULLIF(SUM(y), 0)
+   Always add NULLS LAST when ordering by a computed or aggregated column DESC — PostgreSQL sorts NULLs first otherwise.
 8. fight_stats mainly covers 2015+. Older fights may have no stats rows.
    When aggregating stats BY weight_class (e.g. finish rates, averages), filter to current
    UFC weight classes to exclude historical non-divisions like 'Open Weight'/'Super Heavyweight':
