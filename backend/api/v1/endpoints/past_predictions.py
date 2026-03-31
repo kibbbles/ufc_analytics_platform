@@ -365,7 +365,8 @@ def get_past_prediction_stats(
         CASE
             WHEN confidence >= 0.30 THEN '30%+'
             WHEN confidence >= 0.20 THEN '20-30%'
-            ELSE 'Under 20%'
+            WHEN confidence >= 0.10 THEN '10-20%'
+            ELSE 'Under 10%'
         END
     """
 
