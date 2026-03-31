@@ -22,11 +22,20 @@ interface Props {
 // ChatPanel
 // ---------------------------------------------------------------------------
 
+const COOLDOWN_KEY = 'chat_cooldown_until'
+
+function getStoredCooldownSecs(): number {
+  try {
+    const until = parseInt(localStorage.getItem(COOLDOWN_KEY) ?? '0', 10)
+    return Math.max(0, Math.ceil((until - Date.now()) / 1000))
+  } catch { return 0 }
+}
+
 export default function ChatPanel({ onClose }: Props) {
   const [messages, setMessages]     = useState<Message[]>([])
   const [input, setInput]           = useState('')
   const [isLoading, setIsLoading]   = useState(false)
-  const [cooldownSecs, setCooldownSecs] = useState(0)
+  const [cooldownSecs, setCooldownSecs] = useState(getStoredCooldownSecs)
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLTextAreaElement>(null)
@@ -41,14 +50,23 @@ export default function ChatPanel({ onClose }: Props) {
     inputRef.current?.focus()
   }, [])
 
+  // Resume countdown on mount if a cooldown is still active
+  useEffect(() => {
+    const remaining = getStoredCooldownSecs()
+    if (remaining > 0) startCooldown(remaining)
+  }, [])
+
   // Cooldown countdown
   function startCooldown(secs: number) {
     if (cooldownTimer.current) clearInterval(cooldownTimer.current)
+    const until = Date.now() + secs * 1000
+    try { localStorage.setItem(COOLDOWN_KEY, String(until)) } catch {}
     setCooldownSecs(secs)
     cooldownTimer.current = setInterval(() => {
       setCooldownSecs((s) => {
         if (s <= 1) {
           clearInterval(cooldownTimer.current!)
+          try { localStorage.removeItem(COOLDOWN_KEY) } catch {}
           return 0
         }
         return s - 1
