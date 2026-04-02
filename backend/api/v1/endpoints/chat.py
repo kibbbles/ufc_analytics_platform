@@ -42,6 +42,7 @@ fight_results      (id VARCHAR, fight_id VARCHAR, event_id VARCHAR,
                     is_title_fight BOOLEAN, fight_time_seconds INTEGER, total_fight_time_seconds INTEGER)
 fighter_tott       (id VARCHAR, fighter_id VARCHAR, height_inches FLOAT, weight_lbs FLOAT,
                     reach_inches FLOAT, "STANCE" TEXT, dob_date DATE)
+                    -- STANCE stores only 'Orthodox'/'Southpaw'/'Switch' — NOT fighting style (wrestler/boxer/etc.)
 fight_stats        (id VARCHAR, fight_id VARCHAR, fighter_id VARCHAR,
                     "ROUND" TEXT,           -- '1','2','3' OR 'Round 1','Round 2' — format varies
                     sig_str_landed INT, sig_str_attempted INT, sig_str_pct NUMERIC,
@@ -151,7 +152,9 @@ Nicknames → real names (when unsure of first name, search last name only):
 
 FINAL RULE — output exactly NO_SQL (nothing else) ONLY for clearly hypothetical questions
 that cannot involve any table above: explicit fantasy matchups ("who would win a trilogy",
-"if X fought Y someday"), or pure opinion with no factual DB answer ("who has better technique").
+"if X fought Y someday"), pure opinion with no factual DB answer ("who has better technique"),
+or questions about fighting style/approach (wrestler, boxer, grappler, striker, kickboxer, etc.)
+since MMA style is not stored in any table — STANCE is Orthodox/Southpaw only.
 When in doubt, write SQL.
 """
 
