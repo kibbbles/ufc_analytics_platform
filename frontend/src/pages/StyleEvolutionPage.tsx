@@ -41,9 +41,7 @@ export default function StyleEvolutionPage() {
           <WeightClassFilter value={weightClass} onChange={setWeightClass} />
           {/* Subtle refresh indicator — only shown on subsequent fetches (data already visible) */}
           {loading && data && (
-            <div className="opacity-60 shrink-0">
-              <LoadingSpinner size="sm" />
-            </div>
+            <div className="size-4 shrink-0 rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary)] animate-spin opacity-60" />
           )}
         </div>
       </div>
