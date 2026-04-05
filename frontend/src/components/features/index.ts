@@ -1,4 +1,7 @@
 export { default as EventCard } from './EventCard'
+export { default as FinishRateChart } from './FinishRateChart'
+export { default as FighterOutputChart } from './FighterOutputChart'
+export { default as WeightClassFilter } from './WeightClassFilter'
 export { default as FightSearchTab } from './FightSearchTab'
 export { default as FightRow } from './FightRow'
 export { default as FighterCard } from './FighterCard'
