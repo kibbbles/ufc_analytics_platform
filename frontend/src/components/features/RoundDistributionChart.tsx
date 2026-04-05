@@ -76,7 +76,7 @@ export default function RoundDistributionChart({ data }: Props) {
         <Bar dataKey="r1_pct"     name="Round 1" stackId="a" fill={ROUND_COLORS.r1}     isAnimationActive={false} />
         <Bar dataKey="r2_pct"     name="Round 2" stackId="a" fill={ROUND_COLORS.r2}     isAnimationActive={false} />
         <Bar dataKey="r3_pct"     name="Round 3" stackId="a" fill={ROUND_COLORS.r3}     isAnimationActive={false} />
-        <Bar dataKey="r4plus_pct" name="Rd 4/5"  stackId="a" fill={ROUND_COLORS.r4plus} isAnimationActive={false} radius={[2, 2, 0, 0]} />
+        <Bar dataKey="r4plus_pct" name="Round 4/5" stackId="a" fill={ROUND_COLORS.r4plus} isAnimationActive={false} radius={[2, 2, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

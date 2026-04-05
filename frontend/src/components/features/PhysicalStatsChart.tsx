@@ -1,6 +1,8 @@
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -10,7 +12,7 @@ import {
 } from 'recharts'
 import type { PhysicalStatPoint } from '@t/api'
 
-// Display order: heaviest first so bars read top-to-bottom in a familiar weight-class hierarchy
+// Heaviest → lightest so bars read top-to-bottom in a familiar weight-class hierarchy
 const WC_ORDER = [
   'Heavyweight',
   'Light Heavyweight',
@@ -43,14 +45,108 @@ const WC_SHORT: Record<string, string> = {
   "Women's Strawweight":    'W-STR',
 }
 
-interface Props {
-  data: PhysicalStatPoint[]
+// ── Shared tooltip ────────────────────────────────────────────────────────────
+
+function PhysicalTooltip({ active, payload, label, isTimeSeries }: any) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
+      <p className="font-bold mb-1">
+        {isTimeSeries ? label : payload[0]?.payload?.full_name ?? label}
+      </p>
+      {payload.map((p: any) => (
+        <p key={p.dataKey} style={{ color: p.color ?? p.fill }}>
+          {p.name}: {typeof p.value === 'number' ? `${p.value.toFixed(1)}"` : p.value}
+        </p>
+      ))}
+      {!isTimeSeries && payload[0]?.payload?.fighter_count != null && (
+        <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+          {payload[0].payload.fighter_count} fighters · latest data: {payload[0].payload.year}
+        </p>
+      )}
+      {isTimeSeries && payload[0]?.payload?.fighter_count != null && (
+        <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+          {payload[0].payload.fighter_count} fighters
+        </p>
+      )}
+    </div>
+  )
 }
 
-export default function PhysicalStatsChart({ data }: Props) {
-  if (!data.length) return null
+// ── Time-series view (single weight class selected) ───────────────────────────
 
-  // Use the most recent year available per weight class
+function TimeSeriesView({ data, weightClass }: { data: PhysicalStatPoint[]; weightClass: string }) {
+  const filtered = data
+    .filter((d) => d.weight_class === weightClass)
+    .sort((a, b) => a.year - b.year)
+
+  if (!filtered.length) {
+    return (
+      <p className="text-sm text-[var(--color-text-muted)]">
+        No physical stats available for {weightClass}.
+      </p>
+    )
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={280}>
+      <LineChart data={filtered} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="var(--color-border-light)"
+          className="dark:[stroke:var(--color-border)]"
+          vertical={false}
+        />
+        <XAxis
+          dataKey="year"
+          tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          tickFormatter={(v: number) => `${v}"`}
+          tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+          tickLine={false}
+          axisLine={false}
+          domain={['auto', 'auto']}
+          width={36}
+        />
+        <Tooltip
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          content={((props: any) => <PhysicalTooltip {...props} isTimeSeries />) as any}
+        />
+        <Legend
+          wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+          formatter={(value: string) => (
+            <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+              {value}
+            </span>
+          )}
+        />
+        <Line
+          dataKey="avg_height_inches"
+          name="Avg height (in)"
+          stroke="#4361ee"
+          strokeWidth={2}
+          dot={false}
+          connectNulls
+        />
+        <Line
+          dataKey="avg_reach_inches"
+          name="Avg reach (in)"
+          stroke="#e63946"
+          strokeWidth={2}
+          dot={false}
+          connectNulls
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
+// ── Snapshot view (all weight classes, most recent year) ──────────────────────
+
+function SnapshotView({ data }: { data: PhysicalStatPoint[] }) {
   const latestByWc: Record<string, PhysicalStatPoint> = {}
   for (const d of data) {
     if (!latestByWc[d.weight_class] || d.year > latestByWc[d.weight_class].year) {
@@ -64,11 +160,11 @@ export default function PhysicalStatsChart({ data }: Props) {
       wc: WC_SHORT[wc] ?? wc,
       full_name: wc,
       avg_height: latestByWc[wc].avg_height_inches,
-      avg_reach: latestByWc[wc].avg_reach_inches,
+      avg_reach:  latestByWc[wc].avg_reach_inches,
       year: latestByWc[wc].year,
       fighter_count: latestByWc[wc].fighter_count,
     }))
-    .reverse() // lightest at top in a horizontal chart
+    .reverse() // lightest at top in horizontal chart
 
   return (
     <ResponsiveContainer width="100%" height={Math.max(280, chartData.length * 28)}>
@@ -103,20 +199,7 @@ export default function PhysicalStatsChart({ data }: Props) {
         />
         <Tooltip
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          content={((props: any) => {
-            if (!props.active || !props.payload?.length) return null
-            const d = props.payload[0]?.payload
-            return (
-              <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
-                <p className="font-bold mb-1">{d.full_name}</p>
-                <p style={{ color: '#4361ee' }}>Avg height: {d.avg_height}"</p>
-                <p style={{ color: '#e63946' }}>Avg reach: {d.avg_reach}"</p>
-                <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  {d.fighter_count} fighters · most recent data: {d.year}
-                </p>
-              </div>
-            )
-          }) as any}
+          content={((props: any) => <PhysicalTooltip {...props} isTimeSeries={false} />) as any}
         />
         <Legend
           wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
@@ -131,4 +214,20 @@ export default function PhysicalStatsChart({ data }: Props) {
       </BarChart>
     </ResponsiveContainer>
   )
+}
+
+// ── Public component ──────────────────────────────────────────────────────────
+
+interface Props {
+  data: PhysicalStatPoint[]
+  weightClass?: string | null
+}
+
+export default function PhysicalStatsChart({ data, weightClass }: Props) {
+  if (!data.length) return null
+
+  if (weightClass) {
+    return <TimeSeriesView data={data} weightClass={weightClass} />
+  }
+  return <SnapshotView data={data} />
 }

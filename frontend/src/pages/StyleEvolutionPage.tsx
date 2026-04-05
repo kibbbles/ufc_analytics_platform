@@ -163,15 +163,14 @@ export default function StyleEvolutionPage() {
             <div>
               <h2 className="text-lg font-semibold">Athlete body sizes by weight class</h2>
               <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] max-w-2xl">
-                Average height and reach across all fighters active in each weight class
-                (most recent available data, minimum 5 fighters). Heavier classes skew
-                taller, and reach typically exceeds height at every level. Weight class
-                filter does not apply here.
+                {weightClass
+                  ? `Average height and reach for ${weightClass} fighters over time (minimum 5 fighters per year). Select a different weight class above to compare.`
+                  : 'Average height and reach per weight class (most recent data, minimum 5 fighters). Select a weight class above to see how athlete sizes have changed over time.'}
               </p>
             </div>
 
             {physicalData.length > 0 ? (
-              <PhysicalStatsChart data={physicalData} />
+              <PhysicalStatsChart data={physicalData} weightClass={weightClass} />
             ) : (
               <p className="text-sm text-[var(--color-text-muted)]">No physical stats available.</p>
             )}
