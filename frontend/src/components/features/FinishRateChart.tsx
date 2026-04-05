@@ -91,7 +91,10 @@ export default function FinishRateChart({ data, config = {} }: Props) {
   }))
 
   // Carry last solid point into partial so the line connects
-  const lastSolidIdx = chartData.findLastIndex((d) => !d.is_partial_year)
+  let lastSolidIdx = -1
+  for (let i = chartData.length - 1; i >= 0; i--) {
+    if (!chartData[i].is_partial_year) { lastSolidIdx = i; break }
+  }
   if (lastSolidIdx >= 0 && lastSolidIdx + 1 < chartData.length) {
     chartData[lastSolidIdx + 1].finish_rate_partial = chartData[lastSolidIdx].finish_rate
     chartData[lastSolidIdx + 1].decision_rate_partial = chartData[lastSolidIdx].decision_rate
@@ -113,7 +116,7 @@ export default function FinishRateChart({ data, config = {} }: Props) {
           axisLine={false}
         />
         <YAxis
-          tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+          tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
           tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
           tickLine={false}
           axisLine={false}
@@ -123,7 +126,7 @@ export default function FinishRateChart({ data, config = {} }: Props) {
         <Tooltip content={<ChartTooltip />} />
         <Legend
           wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-          formatter={(value) => (
+          formatter={(value: string) => (
             <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
               {value}
             </span>

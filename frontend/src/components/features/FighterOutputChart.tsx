@@ -71,7 +71,7 @@ function MetricPanel({ data, dataKey, label, formatValue, color, colorPartial }:
             width={32}
           />
           <Tooltip
-            content={({ active, payload }) => {
+            content={({ active, payload }: { active?: boolean; payload?: any[] }) => {
               if (!active || !payload?.length) return null
               const d = payload[0]?.payload as FighterOutputPoint & { value: number }
               return (
