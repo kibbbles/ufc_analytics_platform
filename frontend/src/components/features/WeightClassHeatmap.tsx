@@ -71,8 +71,10 @@ export default function WeightClassHeatmap({ data }: Props) {
         className="grid text-[10px] min-w-max px-1"
         style={{ gridTemplateColumns: `56px repeat(${years.length}, 26px)` }}
       >
-        {/* Year header — spacer for sticky label column */}
-        <div className="sticky left-0 bg-[var(--color-bg-light)] dark:bg-[var(--color-bg)]" />
+        {/* Year header — sticky label column header */}
+        <div className="sticky left-0 bg-[var(--color-bg-light)] dark:bg-[var(--color-bg)] text-[var(--color-text-muted)] font-medium pb-1">
+          Division
+        </div>
         {years.map((y) => (
           <div
             key={y}

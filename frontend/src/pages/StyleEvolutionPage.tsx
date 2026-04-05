@@ -9,6 +9,7 @@ import WeightClassHeatmap from '@components/features/WeightClassHeatmap'
 import PhysicalStatsChart from '@components/features/PhysicalStatsChart'
 import AgeByWeightClassChart from '@components/features/AgeByWeightClassChart'
 import FighterStatsByWeightClassTable from '@components/features/FighterStatsByWeightClassTable'
+import FighterStatsTimeSeriesChart from '@components/features/FighterStatsTimeSeriesChart'
 import LoadingSpinner from '@components/common/LoadingSpinner'
 
 export default function StyleEvolutionPage() {
@@ -27,6 +28,7 @@ export default function StyleEvolutionPage() {
   const physicalData     = data?.physical_stats    ?? []
   const ageData          = data?.age_data          ?? []
   const fighterStatsData = data?.fighter_stats     ?? []
+  const styleStatsData   = data?.style_stats       ?? []
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-12">
@@ -207,22 +209,25 @@ export default function StyleEvolutionPage() {
             )}
           </section>
 
-          {/* ── Section 7: Fighter stats by weight class ──────────────────── */}
+          {/* ── Section 7: Fighting style by weight class ─────────────────── */}
           <section className="space-y-4">
             <div>
               <h2 className="text-lg font-semibold">Fighting style by weight class</h2>
               <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] max-w-2xl">
-                Average career stats for fighters in each division — striking output,
-                defence, takedown aggression, and submission attempts. Darker cells
-                indicate higher values relative to other divisions in the same column.
-                Weight class filter does not apply here.
+                {weightClass
+                  ? `How ${weightClass} fighters' striking and grappling output has evolved since 2015. SLpM and Str. Acc. reflect striking; TD per fight, TD Acc., and control time reflect grappling.`
+                  : 'Average career stats per division — striking output, accuracy, takedown rate, and control time. Darker cells = higher relative to other divisions. Select a weight class above to see trends over time.'}
               </p>
             </div>
 
-            {fighterStatsData.length > 0 ? (
-              <FighterStatsByWeightClassTable data={fighterStatsData} />
+            {weightClass ? (
+              styleStatsData.length > 0
+                ? <FighterStatsTimeSeriesChart data={styleStatsData} weightClass={weightClass} />
+                : <p className="text-sm text-[var(--color-text-muted)]">No stats available.</p>
             ) : (
-              <p className="text-sm text-[var(--color-text-muted)]">No stats available.</p>
+              fighterStatsData.length > 0
+                ? <FighterStatsByWeightClassTable data={fighterStatsData} />
+                : <p className="text-sm text-[var(--color-text-muted)]">No stats available.</p>
             )}
           </section>
         </>

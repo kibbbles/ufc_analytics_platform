@@ -25,6 +25,7 @@ from schemas.analytics import (
     RoundDistributionPoint,
     StyleEvolutionPoint,
     StyleEvolutionResponse,
+    StyleStatsByWeightClassPoint,
     WeightClassYearPoint,
 )
 
@@ -232,6 +233,51 @@ def style_evolution(
         ORDER BY fr.weight_class
     """)).mappings().all()
 
+    # ── Query 8: per-year style metrics by weight class from fight_stats ─────────
+    style_rows = db.execute(text(f"""
+        SELECT
+            EXTRACT(YEAR FROM ed.date_proper)::int AS year,
+            fr.weight_class,
+            ROUND(AVG(
+                pf.sig_str_landed::float / NULLIF(fr.total_fight_time_seconds / 60.0, 0)
+            )::numeric, 2)::float AS avg_slpm,
+            ROUND(AVG(
+                CASE WHEN pf.sig_str_attempted > 0
+                     THEN pf.sig_str_landed::float / pf.sig_str_attempted
+                     ELSE NULL END
+            )::numeric, 4)::float AS avg_str_acc,
+            ROUND(AVG(pf.td_landed)::numeric, 2)::float AS avg_td_per_fight,
+            ROUND(AVG(
+                CASE WHEN pf.td_attempted > 0
+                     THEN pf.td_landed::float / pf.td_attempted
+                     ELSE NULL END
+            )::numeric, 4)::float AS avg_td_acc,
+            ROUND(AVG(pf.ctrl_seconds_total)::numeric, 0)::float AS avg_ctrl_seconds,
+            COUNT(DISTINCT pf.fight_id) AS fight_count
+        FROM (
+            SELECT
+                fs.fight_id,
+                fs.fighter_id,
+                SUM(fs.sig_str_landed)    AS sig_str_landed,
+                SUM(fs.sig_str_attempted) AS sig_str_attempted,
+                SUM(fs.td_landed)         AS td_landed,
+                SUM(fs.td_attempted)      AS td_attempted,
+                SUM(fs.ctrl_seconds)      AS ctrl_seconds_total
+            FROM fight_stats fs
+            WHERE fs."ROUND" NOT ILIKE '%total%'
+              AND fs.sig_str_landed IS NOT NULL
+            GROUP BY fs.fight_id, fs.fighter_id
+        ) pf
+        JOIN fight_results fr ON fr.fight_id = pf.fight_id
+        JOIN event_details ed  ON ed.id = fr.event_id
+        WHERE ed.date_proper IS NOT NULL
+          AND fr.total_fight_time_seconds > 0
+          AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
+        GROUP BY year, fr.weight_class
+        HAVING COUNT(DISTINCT pf.fight_id) >= 10
+        ORDER BY year, fr.weight_class
+    """)).mappings().all()
+
     current_year = date.today().year
     return StyleEvolutionResponse(
         data=[
@@ -315,6 +361,19 @@ def style_evolution(
                 fighter_count=r["fighter_count"],
             )
             for r in stats_rows
+        ],
+        style_stats=[
+            StyleStatsByWeightClassPoint(
+                year=r["year"],
+                weight_class=r["weight_class"],
+                avg_slpm=r["avg_slpm"] or 0.0,
+                avg_str_acc=r["avg_str_acc"] or 0.0,
+                avg_td_per_fight=r["avg_td_per_fight"] or 0.0,
+                avg_td_acc=r["avg_td_acc"] or 0.0,
+                avg_ctrl_seconds=r["avg_ctrl_seconds"] or 0.0,
+                fight_count=r["fight_count"],
+            )
+            for r in style_rows
         ],
         weight_class=weight_class,
     )

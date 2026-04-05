@@ -241,6 +241,17 @@ export interface FighterStatsByWeightClass {
   fighter_count: number
 }
 
+export interface StyleStatsByWeightClassPoint {
+  year: number
+  weight_class: string
+  avg_slpm: number
+  avg_str_acc: number       // 0–1
+  avg_td_per_fight: number
+  avg_td_acc: number        // 0–1
+  avg_ctrl_seconds: number
+  fight_count: number
+}
+
 export interface StyleEvolutionResponse {
   data: StyleEvolutionPoint[]
   fighter_outputs: FighterOutputPoint[]
@@ -249,6 +260,7 @@ export interface StyleEvolutionResponse {
   physical_stats: PhysicalStatPoint[]
   age_data: AgeByWeightClassPoint[]
   fighter_stats: FighterStatsByWeightClass[]
+  style_stats: StyleStatsByWeightClassPoint[]
   weight_class: string | null
 }
 
