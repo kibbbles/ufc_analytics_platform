@@ -196,6 +196,7 @@ function SnapshotView({ data }: { data: PhysicalStatPoint[] }) {
           tickLine={false}
           axisLine={false}
           width={40}
+          interval={0}
         />
         <Tooltip
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
