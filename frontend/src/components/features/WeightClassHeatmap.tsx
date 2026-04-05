@@ -1,7 +1,6 @@
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import type { WeightClassYearPoint } from '@t/api'
 
-// Heaviest to lightest — rows rendered top-to-bottom in this order
 const WC_ORDER = [
   'Heavyweight',
   'Light Heavyweight',
@@ -34,6 +33,12 @@ const WC_SHORT: Record<string, string> = {
   "Women's Strawweight":    'W-STR',
 }
 
+interface ActiveCell {
+  wc: string
+  year: number
+  cell: WeightClassYearPoint
+}
+
 interface Props {
   data: WeightClassYearPoint[]
 }
@@ -41,7 +46,8 @@ interface Props {
 export default function WeightClassHeatmap({ data }: Props) {
   if (!data.length) return null
 
-  // Build lookup: [weight_class][year] → point
+  const [active, setActive] = useState<ActiveCell | null>(null)
+
   const lookup: Record<string, Record<number, WeightClassYearPoint>> = {}
   for (const d of data) {
     if (!lookup[d.weight_class]) lookup[d.weight_class] = {}
@@ -51,7 +57,6 @@ export default function WeightClassHeatmap({ data }: Props) {
   const years = [...new Set(data.map((d) => d.year))].sort()
   const weightClasses = WC_ORDER.filter((wc) => lookup[wc])
 
-  // Normalise finish rate across whole dataset for color scale
   const allRates = data.map((d) => d.finish_rate)
   const minRate = Math.min(...allRates)
   const maxRate = Math.max(...allRates)
@@ -62,8 +67,14 @@ export default function WeightClassHeatmap({ data }: Props) {
     return `rgba(230, 57, 70, ${(0.08 + t * 0.82).toFixed(2)})`
   }
 
-  // Show year label only every 5 years to avoid crowding
   const showYearLabel = (y: number) => y % 5 === 0
+
+  const handleCellClick = (wc: string, year: number, cell: WeightClassYearPoint | undefined) => {
+    if (!cell) { setActive(null); return }
+    setActive((prev) =>
+      prev?.wc === wc && prev?.year === year ? null : { wc, year, cell }
+    )
+  }
 
   return (
     <div className="overflow-x-auto -mx-1">
@@ -71,7 +82,7 @@ export default function WeightClassHeatmap({ data }: Props) {
         className="grid text-[10px] min-w-max px-1"
         style={{ gridTemplateColumns: `56px repeat(${years.length}, 26px)` }}
       >
-        {/* Year header — sticky label column header */}
+        {/* Year header */}
         <div className="sticky left-0 bg-[var(--color-bg-light)] dark:bg-[var(--color-bg)] text-[var(--color-text-muted)] font-medium pb-1">
           Division
         </div>
@@ -92,15 +103,17 @@ export default function WeightClassHeatmap({ data }: Props) {
             </div>
             {years.map((y) => {
               const cell = lookup[wc]?.[y]
+              const isActive = active?.wc === wc && active?.year === y
               return (
                 <div
                   key={y}
-                  title={
-                    cell
-                      ? `${wc} ${y}: ${(cell.finish_rate * 100).toFixed(0)}% finish rate (${cell.total_fights} fights)`
-                      : `${wc} ${y}: no data`
-                  }
-                  className="h-7 border border-[var(--color-surface-light)] dark:border-[var(--color-surface)]"
+                  title={cell ? `${wc} ${y}: ${(cell.finish_rate * 100).toFixed(0)}% finish rate (${cell.total_fights} fights)` : undefined}
+                  onClick={() => handleCellClick(wc, y, cell)}
+                  className={`h-7 border cursor-pointer transition-opacity ${
+                    isActive
+                      ? 'border-white/60 opacity-100'
+                      : 'border-[var(--color-surface-light)] dark:border-[var(--color-surface)] opacity-90 hover:opacity-100'
+                  }`}
                   style={{ backgroundColor: cellColor(cell?.finish_rate) }}
                 />
               )
@@ -109,21 +122,37 @@ export default function WeightClassHeatmap({ data }: Props) {
         ))}
       </div>
 
+      {/* Tapped cell info bar — visible on mobile tap, also works on desktop click */}
+      {active && (
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-surface-light)] dark:bg-[var(--color-surface)] px-3 py-2 text-xs">
+          <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+            <span className="font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+              {active.wc} · {active.year}
+            </span>
+            {' '}— {(active.cell.finish_rate * 100).toFixed(0)}% finish rate
+            {' '}({(active.cell.ko_tko_rate * 100).toFixed(0)}% KO/TKO,
+            {' '}{(active.cell.submission_rate * 100).toFixed(0)}% sub,
+            {' '}{(active.cell.decision_rate * 100).toFixed(0)}% dec)
+            {' '}· {active.cell.total_fights} fights
+          </span>
+          <button
+            onClick={() => setActive(null)}
+            className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)]"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Color scale legend */}
       <div className="flex items-center gap-2 mt-3 ml-14">
-        <span className="text-[10px] text-[var(--color-text-muted)]">
-          Lower finish rate
-        </span>
+        <span className="text-[10px] text-[var(--color-text-muted)]">Lower finish rate</span>
         <div
           className="h-2.5 w-28 rounded"
-          style={{
-            background:
-              'linear-gradient(to right, rgba(230,57,70,0.08), rgba(230,57,70,0.9))',
-          }}
+          style={{ background: 'linear-gradient(to right, rgba(230,57,70,0.08), rgba(230,57,70,0.9))' }}
         />
-        <span className="text-[10px] text-[var(--color-text-muted)]">
-          Higher finish rate
-        </span>
+        <span className="text-[10px] text-[var(--color-text-muted)]">Higher finish rate</span>
       </div>
     </div>
   )
