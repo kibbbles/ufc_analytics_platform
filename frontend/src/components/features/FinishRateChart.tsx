@@ -7,6 +7,7 @@ import {
   Tooltip,
   Legend,
   ReferenceLine,
+  ReferenceArea,
   ResponsiveContainer,
 } from 'recharts'
 import type { StyleEvolutionPoint } from '@t/api'
@@ -31,7 +32,7 @@ const DEFAULT_CONFIG: Required<FinishRateChartConfig> = {
   showKoTko: false,
   showSubmission: false,
   showDecision: false,
-  showFinishRate: true,      // default: show combined Finish vs Decision
+  showFinishRate: true,
   colorKoTko: '#e63946',
   colorSubmission: '#4361ee',
   colorDecision: 'var(--color-text-muted)',
@@ -39,10 +40,15 @@ const DEFAULT_CONFIG: Required<FinishRateChartConfig> = {
   showEraAnnotations: true,
 }
 
-const ERA_ANNOTATIONS = [
-  { year: 2001, label: 'Zuffa era' },
+// Lines = rule changes with a visible effect on finishes/decisions
+// COVID rendered as a shaded range (ReferenceArea), not a line
+const ERA_LINES = [
+  { year: 2001, label: 'Unified Rules' },
   { year: 2015, label: 'USADA begins' },
+  { year: 2017, label: 'Judging update' },
 ]
+
+const COVID_RANGE = { x1: 2020, x2: 2021, label: 'COVID era' }
 
 // ---------------------------------------------------------------------------
 // Tooltip
@@ -101,8 +107,8 @@ export default function FinishRateChart({ data, config = {} }: Props) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={320}>
-      <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={340}>
+      <LineChart data={chartData} margin={{ top: 28, right: 16, left: 0, bottom: 0 }}>
         <CartesianGrid
           strokeDasharray="3 3"
           stroke="var(--color-border-light)"
@@ -133,21 +139,41 @@ export default function FinishRateChart({ data, config = {} }: Props) {
           )}
         />
 
-        {cfg.showEraAnnotations &&
-          ERA_ANNOTATIONS.map(({ year, label }) => (
-            <ReferenceLine
-              key={year}
-              x={year}
-              stroke="var(--color-border)"
-              strokeDasharray="4 2"
+        {cfg.showEraAnnotations && (
+          <>
+            {/* COVID shaded range */}
+            <ReferenceArea
+              x1={COVID_RANGE.x1}
+              x2={COVID_RANGE.x2}
+              fill="var(--color-text-muted)"
+              fillOpacity={0.08}
               label={{
-                value: label,
-                position: 'insideTopRight',
+                value: COVID_RANGE.label,
+                position: 'insideTop',
                 fontSize: 10,
                 fill: 'var(--color-text-muted)',
               }}
             />
-          ))}
+
+            {/* Rule change lines — label above the chart area (top margin) */}
+            {ERA_LINES.map(({ year, label }, i) => (
+              <ReferenceLine
+                key={year}
+                x={year}
+                stroke="var(--color-border)"
+                strokeDasharray="4 2"
+                label={{
+                  value: label,
+                  position: 'top',
+                  fontSize: 10,
+                  fill: 'var(--color-text-muted)',
+                  // Alternate offset so adjacent labels don't overlap
+                  offset: i % 2 === 0 ? 4 : 16,
+                }}
+              />
+            ))}
+          </>
+        )}
 
         {/* Combined finish rate */}
         {cfg.showFinishRate && (
