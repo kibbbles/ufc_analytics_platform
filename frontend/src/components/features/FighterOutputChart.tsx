@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
+import type { TooltipProps } from 'recharts'
 import type { FighterOutputPoint } from '@t/api'
 
 // ---------------------------------------------------------------------------
@@ -71,9 +72,9 @@ function MetricPanel({ data, dataKey, label, formatValue, color, colorPartial }:
             width={32}
           />
           <Tooltip
-            content={({ active, payload }: { active?: boolean; payload?: any[] }) => {
-              if (!active || !payload?.length) return null
-              const d = payload[0]?.payload as FighterOutputPoint & { value: number }
+            content={(props: TooltipProps<number, string>) => {
+              if (!props.active || !props.payload?.length) return null
+              const d = props.payload[0]?.payload as FighterOutputPoint & { value: number }
               return (
                 <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
                   <p className="font-bold">{d.year}</p>
