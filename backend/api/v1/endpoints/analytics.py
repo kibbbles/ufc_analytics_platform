@@ -8,6 +8,7 @@ Routes:
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -65,6 +66,7 @@ def style_evolution(
         ORDER BY year
     """), params).mappings().all()
 
+    current_year = date.today().year
     return StyleEvolutionResponse(
         data=[
             StyleEvolutionPoint(
@@ -72,7 +74,9 @@ def style_evolution(
                 ko_tko_rate=r["ko_tko_rate"] or 0.0,
                 submission_rate=r["submission_rate"] or 0.0,
                 decision_rate=r["decision_rate"] or 0.0,
+                finish_rate=round((r["ko_tko_rate"] or 0.0) + (r["submission_rate"] or 0.0), 4),
                 total_fights=r["total_fights"],
+                is_partial_year=r["year"] == current_year,
                 weight_class=weight_class,
             )
             for r in rows

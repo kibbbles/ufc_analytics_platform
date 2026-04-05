@@ -20,7 +20,9 @@ class StyleEvolutionPoint(BaseModel):
     ko_tko_rate: float
     submission_rate: float
     decision_rate: float
+    finish_rate: float          # ko_tko_rate + submission_rate
     total_fights: int
+    is_partial_year: bool = False  # True for the current calendar year (incomplete data)
     weight_class: Optional[str] = None  # None = all weight classes combined
 
 

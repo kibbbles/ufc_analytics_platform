@@ -178,7 +178,9 @@ export interface StyleEvolutionPoint {
   ko_tko_rate: number
   submission_rate: number
   decision_rate: number
+  finish_rate: number
   total_fights: number
+  is_partial_year: boolean
   weight_class: string | null
 }
 
