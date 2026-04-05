@@ -184,8 +184,18 @@ export interface StyleEvolutionPoint {
   weight_class: string | null
 }
 
+export interface FighterOutputPoint {
+  year: number
+  avg_sig_str_per_fight: number
+  avg_td_attempts_per_fight: number
+  avg_ctrl_seconds_per_fight: number
+  total_fights: number
+  is_partial_year: boolean
+}
+
 export interface StyleEvolutionResponse {
   data: StyleEvolutionPoint[]
+  fighter_outputs: FighterOutputPoint[]
   weight_class: string | null
 }
 

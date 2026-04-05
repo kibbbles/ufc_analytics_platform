@@ -26,11 +26,24 @@ class StyleEvolutionPoint(BaseModel):
     weight_class: Optional[str] = None  # None = all weight classes combined
 
 
+class FighterOutputPoint(BaseModel):
+    """Average per-fighter outputs per fight, aggregated by year (fight_stats, 2015+)."""
+    model_config = ConfigDict(from_attributes=False)
+
+    year: int
+    avg_sig_str_per_fight: float        # significant strikes landed
+    avg_td_attempts_per_fight: float    # takedown attempts
+    avg_ctrl_seconds_per_fight: float   # control time in seconds
+    total_fights: int
+    is_partial_year: bool = False
+
+
 class StyleEvolutionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
-    data: list[StyleEvolutionPoint]
-    weight_class: Optional[str] = None  # echoes the filter applied
+    data: list[StyleEvolutionPoint]             # finish rates by year (2001+)
+    fighter_outputs: list[FighterOutputPoint]   # avg fighter outputs by year (2015+)
+    weight_class: Optional[str] = None          # echoes the filter applied
 
 
 # ── Product 3: Fighter Endurance & Pacing ─────────────────────────────────────

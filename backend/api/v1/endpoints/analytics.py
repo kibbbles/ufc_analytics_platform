@@ -18,6 +18,7 @@ from api.dependencies import get_db
 from schemas.analytics import (
     EnduranceRoundData,
     FighterEnduranceResponse,
+    FighterOutputPoint,
     StyleEvolutionPoint,
     StyleEvolutionResponse,
 )
@@ -37,9 +38,11 @@ def style_evolution(
     db: Session = Depends(get_db),
 ):
     params: dict = {}
-    wc_filter = ""
+    wc_filter_fr = ""
+    wc_filter_fs = ""
     if weight_class:
-        wc_filter = "AND fr.weight_class = :weight_class"
+        wc_filter_fr = "AND fr.weight_class = :weight_class"
+        wc_filter_fs = "AND fr.weight_class = :weight_class"
         params["weight_class"] = weight_class
 
     rows = db.execute(text(f"""
@@ -61,7 +64,40 @@ def style_evolution(
         FROM fight_results fr
         JOIN event_details ed ON ed.id = fr.event_id
         WHERE ed.date_proper IS NOT NULL
-          {wc_filter}
+          AND EXTRACT(YEAR FROM ed.date_proper) >= 2001
+          {wc_filter_fr}
+        GROUP BY year
+        ORDER BY year
+    """), params).mappings().all()
+
+    # ── Second query: avg fighter outputs per fight by year (fight_stats, 2015+) ──
+    output_rows = db.execute(text(f"""
+        SELECT
+            EXTRACT(YEAR FROM ed.date_proper)::int          AS year,
+            COUNT(DISTINCT per_fighter.fight_id)            AS total_fights,
+            ROUND(AVG(per_fighter.sig_str_total)::numeric, 1)::float
+                                                            AS avg_sig_str_per_fight,
+            ROUND(AVG(per_fighter.td_attempted_total)::numeric, 1)::float
+                                                            AS avg_td_attempts_per_fight,
+            ROUND(AVG(per_fighter.ctrl_seconds_total)::numeric, 0)::float
+                                                            AS avg_ctrl_seconds_per_fight
+        FROM (
+            SELECT
+                fs.fight_id,
+                fs.fighter_id,
+                SUM(fs.sig_str_landed)  AS sig_str_total,
+                SUM(fs.td_attempted)    AS td_attempted_total,
+                SUM(fs.ctrl_seconds)    AS ctrl_seconds_total
+            FROM fight_stats fs
+            WHERE fs."ROUND" NOT ILIKE '%total%'
+              AND fs.sig_str_landed IS NOT NULL
+            GROUP BY fs.fight_id, fs.fighter_id
+        ) per_fighter
+        JOIN fight_details fdet ON fdet.id = per_fighter.fight_id
+        JOIN fight_results fr   ON fr.fight_id = per_fighter.fight_id
+        JOIN event_details ed   ON ed.id = fdet.event_id
+        WHERE ed.date_proper >= '2015-01-01'
+          {wc_filter_fs}
         GROUP BY year
         ORDER BY year
     """), params).mappings().all()
@@ -80,6 +116,17 @@ def style_evolution(
                 weight_class=weight_class,
             )
             for r in rows
+        ],
+        fighter_outputs=[
+            FighterOutputPoint(
+                year=r["year"],
+                avg_sig_str_per_fight=r["avg_sig_str_per_fight"] or 0.0,
+                avg_td_attempts_per_fight=r["avg_td_attempts_per_fight"] or 0.0,
+                avg_ctrl_seconds_per_fight=r["avg_ctrl_seconds_per_fight"] or 0.0,
+                total_fights=r["total_fights"],
+                is_partial_year=r["year"] == current_year,
+            )
+            for r in output_rows
         ],
         weight_class=weight_class,
     )
