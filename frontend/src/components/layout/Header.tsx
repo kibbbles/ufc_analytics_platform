@@ -8,7 +8,10 @@ const navLinks = [
   { to: '/upcoming', label: 'Upcoming' },
   { to: '/events',   label: 'Fight Database' },
   { to: '/fighters', label: 'Fighter Lookup' },
-  { to: '/about',    label: 'About' },
+]
+
+const trailingLinks = [
+  { to: '/about', label: 'About' },
 ]
 
 // Analytics dropdown items — add new analytics pages here
@@ -229,6 +232,11 @@ export default function Header() {
             </NavLink>
           ))}
           <AnalyticsDropdown />
+          {trailingLinks.map(({ to, label }) => (
+            <NavLink key={to} to={to} className={linkClass}>
+              {label}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Right side: toggle + hamburger */}
@@ -261,6 +269,7 @@ export default function Header() {
           className="md:hidden border-t border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-surface-light)] dark:bg-[var(--color-surface)] px-4 py-3 space-y-1"
           aria-label="Mobile navigation"
         >
+          {/* Home, Upcoming, Fight Database, Fighter Lookup */}
           {navLinks.map(({ to, label, end }) => (
             <NavLink
               key={to}
@@ -278,7 +287,25 @@ export default function Header() {
               {label}
             </NavLink>
           ))}
+          {/* Analytics accordion */}
           <MobileAnalyticsAccordion onNavigate={() => setMenuOpen(false)} />
+          {/* About — always last */}
+          {trailingLinks.map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-high-light)] dark:hover:bg-[var(--color-surface-high)]'
+                }`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
         </nav>
       )}
     </header>
