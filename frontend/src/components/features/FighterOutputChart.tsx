@@ -7,7 +7,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import type { TooltipProps } from 'recharts'
 import type { FighterOutputPoint } from '@t/api'
 
 // ---------------------------------------------------------------------------
@@ -72,7 +71,8 @@ function MetricPanel({ data, dataKey, label, formatValue, color, colorPartial }:
             width={32}
           />
           <Tooltip
-            content={(props: TooltipProps<number, string>) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            content={((props: any) => {
               if (!props.active || !props.payload?.length) return null
               const d = props.payload[0]?.payload as FighterOutputPoint & { value: number }
               return (
@@ -84,7 +84,7 @@ function MetricPanel({ data, dataKey, label, formatValue, color, colorPartial }:
                   </p>
                 </div>
               )
-            }}
+            }) as any}
           />
           <Bar dataKey="value" radius={[2, 2, 0, 0]}>
             {chartData.map((entry, i) => (
