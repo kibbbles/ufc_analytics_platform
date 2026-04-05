@@ -3,11 +3,12 @@ import { NavLink } from 'react-router-dom'
 import { useTheme } from './ThemeProvider'
 
 const navLinks = [
-  { to: '/',           label: 'Home',           end: true },
-  { to: '/upcoming',   label: 'Upcoming' },
-  { to: '/events',     label: 'Fight Database' },
-  { to: '/fighters',   label: 'Fighter Lookup' },
-  { to: '/about',      label: 'About' },
+  { to: '/',                          label: 'Home',           end: true },
+  { to: '/upcoming',                  label: 'Upcoming' },
+  { to: '/events',                    label: 'Fight Database' },
+  { to: '/fighters',                  label: 'Fighter Lookup' },
+  { to: '/analytics/style-evolution', label: 'How UFC Changed' },
+  { to: '/about',                     label: 'About' },
 ]
 
 function SunIcon({ className }: { className?: string }) {
