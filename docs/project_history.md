@@ -67,6 +67,17 @@ This runs automatically after every weekly scrape via GitHub Actions chaining: s
 
 **Validation**: 62.4% overall accuracy on test set (Jan 2022 → present, 1716 fights). 84.2% accuracy on high-confidence predictions (≥65% win probability) — this is the headline number.
 
+**Conviction bucket analysis** (added Mar 2026): The model scorecard originally grouped low-conviction predictions into a single "Under 20%" bucket. Splitting it into "Under 10%" and "10–20%" revealed a meaningful gradient:
+
+| Conviction | Accuracy |
+|------------|----------|
+| Under 10% | 56.9% |
+| 10–20% | 63.5% |
+| 20–30% | — |
+| 30%+ | — |
+
+Conviction = `(max_win_prob − 0.5) × 2` — the model's normalized distance from a coin flip. The 6.6pp gap between the two lowest buckets confirms the score captures genuine signal even in the uncertain range. The scorecard UI now shows all four buckets.
+
 ---
 
 ## Backend — FastAPI (Task 4 → Tasks 11–19)

@@ -22,7 +22,7 @@ class StyleEvolutionPoint(BaseModel):
     decision_rate: float
     finish_rate: float          # ko_tko_rate + submission_rate
     total_fights: int
-    is_partial_year: bool = False  # True for the current calendar year (incomplete data)
+    is_partial_year: bool = False
     weight_class: Optional[str] = None  # None = all weight classes combined
 
 
@@ -38,11 +38,51 @@ class FighterOutputPoint(BaseModel):
     is_partial_year: bool = False
 
 
+class RoundDistributionPoint(BaseModel):
+    """Share of finishes by round for a given year."""
+    model_config = ConfigDict(from_attributes=False)
+
+    year: int
+    r1_pct: float       # % of finishes that ended in round 1
+    r2_pct: float
+    r3_pct: float
+    r4plus_pct: float   # round 4 or 5 (championship rounds)
+    total_finishes: int
+    is_partial_year: bool = False
+
+
+class WeightClassYearPoint(BaseModel):
+    """Finish rates for one weight class in one year — used for the heatmap."""
+    model_config = ConfigDict(from_attributes=False)
+
+    year: int
+    weight_class: str
+    finish_rate: float
+    ko_tko_rate: float
+    submission_rate: float
+    decision_rate: float
+    total_fights: int
+
+
+class PhysicalStatPoint(BaseModel):
+    """Average height and reach for fighters active in a given weight class and year."""
+    model_config = ConfigDict(from_attributes=False)
+
+    year: int
+    weight_class: str
+    avg_height_inches: float
+    avg_reach_inches: float
+    fighter_count: int
+
+
 class StyleEvolutionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
-    data: list[StyleEvolutionPoint]             # finish rates by year (2001+)
-    fighter_outputs: list[FighterOutputPoint]   # avg fighter outputs by year (2015+)
+    data: list[StyleEvolutionPoint]             # finish rates by year (all years, filtered by wc)
+    fighter_outputs: list[FighterOutputPoint]   # avg fighter outputs by year (2015+, filtered by wc)
+    round_distribution: list[RoundDistributionPoint]  # finish round breakdown by year (filtered by wc)
+    heatmap_data: list[WeightClassYearPoint]    # finish rates by wc × year (always all wcs)
+    physical_stats: list[PhysicalStatPoint]     # avg height/reach by wc × year (always all wcs)
     weight_class: Optional[str] = None          # echoes the filter applied
 
 
@@ -66,5 +106,4 @@ class FighterEnduranceResponse(BaseModel):
     fighter_id: str
     fighter_name: Optional[str] = None
     rounds: list[EnduranceRoundData]
-    # Surfaced in the UI for fighters with pre-2015 careers
     note: Optional[str] = None

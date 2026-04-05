@@ -193,9 +193,40 @@ export interface FighterOutputPoint {
   is_partial_year: boolean
 }
 
+export interface RoundDistributionPoint {
+  year: number
+  r1_pct: number
+  r2_pct: number
+  r3_pct: number
+  r4plus_pct: number
+  total_finishes: number
+  is_partial_year: boolean
+}
+
+export interface WeightClassYearPoint {
+  year: number
+  weight_class: string
+  finish_rate: number
+  ko_tko_rate: number
+  submission_rate: number
+  decision_rate: number
+  total_fights: number
+}
+
+export interface PhysicalStatPoint {
+  year: number
+  weight_class: string
+  avg_height_inches: number
+  avg_reach_inches: number
+  fighter_count: number
+}
+
 export interface StyleEvolutionResponse {
   data: StyleEvolutionPoint[]
   fighter_outputs: FighterOutputPoint[]
+  round_distribution: RoundDistributionPoint[]
+  heatmap_data: WeightClassYearPoint[]
+  physical_stats: PhysicalStatPoint[]
   weight_class: string | null
 }
 

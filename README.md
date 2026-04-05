@@ -88,6 +88,15 @@ Sunday   14:00 UTC  →  weekly-ufc-scraper       scrape completed events from U
 | Title fights only | **61.90%** | 42 |
 | High confidence (≥65%) | **84.2%** | — |
 
+**By conviction bucket** (conviction = `(max_win_prob − 0.5) × 2`, normalized distance from a coin flip):
+
+| Conviction | Accuracy |
+|------------|----------|
+| Under 10% | **56.9%** |
+| 10–20% | **63.5%** |
+| 20–30% | — |
+| 30%+ | — |
+
 Test period: Dec 2023 – Mar 2026. Model: Random Forest, selected by validation AUC.
 
 Features: 30 differentials across physical attributes, rolling striking/grappling metrics, experience, and time-based features.
@@ -190,4 +199,4 @@ ufc_analytics_platform/
 
 ---
 
-**Last Updated:** 2026-03-29
+**Last Updated:** 2026-03-31
