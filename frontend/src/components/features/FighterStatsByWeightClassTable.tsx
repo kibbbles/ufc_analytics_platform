@@ -79,7 +79,7 @@ export default function FighterStatsByWeightClassTable({ data }: Props) {
       <table className="min-w-max w-full text-xs border-collapse px-1">
         <thead>
           <tr>
-            <th className="text-left pr-4 py-2 text-[var(--color-text-muted)] font-medium sticky left-0 bg-[var(--color-surface-light)] dark:bg-[var(--color-surface)]">
+            <th className="text-center px-3 py-2 text-[var(--color-text-muted)] font-medium sticky left-0 bg-[var(--color-bg-light)] dark:bg-[var(--color-bg)]">
               Division
             </th>
             {COLUMNS.map((col) => (
@@ -101,9 +101,8 @@ export default function FighterStatsByWeightClassTable({ data }: Props) {
             return (
               <Fragment key={wc}>
                 <tr className="border-t border-[var(--color-border-light)] dark:border-[var(--color-border)]">
-                  <td className="pr-4 py-2 font-medium text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] whitespace-nowrap sticky left-0 bg-[var(--color-surface-light)] dark:bg-[var(--color-surface)]">
-                    <span className="hidden sm:inline">{wc}</span>
-                    <span className="sm:hidden">{WC_SHORT[wc] ?? wc}</span>
+                  <td className="px-3 py-2 text-center font-medium text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] whitespace-nowrap sticky left-0 bg-[var(--color-bg-light)] dark:bg-[var(--color-bg)]">
+                    {WC_SHORT[wc] ?? wc}
                   </td>
                   {COLUMNS.map((col, i) => {
                     const val = row[col.key] as number

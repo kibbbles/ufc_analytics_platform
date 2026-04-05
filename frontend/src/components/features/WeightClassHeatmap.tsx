@@ -71,8 +71,8 @@ export default function WeightClassHeatmap({ data }: Props) {
         className="grid text-[10px] min-w-max px-1"
         style={{ gridTemplateColumns: `56px repeat(${years.length}, 26px)` }}
       >
-        {/* Year header */}
-        <div />
+        {/* Year header — spacer for sticky label column */}
+        <div className="sticky left-0 bg-[var(--color-bg-light)] dark:bg-[var(--color-bg)]" />
         {years.map((y) => (
           <div
             key={y}
@@ -85,7 +85,7 @@ export default function WeightClassHeatmap({ data }: Props) {
         {/* One row per weight class */}
         {weightClasses.map((wc) => (
           <Fragment key={wc}>
-            <div className="text-right pr-2 text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] leading-7 truncate">
+            <div className="text-right pr-2 text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] leading-7 truncate sticky left-0 bg-[var(--color-bg-light)] dark:bg-[var(--color-bg)]">
               {WC_SHORT[wc] ?? wc}
             </div>
             {years.map((y) => {
