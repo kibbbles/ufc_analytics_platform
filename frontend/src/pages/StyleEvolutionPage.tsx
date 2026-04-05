@@ -35,8 +35,10 @@ export default function StyleEvolutionPage() {
         </p>
       </div>
 
-      {/* Weight class filter — applies to sections 1–3 */}
-      <WeightClassFilter value={weightClass} onChange={setWeightClass} />
+      {/* Weight class filter — sticky below header so it stays visible while scrolling */}
+      <div className="sticky top-14 z-40 -mx-4 px-4 py-2 bg-[var(--color-surface-light)]/95 dark:bg-[var(--color-surface)]/95 backdrop-blur-sm border-b border-[var(--color-border-light)] dark:border-[var(--color-border)]">
+        <WeightClassFilter value={weightClass} onChange={setWeightClass} />
+      </div>
 
       {loading && (
         <div className="flex justify-center py-16">
