@@ -1,15 +1,37 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useState, useRef } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from './ThemeProvider'
 
+// Plain nav links (no dropdown)
 const navLinks = [
-  { to: '/',                          label: 'Home',           end: true },
-  { to: '/upcoming',                  label: 'Upcoming' },
-  { to: '/events',                    label: 'Fight Database' },
-  { to: '/fighters',                  label: 'Fighter Lookup' },
-  { to: '/analytics/style-evolution', label: 'How UFC Changed' },
-  { to: '/about',                     label: 'About' },
+  { to: '/',         label: 'Home',           end: true },
+  { to: '/upcoming', label: 'Upcoming' },
+  { to: '/events',   label: 'Fight Database' },
+  { to: '/fighters', label: 'Fighter Lookup' },
+  { to: '/about',    label: 'About' },
 ]
+
+// Analytics dropdown items — add new analytics pages here
+const analyticsLinks = [
+  { to: '/analytics/style-evolution', label: 'How UFC Changed' },
+  // { to: '/analytics/fighter-endurance', label: 'Fighter Endurance' },
+  // { to: '/analytics/fight-predictor',   label: 'Fight Predictor' },
+]
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`size-3 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2 4l4 4 4-4" />
+    </svg>
+  )
+}
 
 function SunIcon({ className }: { className?: string }) {
   return (
@@ -45,16 +67,13 @@ function ThemeToggle() {
           : 'bg-amber-100 border-amber-300',
       ].join(' ')}
     >
-      {/* Thumb — slides left (light) ↔ right (dark), icon inside */}
       <span
         aria-hidden="true"
         className={[
           'absolute top-[2px] left-[2px] size-6 rounded-full shadow',
           'flex items-center justify-center',
           'transition-transform duration-200',
-          isDark
-            ? 'translate-x-7 bg-slate-900'
-            : 'translate-x-0 bg-white',
+          isDark ? 'translate-x-7 bg-slate-900' : 'translate-x-0 bg-white',
         ].join(' ')}
       >
         {isDark
@@ -64,6 +83,117 @@ function ThemeToggle() {
     </button>
   )
 }
+
+// ── Desktop analytics dropdown ────────────────────────────────────────────────
+
+function AnalyticsDropdown() {
+  const location = useLocation()
+  const isAnalyticsActive = location.pathname.startsWith('/analytics')
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [open, setOpen] = useState(false)
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    setOpen(true)
+  }
+
+  const handleMouseLeave = () => {
+    // Small delay so the user can move the cursor into the dropdown
+    timeoutRef.current = setTimeout(() => setOpen(false), 120)
+  }
+
+  const dropdownLinkClass = (isActive: boolean) =>
+    `block px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+      isActive
+        ? 'bg-[var(--color-primary)] text-white'
+        : 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-high-light)] dark:hover:bg-[var(--color-surface-high)]'
+    }`
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Trigger button — styled like a nav link, active when on any /analytics route */}
+      <button
+        aria-haspopup="true"
+        aria-expanded={open}
+        className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          isAnalyticsActive
+            ? 'bg-[var(--color-primary)] text-white'
+            : 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-high-light)] dark:hover:bg-[var(--color-surface-high)]'
+        }`}
+      >
+        Analytics
+        <ChevronIcon open={open} />
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div className="absolute left-0 top-full mt-1 min-w-[160px] rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-surface-light)] dark:bg-[var(--color-surface)] shadow-lg py-1 z-50">
+          {analyticsLinks.map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={() => setOpen(false)}
+              className={({ isActive }) => dropdownLinkClass(isActive)}
+            >
+              {label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Mobile analytics accordion ────────────────────────────────────────────────
+
+function MobileAnalyticsAccordion({ onNavigate }: { onNavigate: () => void }) {
+  const location = useLocation()
+  const isAnalyticsActive = location.pathname.startsWith('/analytics')
+  const [open, setOpen] = useState(isAnalyticsActive)
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+          isAnalyticsActive
+            ? 'bg-[var(--color-primary)] text-white'
+            : 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-high-light)] dark:hover:bg-[var(--color-surface-high)]'
+        }`}
+      >
+        Analytics
+        <ChevronIcon open={open} />
+      </button>
+
+      {open && (
+        <div className="mt-1 ml-3 pl-3 border-l-2 border-[var(--color-border-light)] dark:border-[var(--color-border)] space-y-1">
+          {analyticsLinks.map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-high-light)] dark:hover:bg-[var(--color-surface-high)]'
+                }`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -98,6 +228,7 @@ export default function Header() {
               {label}
             </NavLink>
           ))}
+          <AnalyticsDropdown />
         </nav>
 
         {/* Right side: toggle + hamburger */}
@@ -147,6 +278,7 @@ export default function Header() {
               {label}
             </NavLink>
           ))}
+          <MobileAnalyticsAccordion onNavigate={() => setMenuOpen(false)} />
         </nav>
       )}
     </header>
