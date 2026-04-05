@@ -37,20 +37,29 @@ export default function StyleEvolutionPage() {
 
       {/* Weight class filter — sticky below header so it stays visible while scrolling */}
       <div className="sticky top-14 z-40 -mx-4 px-4 py-2 bg-[var(--color-surface-light)]/95 dark:bg-[var(--color-surface)]/95 backdrop-blur-sm border-b border-[var(--color-border-light)] dark:border-[var(--color-border)]">
-        <WeightClassFilter value={weightClass} onChange={setWeightClass} />
+        <div className="flex items-center gap-3">
+          <WeightClassFilter value={weightClass} onChange={setWeightClass} />
+          {/* Subtle refresh indicator — only shown on subsequent fetches (data already visible) */}
+          {loading && data && (
+            <div className="opacity-60 shrink-0">
+              <LoadingSpinner size="sm" />
+            </div>
+          )}
+        </div>
       </div>
 
-      {loading && (
+      {/* Initial load — no data yet */}
+      {loading && !data && (
         <div className="flex justify-center py-16">
           <LoadingSpinner />
         </div>
       )}
 
-      {error && (
+      {error && !data && (
         <p className="text-sm text-red-500">Failed to load data. Try refreshing.</p>
       )}
 
-      {!loading && !error && data && (
+      {data && (
         <>
           {/* ── Section 1: How fights end ─────────────────────────────────── */}
           <section className="space-y-4">
