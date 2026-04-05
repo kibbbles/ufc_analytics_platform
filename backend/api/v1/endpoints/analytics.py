@@ -16,9 +16,11 @@ from sqlalchemy.orm import Session
 
 from api.dependencies import get_db
 from schemas.analytics import (
+    AgeByWeightClassPoint,
     EnduranceRoundData,
     FighterEnduranceResponse,
     FighterOutputPoint,
+    FighterStatsByWeightClass,
     PhysicalStatPoint,
     RoundDistributionPoint,
     StyleEvolutionPoint,
@@ -186,6 +188,50 @@ def style_evolution(
         ORDER BY year, fr.weight_class
     """)).mappings().all()
 
+    # ── Query 6: avg fighter age by weight class × year (always all wcs) ─────────
+    age_rows = db.execute(text(f"""
+        SELECT
+            EXTRACT(YEAR FROM ed.date_proper)::int AS year,
+            fr.weight_class,
+            ROUND(AVG(
+                EXTRACT(YEAR FROM AGE(ed.date_proper, ft.dob_date)) +
+                EXTRACT(MONTH FROM AGE(ed.date_proper, ft.dob_date)) / 12.0
+            )::numeric, 1)::float                  AS avg_age,
+            COUNT(DISTINCT fr.fighter_id)          AS fighter_count
+        FROM fight_results fr
+        JOIN event_details ed ON ed.id = fr.event_id
+        JOIN fighter_tott ft  ON ft.fighter_id = fr.fighter_id
+        WHERE ft.dob_date IS NOT NULL
+          AND ed.date_proper IS NOT NULL
+          AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
+        GROUP BY year, fr.weight_class
+        HAVING COUNT(DISTINCT fr.fighter_id) >= 5
+        ORDER BY year, fr.weight_class
+    """)).mappings().all()
+
+    # ── Query 7: career stats by weight class (always all wcs) ───────────────────
+    # str_acc / str_def / td_acc / td_def stored as "41%" text — strip % and cast
+    stats_rows = db.execute(text(f"""
+        SELECT
+            fr.weight_class,
+            ROUND(AVG(ft.slpm)::numeric,  2)::float AS avg_slpm,
+            ROUND(AVG(NULLIF(REPLACE(ft.str_acc, '%', ''), '')::numeric / 100), 4)::float AS avg_str_acc,
+            ROUND(AVG(ft.sapm)::numeric,  2)::float AS avg_sapm,
+            ROUND(AVG(NULLIF(REPLACE(ft.str_def, '%', ''), '')::numeric / 100), 4)::float AS avg_str_def,
+            ROUND(AVG(ft.td_avg)::numeric, 2)::float AS avg_td_avg,
+            ROUND(AVG(NULLIF(REPLACE(ft.td_acc, '%', ''), '')::numeric / 100), 4)::float AS avg_td_acc,
+            ROUND(AVG(NULLIF(REPLACE(ft.td_def, '%', ''), '')::numeric / 100), 4)::float AS avg_td_def,
+            ROUND(AVG(ft.sub_avg)::numeric, 2)::float AS avg_sub_avg,
+            COUNT(DISTINCT fr.fighter_id)             AS fighter_count
+        FROM fight_results fr
+        JOIN fighter_tott ft ON ft.fighter_id = fr.fighter_id
+        WHERE ft.slpm IS NOT NULL
+          AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
+        GROUP BY fr.weight_class
+        HAVING COUNT(DISTINCT fr.fighter_id) >= 10
+        ORDER BY fr.weight_class
+    """)).mappings().all()
+
     current_year = date.today().year
     return StyleEvolutionResponse(
         data=[
@@ -245,6 +291,30 @@ def style_evolution(
                 fighter_count=r["fighter_count"],
             )
             for r in physical_rows
+        ],
+        age_data=[
+            AgeByWeightClassPoint(
+                year=r["year"],
+                weight_class=r["weight_class"],
+                avg_age=r["avg_age"] or 0.0,
+                fighter_count=r["fighter_count"],
+            )
+            for r in age_rows
+        ],
+        fighter_stats=[
+            FighterStatsByWeightClass(
+                weight_class=r["weight_class"],
+                avg_slpm=r["avg_slpm"] or 0.0,
+                avg_str_acc=r["avg_str_acc"] or 0.0,
+                avg_sapm=r["avg_sapm"] or 0.0,
+                avg_str_def=r["avg_str_def"] or 0.0,
+                avg_td_avg=r["avg_td_avg"] or 0.0,
+                avg_td_acc=r["avg_td_acc"] or 0.0,
+                avg_td_def=r["avg_td_def"] or 0.0,
+                avg_sub_avg=r["avg_sub_avg"] or 0.0,
+                fighter_count=r["fighter_count"],
+            )
+            for r in stats_rows
         ],
         weight_class=weight_class,
     )

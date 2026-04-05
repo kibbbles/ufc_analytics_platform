@@ -7,6 +7,8 @@ import FighterOutputChart from '@components/features/FighterOutputChart'
 import RoundDistributionChart from '@components/features/RoundDistributionChart'
 import WeightClassHeatmap from '@components/features/WeightClassHeatmap'
 import PhysicalStatsChart from '@components/features/PhysicalStatsChart'
+import AgeByWeightClassChart from '@components/features/AgeByWeightClassChart'
+import FighterStatsByWeightClassTable from '@components/features/FighterStatsByWeightClassTable'
 import LoadingSpinner from '@components/common/LoadingSpinner'
 
 export default function StyleEvolutionPage() {
@@ -23,6 +25,8 @@ export default function StyleEvolutionPage() {
   const roundData        = data?.round_distribution ?? []
   const heatmapData      = data?.heatmap_data      ?? []
   const physicalData     = data?.physical_stats    ?? []
+  const ageData          = data?.age_data          ?? []
+  const fighterStatsData = data?.fighter_stats     ?? []
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-12">
@@ -182,6 +186,43 @@ export default function StyleEvolutionPage() {
               <PhysicalStatsChart data={physicalData} weightClass={weightClass} />
             ) : (
               <p className="text-sm text-[var(--color-text-muted)]">No physical stats available.</p>
+            )}
+          </section>
+
+          {/* ── Section 6: Fighter age by weight class ────────────────────── */}
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Fighter age by weight class</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] max-w-2xl">
+                {weightClass
+                  ? `Average age of ${weightClass} fighters at fight time over the years. Shows whether the division is getting younger or older.`
+                  : 'Average age of fighters at the time of their fight, per weight class (most recent data). Select a weight class above to see the trend over time.'}
+              </p>
+            </div>
+
+            {ageData.length > 0 ? (
+              <AgeByWeightClassChart data={ageData} weightClass={weightClass} />
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)]">No age data available.</p>
+            )}
+          </section>
+
+          {/* ── Section 7: Fighter stats by weight class ──────────────────── */}
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Fighting style by weight class</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] max-w-2xl">
+                Average career stats for fighters in each division — striking output,
+                defence, takedown aggression, and submission attempts. Darker cells
+                indicate higher values relative to other divisions in the same column.
+                Weight class filter does not apply here.
+              </p>
+            </div>
+
+            {fighterStatsData.length > 0 ? (
+              <FighterStatsByWeightClassTable data={fighterStatsData} />
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)]">No stats available.</p>
             )}
           </section>
         </>

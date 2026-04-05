@@ -75,15 +75,43 @@ class PhysicalStatPoint(BaseModel):
     fighter_count: int
 
 
+class AgeByWeightClassPoint(BaseModel):
+    """Average fighter age per weight class per year."""
+    model_config = ConfigDict(from_attributes=False)
+
+    year: int
+    weight_class: str
+    avg_age: float
+    fighter_count: int
+
+
+class FighterStatsByWeightClass(BaseModel):
+    """Average career stats (from fighter_tott) for fighters in a given weight class."""
+    model_config = ConfigDict(from_attributes=False)
+
+    weight_class: str
+    avg_slpm: float             # sig strikes landed per minute
+    avg_str_acc: float          # striking accuracy (0–1)
+    avg_sapm: float             # sig strikes absorbed per minute
+    avg_str_def: float          # striking defence (0–1)
+    avg_td_avg: float           # takedowns per 15 min
+    avg_td_acc: float           # takedown accuracy (0–1)
+    avg_td_def: float           # takedown defence (0–1)
+    avg_sub_avg: float          # submission attempts per 15 min
+    fighter_count: int
+
+
 class StyleEvolutionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
-    data: list[StyleEvolutionPoint]             # finish rates by year (all years, filtered by wc)
-    fighter_outputs: list[FighterOutputPoint]   # avg fighter outputs by year (2015+, filtered by wc)
-    round_distribution: list[RoundDistributionPoint]  # finish round breakdown by year (filtered by wc)
-    heatmap_data: list[WeightClassYearPoint]    # finish rates by wc × year (always all wcs)
-    physical_stats: list[PhysicalStatPoint]     # avg height/reach by wc × year (always all wcs)
-    weight_class: Optional[str] = None          # echoes the filter applied
+    data: list[StyleEvolutionPoint]                     # finish rates by year (all years, filtered by wc)
+    fighter_outputs: list[FighterOutputPoint]           # avg fighter outputs by year (2015+, filtered by wc)
+    round_distribution: list[RoundDistributionPoint]    # finish round breakdown by year (filtered by wc)
+    heatmap_data: list[WeightClassYearPoint]            # finish rates by wc × year (always all wcs)
+    physical_stats: list[PhysicalStatPoint]             # avg height/reach by wc × year (always all wcs)
+    age_data: list[AgeByWeightClassPoint]               # avg age by wc × year (always all wcs)
+    fighter_stats: list[FighterStatsByWeightClass]      # career stats by wc (always all wcs)
+    weight_class: Optional[str] = None                  # echoes the filter applied
 
 
 # ── Product 3: Fighter Endurance & Pacing ─────────────────────────────────────

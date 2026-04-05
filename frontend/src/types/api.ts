@@ -221,12 +221,34 @@ export interface PhysicalStatPoint {
   fighter_count: number
 }
 
+export interface AgeByWeightClassPoint {
+  year: number
+  weight_class: string
+  avg_age: number
+  fighter_count: number
+}
+
+export interface FighterStatsByWeightClass {
+  weight_class: string
+  avg_slpm: number
+  avg_str_acc: number    // 0–1
+  avg_sapm: number
+  avg_str_def: number    // 0–1
+  avg_td_avg: number
+  avg_td_acc: number     // 0–1
+  avg_td_def: number     // 0–1
+  avg_sub_avg: number
+  fighter_count: number
+}
+
 export interface StyleEvolutionResponse {
   data: StyleEvolutionPoint[]
   fighter_outputs: FighterOutputPoint[]
   round_distribution: RoundDistributionPoint[]
   heatmap_data: WeightClassYearPoint[]
   physical_stats: PhysicalStatPoint[]
+  age_data: AgeByWeightClassPoint[]
+  fighter_stats: FighterStatsByWeightClass[]
   weight_class: string | null
 }
 
