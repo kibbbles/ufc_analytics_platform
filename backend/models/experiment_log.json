@@ -493,5 +493,41 @@
     },
     "best_model": "random_forest",
     "method_accuracy": 0.4926
+  },
+  {
+    "timestamp": "2026-04-05T14:35:13.320587+00:00",
+    "feature_hash": "ece78a3b",
+    "n_features": 29,
+    "train_rows": 4393,
+    "val_rows": 941,
+    "test_rows": 942,
+    "models": {
+      "logistic_regression": {
+        "train_accuracy": 0.6205,
+        "val_accuracy": 0.5983,
+        "val_auc": 0.6426,
+        "test_accuracy": 0.6444,
+        "test_auc": 0.6745,
+        "val_test_gap": -0.0461
+      },
+      "xgboost": {
+        "train_accuracy": 0.6608,
+        "val_accuracy": 0.5962,
+        "val_auc": 0.6408,
+        "test_accuracy": 0.6285,
+        "test_auc": 0.6773,
+        "val_test_gap": -0.0323
+      },
+      "random_forest": {
+        "train_accuracy": 0.6963,
+        "val_accuracy": 0.593,
+        "val_auc": 0.6425,
+        "test_accuracy": 0.6327,
+        "test_auc": 0.6816,
+        "val_test_gap": -0.0397
+      }
+    },
+    "best_model": "logistic_regression",
+    "method_accuracy": 0.4846
   }
 ]
