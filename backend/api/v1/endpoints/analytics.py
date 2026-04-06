@@ -300,7 +300,7 @@ def style_evolution(
           AND fr.total_fight_time_seconds > 0
           AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
         GROUP BY year, fr.weight_class
-        HAVING COUNT(DISTINCT pf.fight_id) >= 10
+        HAVING COUNT(DISTINCT pf.fight_id) >= 5
         ORDER BY year, fr.weight_class
     """)).mappings().all()
 

@@ -160,6 +160,8 @@ export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props
   ]
 
   const hasPartialYear = filtered.some((d) => d.year === currentYear)
+  const latestYear = filtered[filtered.length - 1]?.year ?? currentYear
+  const missingYears = latestYear < currentYear - 1
 
   return (
     <div className="space-y-3">
@@ -171,6 +173,11 @@ export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props
       {hasPartialYear && (
         <p className="text-[11px] text-[var(--color-text-muted)]">
           ○ Open circle = {currentYear} (partial year, fights still ongoing).
+        </p>
+      )}
+      {missingYears && (
+        <p className="text-[11px] text-[var(--color-text-muted)]">
+          Data through {latestYear} only — recent years had fewer than 5 fights with complete stats recorded.
         </p>
       )}
     </div>
