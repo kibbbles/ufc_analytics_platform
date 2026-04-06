@@ -278,8 +278,8 @@ def style_evolution(
                 SUM(fs.td_landed)         AS td_landed,
                 SUM(fs.td_attempted)      AS td_attempted,
                 SUM(fs.ctrl_seconds)      AS ctrl_seconds_total,
-                SUM(CASE WHEN fs."SUB.ATT" ~ '^[0-9]+$'
-                         THEN fs."SUB.ATT"::integer ELSE 0 END) AS sub_attempts,
+                SUM(CASE WHEN TRIM(COALESCE(fs."SUB.ATT", '')) ~ '^[0-9]+(\.[0-9]*)?$'
+                         THEN FLOOR(TRIM(fs."SUB.ATT")::numeric)::integer ELSE 0 END) AS sub_attempts,
                 SUM(opp.sig_str_landed)    AS opp_sig_str_landed,
                 SUM(opp.sig_str_attempted) AS opp_sig_str_attempted,
                 SUM(opp.td_landed)         AS opp_td_landed,
