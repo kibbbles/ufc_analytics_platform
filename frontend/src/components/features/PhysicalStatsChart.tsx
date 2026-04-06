@@ -109,6 +109,7 @@ function TimeSeriesView({ data, weightClass }: { data: PhysicalStatPoint[]; weig
           tickLine={false}
           axisLine={false}
           domain={['auto', 'auto']}
+          allowDecimals={false}
           width={36}
         />
         <Tooltip

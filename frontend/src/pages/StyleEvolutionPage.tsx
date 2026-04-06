@@ -111,7 +111,7 @@ export default function StyleEvolutionPage() {
             )}
 
             {/* Era annotation key */}
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            <div className="flex flex-col gap-1 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
               <span><span className="font-semibold text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">Unified Rules (2001)</span> — Standardised scoring, prohibited strikes, and referee stoppages across all states.</span>
               <span><span className="font-semibold text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">USADA begins (2015)</span> — UFC's anti-doping programme launched.</span>
               <span><span className="font-semibold text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">Judging update (2017)</span> — Nevada adopted 10-point must with greater emphasis on effective aggression.</span>
