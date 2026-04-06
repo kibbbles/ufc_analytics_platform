@@ -15,9 +15,10 @@ interface PanelProps {
   label: string
   formatValue: (v: number) => string
   color: string
+  currentYear: number
 }
 
-function MetricPanel({ data, dataKey, label, formatValue, color }: PanelProps) {
+function MetricPanel({ data, dataKey, label, formatValue, color, currentYear }: PanelProps) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
@@ -66,7 +67,13 @@ function MetricPanel({ data, dataKey, label, formatValue, color }: PanelProps) {
             dataKey={dataKey as string}
             stroke={color}
             strokeWidth={2}
-            dot={false}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            dot={(props: any) => {
+              if (props.payload?.year === currentYear) {
+                return <circle key={props.index} cx={props.cx} cy={props.cy} r={3} fill="none" stroke={color} strokeWidth={2} />
+              }
+              return <g key={props.index} />
+            }}
             connectNulls
           />
         </LineChart>
@@ -81,6 +88,8 @@ interface Props {
 }
 
 export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props) {
+  const currentYear = new Date().getFullYear()
+
   const filtered = data
     .filter((d) => d.weight_class === weightClass)
     .sort((a, b) => a.year - b.year)
@@ -150,11 +159,20 @@ export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props
     },
   ]
 
+  const hasPartialYear = filtered.some((d) => d.year === currentYear)
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-      {panels.map((p) => (
-        <MetricPanel key={String(p.dataKey)} data={filtered} {...p} />
-      ))}
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+        {panels.map((p) => (
+          <MetricPanel key={String(p.dataKey)} data={filtered} currentYear={currentYear} {...p} />
+        ))}
+      </div>
+      {hasPartialYear && (
+        <p className="text-[11px] text-[var(--color-text-muted)]">
+          ○ Open circle = {currentYear} (partial year, fights still ongoing).
+        </p>
+      )}
     </div>
   )
 }
