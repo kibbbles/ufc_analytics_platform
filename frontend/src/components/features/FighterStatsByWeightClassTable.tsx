@@ -42,14 +42,14 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
-  { key: 'avg_slpm',    label: 'SLpM',      format: (v) => v.toFixed(2) },
-  { key: 'avg_str_acc', label: 'Str. Acc.', format: (v) => `${(v * 100).toFixed(0)}%` },
-  { key: 'avg_sapm',    label: 'SApM',      format: (v) => v.toFixed(2) },
-  { key: 'avg_str_def', label: 'Str. Def.', format: (v) => `${(v * 100).toFixed(0)}%` },
-  { key: 'avg_td_avg',  label: 'TD Avg.',   format: (v) => v.toFixed(2) },
-  { key: 'avg_td_acc',  label: 'TD Acc.',   format: (v) => `${(v * 100).toFixed(0)}%` },
-  { key: 'avg_td_def',  label: 'TD Def.',   format: (v) => `${(v * 100).toFixed(0)}%` },
-  { key: 'avg_sub_avg', label: 'Sub. Avg.', format: (v) => v.toFixed(2) },
+  { key: 'avg_slpm',    label: 'Sig. Strikes/min',      format: (v) => v.toFixed(2) },
+  { key: 'avg_str_acc', label: 'Striking Accuracy',     format: (v) => `${(v * 100).toFixed(0)}%` },
+  { key: 'avg_sapm',    label: 'Strikes Absorbed/min',  format: (v) => v.toFixed(2) },
+  { key: 'avg_str_def', label: 'Strike Defense',        format: (v) => `${(v * 100).toFixed(0)}%` },
+  { key: 'avg_td_avg',  label: 'Takedowns/15min',       format: (v) => v.toFixed(2) },
+  { key: 'avg_td_acc',  label: 'Takedown Accuracy',     format: (v) => `${(v * 100).toFixed(0)}%` },
+  { key: 'avg_td_def',  label: 'Takedown Defense',      format: (v) => `${(v * 100).toFixed(0)}%` },
+  { key: 'avg_sub_avg', label: 'Sub. Attempts/15min',   format: (v) => v.toFixed(2) },
 ]
 
 function cellColor(value: number, min: number, max: number): string {
@@ -128,11 +128,7 @@ export default function FighterStatsByWeightClassTable({ data }: Props) {
 
       {/* Column legend */}
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[var(--color-text-muted)]">
-        <span>SLpM = sig. strikes landed per min</span>
-        <span>SApM = sig. strikes absorbed per min</span>
-        <span>TD Avg. = takedowns per 15 min</span>
-        <span>Sub. Avg. = submission attempts per 15 min</span>
-        <span>Color intensity = relative value within each column</span>
+        <span>Career averages from UFC bouts. Color intensity = relative value within each column.</span>
       </div>
     </div>
   )

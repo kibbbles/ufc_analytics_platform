@@ -109,8 +109,12 @@ class StyleStatsByWeightClassPoint(BaseModel):
     weight_class: str
     avg_slpm: float           # sig strikes landed per minute
     avg_str_acc: float        # striking accuracy (0–1)
+    avg_sapm: float           # sig strikes absorbed per minute (opponent's landed)
+    avg_str_def: float        # striking defence (0–1): % of opponent strikes avoided
     avg_td_per_fight: float   # takedowns landed per fight per fighter
     avg_td_acc: float         # takedown accuracy (0–1)
+    avg_td_def: float         # takedown defence (0–1): % of opponent attempts stuffed
+    avg_sub_per_fight: float  # submission attempts per fight per fighter
     avg_ctrl_seconds: float   # avg ctrl seconds per fight per fighter
     fight_count: int
 

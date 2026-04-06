@@ -245,9 +245,13 @@ export interface StyleStatsByWeightClassPoint {
   year: number
   weight_class: string
   avg_slpm: number
-  avg_str_acc: number       // 0–1
+  avg_str_acc: number         // 0–1
+  avg_sapm: number
+  avg_str_def: number         // 0–1
   avg_td_per_fight: number
-  avg_td_acc: number        // 0–1
+  avg_td_acc: number          // 0–1
+  avg_td_def: number          // 0–1
+  avg_sub_per_fight: number
   avg_ctrl_seconds: number
   fight_count: number
 }

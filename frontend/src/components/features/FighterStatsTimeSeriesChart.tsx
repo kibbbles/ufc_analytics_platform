@@ -96,38 +96,62 @@ export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props
   const panels: Omit<PanelProps, 'data'>[] = [
     {
       dataKey: 'avg_slpm',
-      label: 'SLpM',
+      label: 'Sig. Strikes/min',
       formatValue: (v) => v.toFixed(1),
       color: '#e63946',
     },
     {
+      dataKey: 'avg_sapm',
+      label: 'Strikes Absorbed/min',
+      formatValue: (v) => v.toFixed(1),
+      color: '#f4a261',
+    },
+    {
       dataKey: 'avg_str_acc',
-      label: 'Str. Acc.',
+      label: 'Striking Accuracy',
       formatValue: (v) => `${(v * 100).toFixed(0)}%`,
       color: '#c05c63',
     },
     {
+      dataKey: 'avg_str_def',
+      label: 'Strike Defense',
+      formatValue: (v) => `${(v * 100).toFixed(0)}%`,
+      color: '#e9c46a',
+    },
+    {
       dataKey: 'avg_td_per_fight',
-      label: 'TD per fight',
+      label: 'Takedowns/fight',
       formatValue: (v) => v.toFixed(1),
       color: '#4361ee',
     },
     {
       dataKey: 'avg_td_acc',
-      label: 'TD Acc.',
+      label: 'Takedown Accuracy',
       formatValue: (v) => `${(v * 100).toFixed(0)}%`,
       color: '#6b82f0',
     },
     {
+      dataKey: 'avg_td_def',
+      label: 'Takedown Defense',
+      formatValue: (v) => `${(v * 100).toFixed(0)}%`,
+      color: '#7209b7',
+    },
+    {
+      dataKey: 'avg_sub_per_fight',
+      label: 'Sub. Attempts/fight',
+      formatValue: (v) => v.toFixed(2),
+      color: '#3a0ca3',
+    },
+    {
       dataKey: 'avg_ctrl_seconds',
-      label: 'Ctrl time (s)',
+      label: 'Control time (s)',
       formatValue: (v) => `${Math.round(v)}s`,
       color: '#2a9d8f',
     },
   ]
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
       {panels.map((p) => (
         <MetricPanel key={String(p.dataKey)} data={filtered} {...p} />
       ))}

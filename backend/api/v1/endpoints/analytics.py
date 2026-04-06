@@ -234,6 +234,7 @@ def style_evolution(
     """)).mappings().all()
 
     # ── Query 8: per-year style metrics by weight class from fight_stats ─────────
+    # Self-join on fight_stats to derive opponent-based metrics (SApM, Str Def, TD Def)
     style_rows = db.execute(text(f"""
         SELECT
             EXTRACT(YEAR FROM ed.date_proper)::int AS year,
@@ -246,12 +247,26 @@ def style_evolution(
                      THEN pf.sig_str_landed::float / pf.sig_str_attempted
                      ELSE NULL END
             )::numeric, 4)::float AS avg_str_acc,
+            ROUND(AVG(
+                pf.opp_sig_str_landed::float / NULLIF(fr.total_fight_time_seconds / 60.0, 0)
+            )::numeric, 2)::float AS avg_sapm,
+            ROUND(AVG(
+                CASE WHEN pf.opp_sig_str_attempted > 0
+                     THEN 1.0 - pf.opp_sig_str_landed::float / pf.opp_sig_str_attempted
+                     ELSE NULL END
+            )::numeric, 4)::float AS avg_str_def,
             ROUND(AVG(pf.td_landed)::numeric, 2)::float AS avg_td_per_fight,
             ROUND(AVG(
                 CASE WHEN pf.td_attempted > 0
                      THEN pf.td_landed::float / pf.td_attempted
                      ELSE NULL END
             )::numeric, 4)::float AS avg_td_acc,
+            ROUND(AVG(
+                CASE WHEN pf.opp_td_attempted > 0
+                     THEN 1.0 - pf.opp_td_landed::float / pf.opp_td_attempted
+                     ELSE NULL END
+            )::numeric, 4)::float AS avg_td_def,
+            ROUND(AVG(pf.sub_attempts)::numeric, 2)::float AS avg_sub_per_fight,
             ROUND(AVG(pf.ctrl_seconds_total)::numeric, 0)::float AS avg_ctrl_seconds,
             COUNT(DISTINCT pf.fight_id) AS fight_count
         FROM (
@@ -262,10 +277,21 @@ def style_evolution(
                 SUM(fs.sig_str_attempted) AS sig_str_attempted,
                 SUM(fs.td_landed)         AS td_landed,
                 SUM(fs.td_attempted)      AS td_attempted,
-                SUM(fs.ctrl_seconds)      AS ctrl_seconds_total
+                SUM(fs.ctrl_seconds)      AS ctrl_seconds_total,
+                SUM(CASE WHEN fs."SUB.ATT" ~ '^[0-9]+$'
+                         THEN fs."SUB.ATT"::integer ELSE 0 END) AS sub_attempts,
+                SUM(opp.sig_str_landed)    AS opp_sig_str_landed,
+                SUM(opp.sig_str_attempted) AS opp_sig_str_attempted,
+                SUM(opp.td_landed)         AS opp_td_landed,
+                SUM(opp.td_attempted)      AS opp_td_attempted
             FROM fight_stats fs
+            JOIN fight_stats opp ON opp.fight_id = fs.fight_id
+                AND opp.fighter_id != fs.fighter_id
+                AND opp.fighter_id IS NOT NULL
+                AND opp."ROUND" NOT ILIKE '%total%'
             WHERE fs."ROUND" NOT ILIKE '%total%'
               AND fs.sig_str_landed IS NOT NULL
+              AND fs.fighter_id IS NOT NULL
             GROUP BY fs.fight_id, fs.fighter_id
         ) pf
         JOIN fight_results fr ON fr.fight_id = pf.fight_id
@@ -368,8 +394,12 @@ def style_evolution(
                 weight_class=r["weight_class"],
                 avg_slpm=r["avg_slpm"] or 0.0,
                 avg_str_acc=r["avg_str_acc"] or 0.0,
+                avg_sapm=r["avg_sapm"] or 0.0,
+                avg_str_def=r["avg_str_def"] or 0.0,
                 avg_td_per_fight=r["avg_td_per_fight"] or 0.0,
                 avg_td_acc=r["avg_td_acc"] or 0.0,
+                avg_td_def=r["avg_td_def"] or 0.0,
+                avg_sub_per_fight=r["avg_sub_per_fight"] or 0.0,
                 avg_ctrl_seconds=r["avg_ctrl_seconds"] or 0.0,
                 fight_count=r["fight_count"],
             )
