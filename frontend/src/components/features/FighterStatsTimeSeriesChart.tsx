@@ -102,7 +102,7 @@ export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props
     )
   }
 
-  const panels: Omit<PanelProps, 'data'>[] = [
+  const panels: Omit<PanelProps, 'data' | 'currentYear'>[] = [
     {
       dataKey: 'avg_slpm',
       label: 'Sig. Strikes/min',
@@ -165,7 +165,7 @@ export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props
     <div className="space-y-3">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
         {panels.map((p) => (
-          <MetricPanel key={String(p.dataKey)} data={filtered} currentYear={currentYear} {...p} />
+          <MetricPanel key={String(p.dataKey)} data={filtered} {...p} currentYear={currentYear} />
         ))}
       </div>
       {hasPartialYear && (
