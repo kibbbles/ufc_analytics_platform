@@ -162,11 +162,14 @@ Nicknames → real names (when unsure of first name, search last name only):
   Du Plessis/DDP → Dricus Du Plessis; Prochazka/Jiri → Jiri Prochazka
   Fiziev → Rafael Fiziev; Pantoja → Alexandre Pantoja; Borz → Khamzat Chimaev
 
-FINAL RULE — output exactly NO_SQL (nothing else) ONLY for clearly hypothetical questions
-that cannot involve any table above: explicit fantasy matchups ("who would win a trilogy",
-"if X fought Y someday"), pure opinion with no factual DB answer ("who has better technique"),
-or questions about fighting style/approach (wrestler, boxer, grappler, striker, kickboxer, etc.)
-since MMA style is not stored in any table — STANCE is Orthodox/Southpaw only.
+FINAL RULE — output exactly NO_SQL (nothing else) ONLY for:
+- Clearly hypothetical questions: explicit fantasy matchups ("who would win a trilogy",
+  "if X fought Y someday"), pure opinion with no factual DB answer ("who has better technique"),
+  or questions about fighting style/approach (wrestler, boxer, grappler, striker, kickboxer, etc.)
+  since MMA style is not stored in any table — STANCE is Orthodox/Southpaw only.
+- Current champion questions ("who is the X champion", "who holds the X belt", "current X champ"):
+  the database may contain non-UFC events with mislabeled title fights, making champion lookups
+  unreliable. Use NO_SQL so general knowledge can answer accurately instead.
 When in doubt, write SQL.
 """
 
