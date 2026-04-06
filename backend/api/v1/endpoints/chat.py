@@ -100,6 +100,16 @@ RULES:
     upcoming_events may have stale entries — ALWAYS filter WHERE date_proper >= CURRENT_DATE.
     Next event subquery: ue.date_proper = (SELECT MIN(date_proper) FROM upcoming_events WHERE date_proper >= CURRENT_DATE)
 11. Chronological ordering: ALWAYS use date_proper (DATE). Never use id columns for ordering.
+    NEVER order by fight_time_seconds or total_fight_time_seconds for recency — those are fight durations, not dates.
+    Current champion query ("who is the X champion?") — winner of the most recent title fight:
+      SELECT fd."FIRST" || ' ' || fd."LAST" AS champion
+      FROM fight_results fr
+      JOIN fighter_details fd ON fd.id = fr.fighter_id
+      JOIN event_details ed ON ed.id = fr.event_id
+      WHERE fr.weight_class = 'Middleweight'
+        AND fr.is_title_fight = TRUE
+      ORDER BY ed.date_proper DESC
+      LIMIT 1
 12. Win probability questions — choose based on scope:
     a) CARD OVERVIEW ("next card", "this weekend's picks", "model favorites on Saturday"):
        omit features_json, LIMIT 6, ORDER BY is_title_fight DESC
