@@ -102,16 +102,7 @@ RULES:
 11. Chronological ordering: ALWAYS use date_proper (DATE). Never use id columns for ordering.
     NEVER order by fight_time_seconds or total_fight_time_seconds for recency — those are fight durations, not dates.
     fight_results has NO date column — dates are ONLY on event_details.date_proper.
-    Current champion query ("who is the X champion?") — MUST join event_details for date:
-      SELECT fd."FIRST" || ' ' || fd."LAST" AS champion
-      FROM fight_results fr
-      JOIN event_details ed ON ed.id = fr.event_id
-      JOIN fighter_details fd ON fd.id = fr.fighter_id
-      WHERE fr.weight_class = 'Middleweight'
-        AND fr.is_title_fight = TRUE
-      ORDER BY ed.date_proper DESC
-      LIMIT 1
-    (fr.fighter_id = winner; no OR join needed here — we only want the winner)
+    Any "most recent" query must JOIN event_details and ORDER BY ed.date_proper DESC.
 12. Win probability questions — choose based on scope:
     a) CARD OVERVIEW ("next card", "this weekend's picks", "model favorites on Saturday"):
        omit features_json, LIMIT 6, ORDER BY is_title_fight DESC

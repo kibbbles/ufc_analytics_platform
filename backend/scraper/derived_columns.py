@@ -98,26 +98,36 @@ def populate_weight_class(conn):
 
 
 def populate_is_title_fight(conn):
+    # Exclude Road to UFC and tournament finals (e.g. "Road To UFC 1 Bantamweight
+    # Tournament Title Bout", "TUF Nations ... Tournament Title Bout") — only real
+    # UFC championship bouts count. Recomputes all rows (no IS NULL guard) so that
+    # corrections to this logic are applied on each ETL run.
     n = conn.execute(text("""
         UPDATE fight_results
-        SET is_title_fight = ("WEIGHTCLASS" LIKE '%Title%')
-        WHERE is_title_fight IS NULL
-          AND "WEIGHTCLASS" IS NOT NULL
+        SET is_title_fight = (
+            "WEIGHTCLASS" LIKE '%Title%'
+            AND "WEIGHTCLASS" NOT LIKE '%Tournament%'
+            AND "WEIGHTCLASS" NOT LIKE '%Road%'
+        )
+        WHERE "WEIGHTCLASS" IS NOT NULL
     """)).rowcount
     conn.commit()
-    log.info(f"  is_title_fight:          {n:,} rows populated")
+    log.info(f"  is_title_fight:          {n:,} rows updated")
     return n
 
 
 def populate_is_interim_title(conn):
     n = conn.execute(text("""
         UPDATE fight_results
-        SET is_interim_title = ("WEIGHTCLASS" LIKE '%Interim%')
-        WHERE is_interim_title IS NULL
-          AND "WEIGHTCLASS" IS NOT NULL
+        SET is_interim_title = (
+            "WEIGHTCLASS" LIKE '%Interim%'
+            AND "WEIGHTCLASS" NOT LIKE '%Tournament%'
+            AND "WEIGHTCLASS" NOT LIKE '%Road%'
+        )
+        WHERE "WEIGHTCLASS" IS NOT NULL
     """)).rowcount
     conn.commit()
-    log.info(f"  is_interim_title:        {n:,} rows populated")
+    log.info(f"  is_interim_title:        {n:,} rows updated")
     return n
 
 
