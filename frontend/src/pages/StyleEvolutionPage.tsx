@@ -161,8 +161,11 @@ export default function StyleEvolutionPage() {
               <h2 className="text-lg font-semibold">Finish rate by weight class</h2>
               <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] max-w-2xl">
                 Heavier weight classes consistently finish more fights. Lighter women's
-                divisions — added later — tend to go to the judges more often. Hover a cell
-                for the exact rate and fight count. Weight class filter does not apply here.
+                divisions — added later — tend to go to the judges more often. Color intensity
+                is relative to all cells across every weight class and every year — a darker cell
+                means a higher finish rate compared to all of UFC history, not just its own
+                division or year. Tap or hover a cell for the exact rate and fight count.
+                Weight class filter does not apply here.
               </p>
             </div>
 
