@@ -22,7 +22,7 @@ interface Props {
 
 export default function WeightClassFilter({ value, onChange }: Props) {
   return (
-    <div className="flex w-full justify-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+    <div className="flex w-full justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-none">
       {WEIGHT_CLASSES.map(({ label, value: wc }) => {
         const active = value === wc
         return (
