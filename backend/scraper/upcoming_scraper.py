@@ -519,8 +519,30 @@ class UpcomingScraper:
 
                 with engine.connect() as conn:
                     event_id = self._upsert_event(conn, event)
+                    live_fight_ids = []
                     for position, fight in enumerate(fights):
-                        self._upsert_fight(conn, event_id, fight, position)
+                        fid = self._upsert_fight(conn, event_id, fight, position)
+                        live_fight_ids.append(fid)
+
+                    # Remove fights that were pulled from the card since last scrape
+                    if live_fight_ids:
+                        placeholders = ','.join(f"'{fid}'" for fid in live_fight_ids)
+                        removed = conn.execute(text(f"""
+                            DELETE FROM upcoming_predictions
+                            WHERE fight_id IN (
+                                SELECT id FROM upcoming_fights
+                                WHERE event_id = :eid
+                                  AND id NOT IN ({placeholders})
+                            )
+                        """), {'eid': event_id})
+                        stale = conn.execute(text(f"""
+                            DELETE FROM upcoming_fights
+                            WHERE event_id = :eid
+                              AND id NOT IN ({placeholders})
+                        """), {'eid': event_id})
+                        if stale.rowcount:
+                            print(f'  Removed {stale.rowcount} stale fight(s) no longer on the card')
+
                     conn.commit()
 
                 total_fights += len(fights)
