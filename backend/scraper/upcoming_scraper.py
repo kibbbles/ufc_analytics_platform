@@ -280,7 +280,10 @@ class UpcomingScraper:
                 # Title fight detection — scan full row text (UFCStats may put
                 # "championship"/"title bout" in any cell, or show a belt icon)
                 row_text       = row.get_text(separator=' ', strip=True).lower()
-                is_title_fight = any(kw in row_text for kw in ['championship', 'title bout'])
+                is_title_fight = any(kw in row_text for kw in [
+                    'championship', 'title bout', 'title fight', 'title match',
+                    'for the ufc', 'ufc title', 'world title',
+                ])
                 is_interim     = is_title_fight and 'interim' in row_text
 
                 # Weight class — scan cells for weight class keywords
