@@ -251,13 +251,13 @@ python post_scrape_clean.py        # Run full ETL pipeline + validation
 - `.github/workflows/feature-engineering.yml` — Rebuild training matrix, auto-triggered after ETL
 - `.github/workflows/retrain.yml` — Retrain ML models, auto-triggered after feature engineering
 - `.github/workflows/deploy-backend.yml` — Build Docker image + deploy to Cloud Run; triggers on push to `main` (backend paths only)
-- `.github/workflows/upcoming-predictions.yml` — Friday 12:00 UTC: upcoming_scraper + pre-compute predictions
+- `.github/workflows/upcoming-predictions.yml` — Saturday 15:00 UTC (10 AM EST): upcoming_scraper + pre-compute predictions
 
 **Weekly automation chain:**
 ```
 Daily   03:00 UTC  → daily-keepalive       (keep Supabase alive)
 
-Friday  12:00 UTC  → upcoming-predictions  (scrape next Saturday's card + pre-compute)
+Saturday 15:00 UTC  → upcoming-predictions  (scrape same-day card + pre-compute)
 
 Sunday  18:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
                    → post-scrape-clean     (ETL cleanup + archive pre-fight predictions)

@@ -108,6 +108,31 @@ class UpcomingScraper:
         resp.raise_for_status()
         return BeautifulSoup(resp.content, 'html.parser')
 
+    def _fight_is_title(self, fight_url: str) -> tuple[bool, bool]:
+        """Fetch the fight-details page and check for title-fight text.
+
+        UFCStats event-detail rows only show a belt icon (not text) for
+        upcoming title fights, so row_text detection misses them. The
+        individual fight-details page always contains the full label,
+        e.g. "UFC Light Heavyweight Title Bout" or "UFC Interim …".
+
+        Returns (is_title_fight, is_interim).
+        """
+        if not fight_url:
+            return False, False
+        try:
+            soup = self._get(fight_url, delay=(1.0, 2.0))
+            page_text = soup.get_text(separator=' ', strip=True).lower()
+            is_title = any(kw in page_text for kw in [
+                'title bout', 'championship bout', 'title fight',
+                'for the ufc', 'ufc title',
+            ])
+            is_interim = is_title and 'interim' in page_text
+            return is_title, is_interim
+        except Exception as e:
+            logger.warning(f'Could not fetch fight-details page {fight_url}: {e}')
+            return False, False
+
     # ------------------------------------------------------------------
     # Fighter matching
     # ------------------------------------------------------------------
@@ -277,14 +302,21 @@ class UpcomingScraper:
                 if not fighter_a_name or not fighter_b_name:
                     continue
 
-                # Title fight detection — scan full row text (UFCStats may put
-                # "championship"/"title bout" in any cell, or show a belt icon)
+                # fight detail URL (data-link) — may be empty for upcoming fights
+                fight_url = row.get('data-link', '').strip()
+
+                # Title fight detection — scan full row text first (works for
+                # completed events). For upcoming fights, UFCStats only shows a
+                # belt icon in the row; fall back to fetching the fight-details
+                # page which always has the full label as text.
                 row_text       = row.get_text(separator=' ', strip=True).lower()
                 is_title_fight = any(kw in row_text for kw in [
                     'championship', 'title bout', 'title fight', 'title match',
                     'for the ufc', 'ufc title', 'world title',
                 ])
-                is_interim     = is_title_fight and 'interim' in row_text
+                is_interim = is_title_fight and 'interim' in row_text
+                if not is_title_fight and fight_url:
+                    is_title_fight, is_interim = self._fight_is_title(fight_url)
 
                 # Weight class — scan cells for weight class keywords
                 # Strip title/interim/ufc prefixes to get clean weight class name
@@ -303,9 +335,6 @@ class UpcomingScraper:
                             )
                             weight_class = ' '.join(cleaned.split())
                             break
-
-                # fight detail URL (data-link) — may be empty for upcoming fights
-                fight_url = row.get('data-link', '').strip()
 
                 fights.append({
                     'fighter_a_name':  fighter_a_name,
