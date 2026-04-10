@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import LoadingSkeleton from '@components/common/LoadingSkeleton'
+import { Badge } from '@components/common'
 import { formatDate } from '@utils/format'
 import type { PastPredictionItem } from '@t/api'
 
@@ -85,12 +86,16 @@ function FightRow({ item }: { item: PastPredictionItem }) {
         </p>
       )}
 
-      {/* Event + date + weight class */}
-      <p className="text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-        {item.event_name ?? '—'}
-        {item.event_date ? ` · ${formatDate(item.event_date)}` : ''}
-        {item.weight_class ? ` · ${item.weight_class}` : ''}
-      </p>
+      {/* Event + date + weight class + title badge */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {item.is_title_fight && !item.is_interim_title && <Badge variant="warning">Title</Badge>}
+        {item.is_interim_title && <Badge variant="warning">Interim</Badge>}
+        <p className="text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+          {item.event_name ?? '—'}
+          {item.event_date ? ` · ${formatDate(item.event_date)}` : ''}
+          {item.weight_class ? ` · ${item.weight_class}` : ''}
+        </p>
+      </div>
 
       {/* Prediction row */}
       {hasPred && item.win_prob_a != null && item.win_prob_b != null && (

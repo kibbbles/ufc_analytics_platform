@@ -19,6 +19,8 @@ class PastPredictionItem(BaseModel):
     fighter_a_name: Optional[str] = None
     fighter_b_name: Optional[str] = None
     weight_class: Optional[str] = None
+    is_title_fight: Optional[bool] = None
+    is_interim_title: Optional[bool] = None
     model_version: Optional[str] = None
     # Prediction
     win_prob_a: Optional[float] = None

@@ -154,7 +154,9 @@ def get_past_predictions(
                 predicted_winner_id, predicted_method,
                 actual_winner_id, actual_method,
                 is_correct, confidence, is_upset,
-                prediction_source, pre_fight_predicted_at
+                prediction_source, pre_fight_predicted_at,
+                (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
+                (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
             FROM past_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
@@ -276,7 +278,9 @@ def get_past_prediction_event(
                 predicted_winner_id, predicted_method,
                 actual_winner_id, actual_method,
                 is_correct, confidence, is_upset,
-                prediction_source, pre_fight_predicted_at
+                prediction_source, pre_fight_predicted_at,
+                (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
+                (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
             FROM past_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
@@ -645,7 +649,9 @@ def search_past_prediction_fights(
         rows = db.execute(text(f"""
             SELECT pp.*
             FROM (
-                SELECT {_FIGHT_COLS}
+                SELECT {_FIGHT_COLS},
+                    (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
+                    (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
                 FROM past_predictions
                 {where}
             ) pp
@@ -685,7 +691,9 @@ def search_past_prediction_fights(
                     predicted_winner_id, predicted_method,
                     actual_winner_id, actual_method,
                     is_correct, confidence, is_upset,
-                    prediction_source, pre_fight_predicted_at
+                    prediction_source, pre_fight_predicted_at,
+                    (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
+                    (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
                 FROM past_predictions
                 ORDER BY fight_id,
                          CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
@@ -723,7 +731,9 @@ def get_past_prediction_fight(
     db: Session = Depends(get_db),
 ) -> PastPredictionItem:
     row = db.execute(text(f"""
-        SELECT DISTINCT ON (fight_id) {_FIGHT_COLS}
+        SELECT DISTINCT ON (fight_id) {_FIGHT_COLS},
+            (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
+            (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
         FROM past_predictions
         WHERE fight_id = :fight_id
         ORDER BY fight_id,

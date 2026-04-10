@@ -342,6 +342,8 @@ export interface PastPredictionItem {
   fighter_a_name: string | null
   fighter_b_name: string | null
   weight_class: string | null
+  is_title_fight: boolean | null
+  is_interim_title: boolean | null
   win_prob_a: number | null
   win_prob_b: number | null
   pred_method_ko_tko: number | null

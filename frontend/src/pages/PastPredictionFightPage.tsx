@@ -3,7 +3,7 @@ import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import { fightersService } from '@services/fightersService'
 import { fightsService } from '@services/fightsService'
-import { Card, LoadingSkeleton } from '@components/common'
+import { Card, LoadingSkeleton, Badge } from '@components/common'
 import { inchesToFeet, formatDate } from '@utils/format'
 import type { FighterResponse, FightListItem, PastPredictionItem } from '@t/api'
 
@@ -290,7 +290,9 @@ export default function PastPredictionFightPage() {
                 <span className="text-xl font-bold">{nameB}</span>
               )}
             </div>
-            <div className="mt-2 flex justify-center gap-2 flex-wrap">
+            <div className="mt-2 flex justify-center gap-2 flex-wrap items-center">
+              {predItem?.is_title_fight && !predItem?.is_interim_title && <Badge variant="warning">Title</Badge>}
+              {predItem?.is_interim_title && <Badge variant="warning">Interim</Badge>}
               {fightDetail.weight_class && (
                 <span className="text-xs text-[var(--color-text-muted)]">{fightDetail.weight_class}</span>
               )}
