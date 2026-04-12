@@ -111,22 +111,11 @@ export default function StyleEvolutionPage() {
             )}
 
             {/* Era annotation key */}
-            <div className="flex flex-col gap-2 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-              {[
-                { year: '2001', color: '#4361ee', label: 'Unified Rules', note: 'Standardised scoring, prohibited strikes, and referee stoppages across all states.' },
-                { year: '2015', color: '#e07030', label: 'USADA begins', note: "UFC's anti-doping programme launched." },
-                { year: '2017', color: '#c89a40', label: 'Judging update', note: 'Nevada adopted 10-point must with greater emphasis on effective aggression.' },
-                { year: '2020–21', color: '#8b9ab0', label: 'COVID era', note: 'Fight Island / empty arenas; condensed schedule with limited fighter preparation time.' },
-              ].map(({ year, color, label, note }) => (
-                <div key={year} className="flex gap-2.5 items-start">
-                  <div className="mt-0.5 w-0.5 self-stretch rounded-full shrink-0" style={{ backgroundColor: color }} />
-                  <span>
-                    <span className="font-semibold" style={{ color }}>{label}</span>
-                    <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]"> ({year})</span>
-                    {' '}— {note}
-                  </span>
-                </div>
-              ))}
+            <div className="flex flex-col gap-1 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+              <span><span className="font-semibold text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">Unified Rules (2001)</span> — Standardised scoring, prohibited strikes, and referee stoppages across all states.</span>
+              <span><span className="font-semibold text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">USADA begins (2015)</span> — UFC's anti-doping programme launched.</span>
+              <span><span className="font-semibold text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">Judging update (2017)</span> — Nevada adopted 10-point must with greater emphasis on effective aggression.</span>
+              <span><span className="font-semibold text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">COVID era (2020–21)</span> — Shaded region. Fight Island / empty arenas; condensed schedule with limited fighter preparation time.</span>
             </div>
           </section>
 
@@ -135,7 +124,7 @@ export default function StyleEvolutionPage() {
             <div>
               <h2 className="text-lg font-semibold">When finishes happen</h2>
               <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] max-w-2xl">
-                Of finishes that do occur, <span className="font-semibold" style={{ color: '#e63946' }}>Round 1</span> has historically produced the most stoppages.
+                Of finishes that do occur, Round 1 has historically produced the most stoppages.
                 Dashed bars indicate the current partial year.
               </p>
             </div>
