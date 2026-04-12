@@ -71,6 +71,8 @@ function MetricPanel({ data, dataKey, label, formatValue, color, colorPartial }:
             width={32}
           />
           <Tooltip
+            cursor={false}
+            position={{ y: 0 }}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             content={((props: any) => {
               if (!props.active || !props.payload?.length) return null
