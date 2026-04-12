@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   retrain:
@@ -74,3 +75,9 @@ jobs:
                   backend/models/shap_importance.png
           git diff --cached --quiet || git commit -m "chore: retrain models [skip ci]"
           git push
+
+      - name: Trigger backend deploy
+        if: ${{ github.event.inputs.eval_only != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy-backend.yml --ref main

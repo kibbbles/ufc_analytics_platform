@@ -246,7 +246,7 @@ python post_scrape_clean.py        # Run full ETL pipeline + validation
 
 ### Automation
 - `.github/workflows/daily-keepalive.yml` — Daily 03:00 UTC: ping Supabase to prevent free tier pause
-- `.github/workflows/weekly-ufc-scraper.yml` — Sunday 18:00 UTC: live_scraper.py → completed events
+- `.github/workflows/weekly-ufc-scraper.yml` — Sunday 14:00 UTC (10 AM EDT): live_scraper.py → completed events
 - `.github/workflows/post-scrape-clean.yml` — ETL cleanup + archive_completed_predictions.py, auto-triggered after scrape
 - `.github/workflows/feature-engineering.yml` — Rebuild training matrix, auto-triggered after ETL
 - `.github/workflows/retrain.yml` — Retrain ML models, auto-triggered after feature engineering
@@ -259,7 +259,7 @@ Daily   03:00 UTC  → daily-keepalive       (keep Supabase alive)
 
 Saturday 15:00 UTC  → upcoming-predictions  (scrape same-day card + pre-compute)
 
-Sunday  18:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
+Sunday  14:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
                    → post-scrape-clean     (ETL cleanup + archive pre-fight predictions)
                    → feature-engineering  (rebuild training_data.parquet)
                    → retrain              (retrain + commit model artefacts)
