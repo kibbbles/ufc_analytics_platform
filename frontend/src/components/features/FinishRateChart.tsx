@@ -86,167 +86,142 @@ interface Props {
 
 export default function FinishRateChart({ data, config = {} }: Props) {
   const cfg = { ...DEFAULT_CONFIG, ...config }
+  const currentYear = new Date().getFullYear()
 
-  // Partial year rendered as dashed at the end
-  const chartData = data.map((d) => ({
-    ...d,
-    finish_rate_solid: d.is_partial_year ? null : d.finish_rate,
-    finish_rate_partial: d.is_partial_year ? d.finish_rate : null,
-    decision_rate_solid: d.is_partial_year ? null : d.decision_rate,
-    decision_rate_partial: d.is_partial_year ? d.decision_rate : null,
-  }))
+  // Partial year rendered as an open circle at the final point
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const partialDot = (color: string) => (props: any) => {
+    if (props.payload?.is_partial_year) {
+      return <circle key={props.index} cx={props.cx} cy={props.cy} r={3} fill="none" stroke={color} strokeWidth={2} />
+    }
+    return <g key={props.index} />
+  }
 
-  // Carry last solid point into partial so the line connects
-  let lastSolidIdx = -1
-  for (let i = chartData.length - 1; i >= 0; i--) {
-    if (!chartData[i].is_partial_year) { lastSolidIdx = i; break }
-  }
-  if (lastSolidIdx >= 0 && lastSolidIdx + 1 < chartData.length) {
-    chartData[lastSolidIdx + 1].finish_rate_partial = chartData[lastSolidIdx].finish_rate
-    chartData[lastSolidIdx + 1].decision_rate_partial = chartData[lastSolidIdx].decision_rate
-  }
+  const hasPartialYear = data.some((d) => d.is_partial_year)
 
   return (
-    <ResponsiveContainer width="100%" height={340}>
-      <LineChart data={chartData} margin={{ top: 28, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="var(--color-border-light)"
-          className="dark:[stroke:var(--color-border)]"
-          vertical={false}
-        />
-        <XAxis
-          dataKey="year"
-          tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-          tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
-          tickLine={false}
-          axisLine={false}
-          domain={[0, 1]}
-          width={36}
-        />
-        <Tooltip content={<ChartTooltip />} />
-        <Legend
-          wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-          formatter={(value: string) => (
-            <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-              {value}
-            </span>
-          )}
-        />
+    <div>
+      <ResponsiveContainer width="100%" height={340}>
+        <LineChart data={data} margin={{ top: 28, right: 16, left: 0, bottom: 0 }}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="var(--color-border-light)"
+            className="dark:[stroke:var(--color-border)]"
+            vertical={false}
+          />
+          <XAxis
+            dataKey="year"
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+            tickLine={false}
+            axisLine={false}
+            domain={[0, 1]}
+            width={36}
+          />
+          <Tooltip content={<ChartTooltip />} />
+          <Legend
+            wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+            formatter={(value: string) => (
+              <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+                {value}
+              </span>
+            )}
+          />
 
-        {cfg.showEraAnnotations && (
-          <>
-            {/* COVID shaded range */}
-            <ReferenceArea
-              x1={COVID_RANGE.x1}
-              x2={COVID_RANGE.x2}
-              fill="var(--color-text-muted)"
-              fillOpacity={0.08}
-              label={{
-                value: COVID_RANGE.label,
-                position: 'insideTop',
-                fontSize: 10,
-                fill: 'var(--color-text-muted)',
-              }}
-            />
-
-            {/* Rule change lines — label above the chart area (top margin) */}
-            {ERA_LINES.map(({ year, label }, i) => (
-              <ReferenceLine
-                key={year}
-                x={year}
-                stroke="var(--color-border)"
-                strokeDasharray="4 2"
+          {cfg.showEraAnnotations && (
+            <>
+              {/* COVID shaded range */}
+              <ReferenceArea
+                x1={COVID_RANGE.x1}
+                x2={COVID_RANGE.x2}
+                fill="var(--color-text-muted)"
+                fillOpacity={0.08}
                 label={{
-                  value: label,
-                  position: 'top',
+                  value: COVID_RANGE.label,
+                  position: 'insideTop',
                   fontSize: 10,
                   fill: 'var(--color-text-muted)',
-                  // Alternate offset so adjacent labels don't overlap
-                  offset: i % 2 === 0 ? 4 : 16,
                 }}
               />
-            ))}
-          </>
-        )}
 
-        {/* Combined finish rate */}
-        {cfg.showFinishRate && (
-          <>
+              {/* Rule change lines — label above the chart area (top margin) */}
+              {ERA_LINES.map(({ year, label }, i) => (
+                <ReferenceLine
+                  key={year}
+                  x={year}
+                  stroke="var(--color-border)"
+                  strokeDasharray="4 2"
+                  label={{
+                    value: label,
+                    position: 'top',
+                    fontSize: 10,
+                    fill: 'var(--color-text-muted)',
+                    offset: i % 2 === 0 ? 4 : 16,
+                  }}
+                />
+              ))}
+            </>
+          )}
+
+          {/* Combined finish rate */}
+          {cfg.showFinishRate && (
             <Line
-              dataKey="finish_rate_solid"
+              dataKey="finish_rate"
               name="Finish rate"
               stroke={cfg.colorFinishRate}
               strokeWidth={2.5}
-              dot={false}
-              connectNulls={false}
+              dot={partialDot(cfg.colorFinishRate)}
+              connectNulls
               legendType="line"
             />
-            <Line
-              dataKey="finish_rate_partial"
-              name=" "
-              stroke={cfg.colorFinishRate}
-              strokeWidth={2.5}
-              strokeDasharray="5 4"
-              dot={false}
-              connectNulls={false}
-              legendType="none"
-            />
-          </>
-        )}
+          )}
 
-        {/* Decision rate — always shown alongside finish rate for context */}
-        {(cfg.showFinishRate || cfg.showDecision) && (
-          <>
+          {/* Decision rate — always shown alongside finish rate for context */}
+          {(cfg.showFinishRate || cfg.showDecision) && (
             <Line
-              dataKey="decision_rate_solid"
+              dataKey="decision_rate"
               name="Decision rate"
               stroke={cfg.colorDecision}
               strokeWidth={2}
-              dot={false}
-              connectNulls={false}
+              dot={partialDot(cfg.colorDecision)}
+              connectNulls
               legendType="line"
             />
-            <Line
-              dataKey="decision_rate_partial"
-              name=" "
-              stroke={cfg.colorDecision}
-              strokeWidth={2}
-              strokeDasharray="5 4"
-              dot={false}
-              connectNulls={false}
-              legendType="none"
-            />
-          </>
-        )}
+          )}
 
-        {/* Individual breakdown lines */}
-        {cfg.showKoTko && (
-          <Line
-            dataKey="ko_tko_rate"
-            name="KO/TKO"
-            stroke={cfg.colorKoTko}
-            strokeWidth={2}
-            dot={false}
-            connectNulls
-          />
-        )}
-        {cfg.showSubmission && (
-          <Line
-            dataKey="submission_rate"
-            name="Submission"
-            stroke={cfg.colorSubmission}
-            strokeWidth={2}
-            dot={false}
-            connectNulls
-          />
-        )}
-      </LineChart>
-    </ResponsiveContainer>
+          {/* Individual breakdown lines */}
+          {cfg.showKoTko && (
+            <Line
+              dataKey="ko_tko_rate"
+              name="KO/TKO"
+              stroke={cfg.colorKoTko}
+              strokeWidth={2}
+              dot={partialDot(cfg.colorKoTko)}
+              connectNulls
+            />
+          )}
+          {cfg.showSubmission && (
+            <Line
+              dataKey="submission_rate"
+              name="Submission"
+              stroke={cfg.colorSubmission}
+              strokeWidth={2}
+              dot={partialDot(cfg.colorSubmission)}
+              connectNulls
+            />
+          )}
+        </LineChart>
+      </ResponsiveContainer>
+      {hasPartialYear && (
+        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+          ○ Open circle = {currentYear} (partial year, fights still ongoing).
+        </p>
+      )}
+    </div>
   )
 }
