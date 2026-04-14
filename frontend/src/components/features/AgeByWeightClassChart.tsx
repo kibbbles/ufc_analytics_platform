@@ -59,55 +59,72 @@ function TimeSeriesView({ data, weightClass }: { data: AgeByWeightClassPoint[]; 
     )
   }
 
+  const currentYear = new Date().getFullYear()
+  const hasCurrentYear = filtered.some((d) => d.year === currentYear)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const partialDot = (color: string) => (props: any) => {
+    if (props.payload?.year === currentYear) {
+      return <circle key={props.index} cx={props.cx} cy={props.cy} r={3} fill="none" stroke={color} strokeWidth={2} />
+    }
+    return <g key={props.index} />
+  }
+
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <LineChart data={filtered} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="var(--color-border-light)"
-          className="dark:[stroke:var(--color-border)]"
-          vertical={false}
-        />
-        <XAxis
-          dataKey="year"
-          tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          tickFormatter={(v: number) => `${v}`}
-          tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
-          tickLine={false}
-          axisLine={false}
-          domain={['auto', 'auto']}
-          width={32}
-        />
-        <Tooltip
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          content={((props: any) => {
-            if (!props.active || !props.payload?.length) return null
-            const d = props.payload[0]?.payload as AgeByWeightClassPoint
-            return (
-              <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
-                <p className="font-bold mb-1">{d.year}</p>
-                <p style={{ color: '#e63946' }}>Avg age: {d.avg_age.toFixed(1)}</p>
-                <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  {d.fighter_count} fighters
-                </p>
-              </div>
-            )
-          }) as any}
-        />
-        <Line
-          dataKey="avg_age"
-          name="Avg age"
-          stroke="#e63946"
-          strokeWidth={2}
-          dot={false}
-          connectNulls
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={260}>
+        <LineChart data={filtered} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="var(--color-border-light)"
+            className="dark:[stroke:var(--color-border)]"
+            vertical={false}
+          />
+          <XAxis
+            dataKey="year"
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tickFormatter={(v: number) => `${v}`}
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+            tickLine={false}
+            axisLine={false}
+            domain={['auto', 'auto']}
+            width={32}
+          />
+          <Tooltip
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            content={((props: any) => {
+              if (!props.active || !props.payload?.length) return null
+              const d = props.payload[0]?.payload as AgeByWeightClassPoint
+              return (
+                <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
+                  <p className="font-bold mb-1">{d.year}</p>
+                  <p style={{ color: '#e63946' }}>Avg age: {d.avg_age.toFixed(1)}</p>
+                  <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    {d.fighter_count} fighters
+                  </p>
+                </div>
+              )
+            }) as any}
+          />
+          <Line
+            dataKey="avg_age"
+            name="Avg age"
+            stroke="#e63946"
+            strokeWidth={2}
+            dot={partialDot('#e63946')}
+            connectNulls
+          />
+        </LineChart>
+      </ResponsiveContainer>
+      {hasCurrentYear && (
+        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+          ○ Open circle = {currentYear} (partial year, fights still ongoing).
+        </p>
+      )}
+    </div>
   )
 }
 

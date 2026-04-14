@@ -88,60 +88,77 @@ function TimeSeriesView({ data, weightClass }: { data: PhysicalStatPoint[]; weig
     )
   }
 
+  const currentYear = new Date().getFullYear()
+  const hasCurrentYear = filtered.some((d) => d.year === currentYear)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const partialDot = (color: string) => (props: any) => {
+    if (props.payload?.year === currentYear) {
+      return <circle key={props.index} cx={props.cx} cy={props.cy} r={3} fill="none" stroke={color} strokeWidth={2} />
+    }
+    return <g key={props.index} />
+  }
+
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={filtered} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="var(--color-border-light)"
-          className="dark:[stroke:var(--color-border)]"
-          vertical={false}
-        />
-        <XAxis
-          dataKey="year"
-          tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          tickFormatter={(v: number) => `${v}"`}
-          tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
-          tickLine={false}
-          axisLine={false}
-          domain={['auto', 'auto']}
-          allowDecimals={false}
-          width={36}
-        />
-        <Tooltip
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          content={((props: any) => <PhysicalTooltip {...props} isTimeSeries />) as any}
-        />
-        <Legend
-          wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-          formatter={(value: string) => (
-            <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-              {value}
-            </span>
-          )}
-        />
-        <Line
-          dataKey="avg_height_inches"
-          name="Avg height (in)"
-          stroke="#4361ee"
-          strokeWidth={2}
-          dot={false}
-          connectNulls
-        />
-        <Line
-          dataKey="avg_reach_inches"
-          name="Avg reach (in)"
-          stroke="#e63946"
-          strokeWidth={2}
-          dot={false}
-          connectNulls
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart data={filtered} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="var(--color-border-light)"
+            className="dark:[stroke:var(--color-border)]"
+            vertical={false}
+          />
+          <XAxis
+            dataKey="year"
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tickFormatter={(v: number) => `${v}"`}
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+            tickLine={false}
+            axisLine={false}
+            domain={['auto', 'auto']}
+            allowDecimals={false}
+            width={36}
+          />
+          <Tooltip
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            content={((props: any) => <PhysicalTooltip {...props} isTimeSeries />) as any}
+          />
+          <Legend
+            wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+            formatter={(value: string) => (
+              <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+                {value}
+              </span>
+            )}
+          />
+          <Line
+            dataKey="avg_height_inches"
+            name="Avg height (in)"
+            stroke="#4361ee"
+            strokeWidth={2}
+            dot={partialDot('#4361ee')}
+            connectNulls
+          />
+          <Line
+            dataKey="avg_reach_inches"
+            name="Avg reach (in)"
+            stroke="#e63946"
+            strokeWidth={2}
+            dot={partialDot('#e63946')}
+            connectNulls
+          />
+        </LineChart>
+      </ResponsiveContainer>
+      {hasCurrentYear && (
+        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+          ○ Open circle = {currentYear} (partial year, fights still ongoing).
+        </p>
+      )}
+    </div>
   )
 }
 
