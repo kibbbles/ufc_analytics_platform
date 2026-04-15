@@ -87,11 +87,55 @@ def phase_4_derived_columns():
     run_derived_columns()
 
 
+def phase_5_refresh_materialized_views():
+    """Refresh all analytics materialized views after ETL data is clean.
+
+    These views pre-compute the 8 aggregate queries run by
+    GET /api/v1/analytics/style-evolution.  Refreshing here ensures the
+    analytics page always reads from up-to-date pre-computed rows rather
+    than re-aggregating raw tables on every request.
+
+    Views refreshed (defined in backend/db/migrations/003_materialized_views.sql):
+        mv_finish_rates         — finish/decision rates by year × weight_class
+        mv_fighter_output       — avg sig strikes / TD attempts / ctrl time by year
+        mv_round_distribution   — finish round distribution by year
+        mv_heatmap              — finish rates by year × weight_class (all divisions)
+        mv_physical_stats       — avg height/reach by year × weight_class
+        mv_age_data             — avg fighter age by year × weight_class
+        mv_fighter_stats_by_wc  — career stats snapshot per weight_class
+        mv_style_stats          — per-year striking/grappling metrics by weight_class
+    """
+    from sqlalchemy import text
+    from db.database import SessionLocal
+
+    views = [
+        "mv_finish_rates",
+        "mv_fighter_output",
+        "mv_round_distribution",
+        "mv_heatmap",
+        "mv_physical_stats",
+        "mv_age_data",
+        "mv_fighter_stats_by_wc",
+        "mv_style_stats",
+    ]
+
+    session = SessionLocal()
+    try:
+        for view in views:
+            log.info(f"  Refreshing {view} ...")
+            session.execute(text(f"REFRESH MATERIALIZED VIEW {view}"))
+            session.commit()
+            log.info(f"  {view} OK")
+    finally:
+        session.close()
+
+
 PHASES = {
-    1: ("FK Resolution",    phase_1_fk_resolution),
-    2: ("Quality Cleanup",  phase_2_quality_cleanup),
-    3: ("Type Parsing",     phase_3_type_parsing),
-    4: ("Derived Columns",  phase_4_derived_columns),
+    1: ("FK Resolution",             phase_1_fk_resolution),
+    2: ("Quality Cleanup",           phase_2_quality_cleanup),
+    3: ("Type Parsing",              phase_3_type_parsing),
+    4: ("Derived Columns",           phase_4_derived_columns),
+    5: ("Refresh Materialized Views", phase_5_refresh_materialized_views),
 }
 
 
@@ -187,17 +231,18 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Phases:
-  1  FK Resolution    — fighter_a_id, fighter_b_id, winner/loser FKs, fight_stats.fighter_id
-  2  Quality Cleanup  — NULL out '--' placeholders, strip METHOD whitespace
-  3  Type Parsing     — parse 'X of Y' strikes, CTRL time, height/weight/reach, fight time
-  4  Derived Columns  — weight_class, is_title_fight, is_interim_title, is_championship_rounds
+  1  FK Resolution             — fighter_a_id, fighter_b_id, winner/loser FKs, fight_stats.fighter_id
+  2  Quality Cleanup           — NULL out '--' placeholders, strip METHOD whitespace
+  3  Type Parsing              — parse 'X of Y' strikes, CTRL time, height/weight/reach, fight time
+  4  Derived Columns           — weight_class, is_title_fight, is_interim_title, is_championship_rounds
+  5  Refresh Materialized Views — refresh all 8 analytics views (mv_finish_rates, mv_fighter_output, etc.)
 """,
     )
     parser.add_argument(
         "--phase",
         type=int,
         choices=list(PHASES.keys()),
-        help="Run only this phase (1–4). Omit to run all phases in sequence.",
+        help="Run only this phase (1–5). Omit to run all phases in sequence.",
     )
     parser.add_argument(
         "--dry-run",

@@ -394,6 +394,63 @@ The most technically distinctive feature: a floating chat widget on every page t
 
 ---
 
+## Analytics Page — "How the UFC Has Changed"
+
+The analytics page (`/analytics`) is the most data-dense page on the site. It runs a single endpoint — `GET /api/v1/analytics/style-evolution` — that executes 8 aggregate queries and returns them in one JSON response. The page has no user-submitted data; it's a read-only window into UFC history.
+
+### The 8 sections and their queries
+
+| Section | Chart component | Query grain | Raw tables touched |
+|---|---|---|---|
+| How fights end | `FinishRateChart` | year (× weight_class optional) | `fight_results`, `event_details` |
+| How fighters fight | `FighterOutputChart` | year (× weight_class optional) | `fight_stats`, `fight_details`, `fight_results`, `event_details` |
+| When finishes happen | `RoundDistributionChart` | year (× weight_class optional) | `fight_results`, `event_details` |
+| Finish rate by weight class | `WeightClassHeatmap` | year × weight_class (all divisions) | `fight_results`, `event_details` |
+| Athlete body sizes | `PhysicalStatsChart` | year × weight_class (all divisions) | `fight_results`, `event_details`, `fighter_tott` |
+| Fighter age by weight class | `AgeByWeightClassChart` | year × weight_class (all divisions) | `fight_results`, `event_details`, `fighter_tott` |
+| Fighting style (snapshot) | `FighterStatsByWeightClassTable` | weight_class only | `fight_results`, `fighter_tott` |
+| Fighting style (time series) | `FighterStatsTimeSeriesChart` | year × weight_class (all divisions) | `fight_stats` self-join, `fight_results`, `event_details` |
+
+The heaviest query is the style time series (Query 8) — it self-joins `fight_stats` (39,912 rows) to itself to derive opponent-based metrics (strikes absorbed per minute, strike defense, TD defense). Query 2 (fighter output) is the second heaviest: nested aggregation per-fighter per-fight across all of fight_stats.
+
+### Partial year handling
+
+The current year (2026) is included in all queries but flagged as `is_partial_year = True` in the API response. Charts render the current year's data point as an open circle (hollow dot) rather than a solid point, with a footnote "○ Open circle = 2026 (partial year, fights still ongoing)." This pattern is consistent across `FinishRateChart`, `PhysicalStatsChart`, `AgeByWeightClassChart`, and `FighterStatsTimeSeriesChart`.
+
+### Weight class filter
+
+A sticky filter bar at the top of the page lets users pick a single weight class. When selected:
+- Queries 1, 2, 3 add `AND fr.weight_class = :weight_class` — the charts narrow to that division's history.
+- Queries 4, 5, 6, 7, 8 always return all divisions regardless — the heatmap, physical stats, and age charts show all divisions and the filter is noted in the UI as not applying.
+- The "Fighting style" section switches from the snapshot table (all divisions) to a time series chart for the selected division.
+
+### Materialized views (added April 2026)
+
+**Problem:** With `min-instances=0` on Cloud Run, cold starts meant the analytics page ran all 8 queries fresh against 8,000+ fight results and 39,000+ fight stats rows on every visit. Even with `min-instances=1`, each page load fired 8 sequential round trips to Supabase (~40–80ms each).
+
+**Insight:** The data has a natural immutability boundary. Once a year ends and the ETL runs, that year's aggregated results never change. 2025 and everything before it is frozen permanently. Only the current partial year (2026) changes week-to-week.
+
+**Solution:** 8 materialized views defined in `backend/db/migrations/003_materialized_views.sql`:
+
+```
+mv_finish_rates         — ~400 rows  (year × weight_class, incl. all-divisions NULL rows)
+mv_fighter_output       — ~140 rows  (2015+, year × weight_class)
+mv_round_distribution   — ~400 rows  (year × weight_class)
+mv_heatmap              — ~400 rows  (year × weight_class, UFC divisions only)
+mv_physical_stats       — ~300 rows  (year × weight_class, HAVING >= 5 fighters)
+mv_age_data             — ~300 rows  (year × weight_class, HAVING >= 5 fighters)
+mv_fighter_stats_by_wc  —  ~13 rows  (weight_class only, career snapshot)
+mv_style_stats          — ~140 rows  (year × weight_class)
+```
+
+Total storage: well under 1 MB. On load, the endpoint does `SELECT * FROM mv_xxx WHERE ...` — instant reads on tiny pre-computed tables instead of full aggregations over raw data.
+
+**Refresh:** `post_scrape_clean.py` Phase 5 (added alongside the views) calls `REFRESH MATERIALIZED VIEW` for all 8 views after Phase 4 completes. This runs every Sunday after the weekly scrape and ETL, so the views are always current within one week. The current year's rows are at most 6 days stale between refreshes — acceptable for an analytics showcase.
+
+**Cold start behaviour:** Unlike in-process Python caching (which resets on every container restart), materialized views live in Supabase. A cold start doesn't matter — the pre-computed data is always there waiting, regardless of whether the container was running.
+
+---
+
 ## What's Next (Post-MVP)
 
 1. **Fight Outcome Predictor (Task 8)**: Interactive sliders — adjust fighter attributes and see win probability update in real time.
