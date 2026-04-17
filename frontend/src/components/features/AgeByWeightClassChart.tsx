@@ -86,7 +86,8 @@ function TimeSeriesView({ data, weightClass }: { data: AgeByWeightClassPoint[]; 
             axisLine={false}
           />
           <YAxis
-            tickFormatter={(v: number) => `${v}`}
+            tickFormatter={(v: number) => String(Math.round(v))}
+            allowDecimals={false}
             tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
             tickLine={false}
             axisLine={false}
@@ -101,7 +102,7 @@ function TimeSeriesView({ data, weightClass }: { data: AgeByWeightClassPoint[]; 
               return (
                 <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
                   <p className="font-bold mb-1">{d.year}</p>
-                  <p style={{ color: '#e63946' }}>Avg age: {d.avg_age.toFixed(1)}</p>
+                  <p style={{ color: '#e63946' }}>Avg age: {Math.round(d.avg_age)}</p>
                   <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                     {d.fighter_count} fighters
                   </p>

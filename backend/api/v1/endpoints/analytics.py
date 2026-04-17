@@ -33,13 +33,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Current UFC weight classes — used to exclude historical non-divisions
-_UFC_WEIGHT_CLASSES = (
-    "'Heavyweight','Light Heavyweight','Middleweight','Welterweight',"
-    "'Lightweight','Featherweight','Bantamweight','Flyweight','Strawweight',"
-    "'Women''s Strawweight','Women''s Flyweight','Women''s Bantamweight','Women''s Featherweight'"
-)
-
 
 @router.get(
     "/style-evolution",
@@ -51,257 +44,77 @@ def style_evolution(
     db: Session = Depends(get_db),
 ):
     params: dict = {}
-    wc_filter_fr = ""
-    wc_filter_fs = ""
+    # Queries 1–3 filter by weight_class; the materialized views encode the
+    # all-divisions aggregate as weight_class IS NULL and per-division rows with
+    # the actual weight class string.
     if weight_class:
-        wc_filter_fr = "AND fr.weight_class = :weight_class"
-        wc_filter_fs = "AND fr.weight_class = :weight_class"
+        wc_clause_filtered = "WHERE weight_class = :weight_class"
         params["weight_class"] = weight_class
+    else:
+        wc_clause_filtered = "WHERE weight_class IS NULL"
 
-    # ── Query 1: finish rates by year (all years, weight class filter optional) ──
+    # ── Query 1: finish rates by year (mv_finish_rates) ──────────────────────────
     finish_rows = db.execute(text(f"""
-        SELECT
-            EXTRACT(YEAR FROM ed.date_proper)::int AS year,
-            COUNT(*)                               AS total_fights,
-            ROUND(
-                COUNT(CASE WHEN fr."METHOD" ILIKE '%KO%' OR fr."METHOD" ILIKE '%TKO%'
-                           THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS ko_tko_rate,
-            ROUND(
-                COUNT(CASE WHEN fr."METHOD" ILIKE '%Submission%'
-                           THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS submission_rate,
-            ROUND(
-                COUNT(CASE WHEN fr."METHOD" ILIKE '%Decision%'
-                           THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS decision_rate
-        FROM fight_results fr
-        JOIN event_details ed ON ed.id = fr.event_id
-        WHERE ed.date_proper IS NOT NULL
-          {wc_filter_fr}
-        GROUP BY year
+        SELECT year, total_fights, ko_tko_rate, submission_rate, decision_rate
+        FROM mv_finish_rates
+        {wc_clause_filtered}
         ORDER BY year
     """), params).mappings().all()
 
-    # ── Query 2: avg fighter outputs per fight by year (fight_stats, 2015+) ──────
+    # ── Query 2: avg fighter outputs per fight by year (mv_fighter_output) ───────
     output_rows = db.execute(text(f"""
-        SELECT
-            EXTRACT(YEAR FROM ed.date_proper)::int          AS year,
-            COUNT(DISTINCT per_fighter.fight_id)            AS total_fights,
-            ROUND(AVG(per_fighter.sig_str_total)::numeric, 1)::float
-                                                            AS avg_sig_str_per_fight,
-            ROUND(AVG(per_fighter.td_attempted_total)::numeric, 1)::float
-                                                            AS avg_td_attempts_per_fight,
-            ROUND(AVG(per_fighter.ctrl_seconds_total)::numeric, 0)::float
-                                                            AS avg_ctrl_seconds_per_fight
-        FROM (
-            SELECT
-                fs.fight_id,
-                fs.fighter_id,
-                SUM(fs.sig_str_landed)  AS sig_str_total,
-                SUM(fs.td_attempted)    AS td_attempted_total,
-                SUM(fs.ctrl_seconds)    AS ctrl_seconds_total
-            FROM fight_stats fs
-            WHERE fs."ROUND" NOT ILIKE '%total%'
-              AND fs.sig_str_landed IS NOT NULL
-            GROUP BY fs.fight_id, fs.fighter_id
-        ) per_fighter
-        JOIN fight_details fdet ON fdet.id = per_fighter.fight_id
-        JOIN fight_results fr   ON fr.fight_id = per_fighter.fight_id
-        JOIN event_details ed   ON ed.id = fdet.event_id
-        WHERE ed.date_proper >= '2015-01-01'
-          {wc_filter_fs}
-        GROUP BY year
+        SELECT year, total_fights, avg_sig_str_per_fight,
+               avg_td_attempts_per_fight, avg_ctrl_seconds_per_fight
+        FROM mv_fighter_output
+        {wc_clause_filtered}
         ORDER BY year
     """), params).mappings().all()
 
-    # ── Query 3: finish round distribution by year (weight class filter optional) ─
+    # ── Query 3: finish round distribution by year (mv_round_distribution) ───────
     round_rows = db.execute(text(f"""
-        SELECT
-            EXTRACT(YEAR FROM ed.date_proper)::int AS year,
-            COUNT(*)                               AS total_finishes,
-            ROUND(
-                COUNT(CASE WHEN fr."ROUND" = 1 THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS r1_pct,
-            ROUND(
-                COUNT(CASE WHEN fr."ROUND" = 2 THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS r2_pct,
-            ROUND(
-                COUNT(CASE WHEN fr."ROUND" = 3 THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS r3_pct,
-            ROUND(
-                COUNT(CASE WHEN fr."ROUND" >= 4 THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS r4plus_pct
-        FROM fight_results fr
-        JOIN event_details ed ON ed.id = fr.event_id
-        WHERE ed.date_proper IS NOT NULL
-          AND fr."METHOD" NOT ILIKE '%decision%'
-          AND fr."METHOD" NOT ILIKE '%no contest%'
-          AND fr."METHOD" NOT ILIKE '%dq%'
-          AND fr."ROUND" IS NOT NULL
-          {wc_filter_fr}
-        GROUP BY year
+        SELECT year, total_finishes, r1_pct, r2_pct, r3_pct, r4plus_pct
+        FROM mv_round_distribution
+        {wc_clause_filtered}
         ORDER BY year
     """), params).mappings().all()
 
-    # ── Query 4: finish rates by weight class × year (heatmap, always all wcs) ───
-    heatmap_rows = db.execute(text(f"""
-        SELECT
-            EXTRACT(YEAR FROM ed.date_proper)::int AS year,
-            fr.weight_class,
-            COUNT(*)                               AS total_fights,
-            ROUND(
-                COUNT(CASE WHEN fr."METHOD" ILIKE '%KO%' OR fr."METHOD" ILIKE '%TKO%'
-                           THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS ko_tko_rate,
-            ROUND(
-                COUNT(CASE WHEN fr."METHOD" ILIKE '%Submission%'
-                           THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS submission_rate,
-            ROUND(
-                COUNT(CASE WHEN fr."METHOD" ILIKE '%Decision%'
-                           THEN 1 END)::numeric / NULLIF(COUNT(*), 0), 4
-            )::float                               AS decision_rate
-        FROM fight_results fr
-        JOIN event_details ed ON ed.id = fr.event_id
-        WHERE ed.date_proper IS NOT NULL
-          AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
-        GROUP BY year, fr.weight_class
-        ORDER BY year, fr.weight_class
+    # ── Query 4: finish rates by weight class × year (mv_heatmap) ────────────────
+    heatmap_rows = db.execute(text("""
+        SELECT year, weight_class, total_fights,
+               ko_tko_rate, submission_rate, decision_rate
+        FROM mv_heatmap
+        ORDER BY year, weight_class
     """)).mappings().all()
 
-    # ── Query 5: avg height/reach by weight class × year (always all wcs) ────────
-    physical_rows = db.execute(text(f"""
-        SELECT
-            EXTRACT(YEAR FROM ed.date_proper)::int          AS year,
-            fr.weight_class,
-            ROUND(AVG(ft.height_inches)::numeric, 1)::float AS avg_height_inches,
-            ROUND(AVG(ft.reach_inches)::numeric, 1)::float  AS avg_reach_inches,
-            COUNT(DISTINCT fr.fighter_id)                   AS fighter_count
-        FROM fight_results fr
-        JOIN event_details ed   ON ed.id = fr.event_id
-        JOIN fighter_tott ft    ON ft.fighter_id = fr.fighter_id
-        WHERE ft.height_inches IS NOT NULL
-          AND ft.reach_inches IS NOT NULL
-          AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
-        GROUP BY year, fr.weight_class
-        HAVING COUNT(DISTINCT fr.fighter_id) >= 5
-        ORDER BY year, fr.weight_class
+    # ── Query 5: avg height/reach by weight class × year (mv_physical_stats) ─────
+    physical_rows = db.execute(text("""
+        SELECT year, weight_class, avg_height_inches, avg_reach_inches, fighter_count
+        FROM mv_physical_stats
+        ORDER BY year, weight_class
     """)).mappings().all()
 
-    # ── Query 6: avg fighter age by weight class × year (always all wcs) ─────────
-    age_rows = db.execute(text(f"""
-        SELECT
-            EXTRACT(YEAR FROM ed.date_proper)::int AS year,
-            fr.weight_class,
-            ROUND(AVG(
-                EXTRACT(YEAR FROM AGE(ed.date_proper, ft.dob_date)) +
-                EXTRACT(MONTH FROM AGE(ed.date_proper, ft.dob_date)) / 12.0
-            )::numeric, 1)::float                  AS avg_age,
-            COUNT(DISTINCT fr.fighter_id)          AS fighter_count
-        FROM fight_results fr
-        JOIN event_details ed ON ed.id = fr.event_id
-        JOIN fighter_tott ft  ON ft.fighter_id = fr.fighter_id
-        WHERE ft.dob_date IS NOT NULL
-          AND ed.date_proper IS NOT NULL
-          AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
-        GROUP BY year, fr.weight_class
-        HAVING COUNT(DISTINCT fr.fighter_id) >= 5
-        ORDER BY year, fr.weight_class
+    # ── Query 6: avg fighter age by weight class × year (mv_age_data) ────────────
+    age_rows = db.execute(text("""
+        SELECT year, weight_class, avg_age, fighter_count
+        FROM mv_age_data
+        ORDER BY year, weight_class
     """)).mappings().all()
 
-    # ── Query 7: career stats by weight class (always all wcs) ───────────────────
-    # str_acc / str_def / td_acc / td_def stored as "41%" text — strip % and cast
-    stats_rows = db.execute(text(f"""
-        SELECT
-            fr.weight_class,
-            ROUND(AVG(ft.slpm)::numeric,  2)::float AS avg_slpm,
-            ROUND(AVG(NULLIF(REPLACE(ft.str_acc, '%', ''), '')::numeric / 100), 4)::float AS avg_str_acc,
-            ROUND(AVG(ft.sapm)::numeric,  2)::float AS avg_sapm,
-            ROUND(AVG(NULLIF(REPLACE(ft.str_def, '%', ''), '')::numeric / 100), 4)::float AS avg_str_def,
-            ROUND(AVG(ft.td_avg)::numeric, 2)::float AS avg_td_avg,
-            ROUND(AVG(NULLIF(REPLACE(ft.td_acc, '%', ''), '')::numeric / 100), 4)::float AS avg_td_acc,
-            ROUND(AVG(NULLIF(REPLACE(ft.td_def, '%', ''), '')::numeric / 100), 4)::float AS avg_td_def,
-            ROUND(AVG(ft.sub_avg)::numeric, 2)::float AS avg_sub_avg,
-            COUNT(DISTINCT fr.fighter_id)             AS fighter_count
-        FROM fight_results fr
-        JOIN fighter_tott ft ON ft.fighter_id = fr.fighter_id
-        WHERE ft.slpm IS NOT NULL
-          AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
-        GROUP BY fr.weight_class
-        HAVING COUNT(DISTINCT fr.fighter_id) >= 10
-        ORDER BY fr.weight_class
+    # ── Query 7: career stats by weight class (mv_fighter_stats_by_wc) ───────────
+    stats_rows = db.execute(text("""
+        SELECT weight_class, avg_slpm, avg_str_acc, avg_sapm, avg_str_def,
+               avg_td_avg, avg_td_acc, avg_td_def, avg_sub_avg, fighter_count
+        FROM mv_fighter_stats_by_wc
+        ORDER BY weight_class
     """)).mappings().all()
 
-    # ── Query 8: per-year style metrics by weight class from fight_stats ─────────
-    # Self-join on fight_stats to derive opponent-based metrics (SApM, Str Def, TD Def)
-    style_rows = db.execute(text(f"""
-        SELECT
-            EXTRACT(YEAR FROM ed.date_proper)::int AS year,
-            fr.weight_class,
-            ROUND(AVG(
-                pf.sig_str_landed::float / NULLIF(fr.total_fight_time_seconds / 60.0, 0)
-            )::numeric, 2)::float AS avg_slpm,
-            ROUND(AVG(
-                CASE WHEN pf.sig_str_attempted > 0
-                     THEN pf.sig_str_landed::float / pf.sig_str_attempted
-                     ELSE NULL END
-            )::numeric, 4)::float AS avg_str_acc,
-            ROUND(AVG(
-                pf.opp_sig_str_landed::float / NULLIF(fr.total_fight_time_seconds / 60.0, 0)
-            )::numeric, 2)::float AS avg_sapm,
-            ROUND(AVG(
-                CASE WHEN pf.opp_sig_str_attempted > 0
-                     THEN 1.0 - pf.opp_sig_str_landed::float / pf.opp_sig_str_attempted
-                     ELSE NULL END
-            )::numeric, 4)::float AS avg_str_def,
-            ROUND(AVG(pf.td_landed)::numeric, 2)::float AS avg_td_per_fight,
-            ROUND(AVG(
-                CASE WHEN pf.td_attempted > 0
-                     THEN pf.td_landed::float / pf.td_attempted
-                     ELSE NULL END
-            )::numeric, 4)::float AS avg_td_acc,
-            ROUND(AVG(
-                CASE WHEN pf.opp_td_attempted > 0
-                     THEN 1.0 - pf.opp_td_landed::float / pf.opp_td_attempted
-                     ELSE NULL END
-            )::numeric, 4)::float AS avg_td_def,
-            ROUND(AVG(pf.sub_attempts)::numeric, 2)::float AS avg_sub_per_fight,
-            ROUND(AVG(pf.ctrl_seconds_total)::numeric, 0)::float AS avg_ctrl_seconds,
-            COUNT(DISTINCT pf.fight_id) AS fight_count
-        FROM (
-            SELECT
-                fs.fight_id,
-                fs.fighter_id,
-                SUM(fs.sig_str_landed)    AS sig_str_landed,
-                SUM(fs.sig_str_attempted) AS sig_str_attempted,
-                SUM(fs.td_landed)         AS td_landed,
-                SUM(fs.td_attempted)      AS td_attempted,
-                SUM(fs.ctrl_seconds)      AS ctrl_seconds_total,
-                SUM(CASE WHEN TRIM(COALESCE(fs."SUB.ATT", '')) ~ '^[0-9]+(\.[0-9]*)?$'
-                         THEN FLOOR(TRIM(fs."SUB.ATT")::numeric)::integer ELSE 0 END) AS sub_attempts,
-                SUM(opp.sig_str_landed)    AS opp_sig_str_landed,
-                SUM(opp.sig_str_attempted) AS opp_sig_str_attempted,
-                SUM(opp.td_landed)         AS opp_td_landed,
-                SUM(opp.td_attempted)      AS opp_td_attempted
-            FROM fight_stats fs
-            JOIN fight_stats opp ON opp.fight_id = fs.fight_id
-                AND opp.fighter_id != fs.fighter_id
-                AND opp.fighter_id IS NOT NULL
-                AND opp."ROUND" NOT ILIKE '%total%'
-            WHERE fs."ROUND" NOT ILIKE '%total%'
-              AND fs.sig_str_landed IS NOT NULL
-              AND fs.fighter_id IS NOT NULL
-            GROUP BY fs.fight_id, fs.fighter_id
-        ) pf
-        JOIN fight_results fr ON fr.fight_id = pf.fight_id
-        JOIN event_details ed  ON ed.id = fr.event_id
-        WHERE ed.date_proper IS NOT NULL
-          AND fr.total_fight_time_seconds > 0
-          AND fr.weight_class IN ({_UFC_WEIGHT_CLASSES})
-        GROUP BY year, fr.weight_class
-        HAVING COUNT(DISTINCT pf.fight_id) >= 5
-        ORDER BY year, fr.weight_class
+    # ── Query 8: per-year style metrics by weight class (mv_style_stats) ─────────
+    style_rows = db.execute(text("""
+        SELECT year, weight_class, avg_slpm, avg_str_acc, avg_sapm, avg_str_def,
+               avg_td_per_fight, avg_td_acc, avg_td_def, avg_sub_per_fight,
+               avg_ctrl_seconds, fight_count
+        FROM mv_style_stats
+        ORDER BY year, weight_class
     """)).mappings().all()
 
     current_year = date.today().year
