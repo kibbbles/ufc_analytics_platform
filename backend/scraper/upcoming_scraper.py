@@ -26,7 +26,7 @@ import time
 import argparse
 from datetime import datetime
 
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import pandas as pd
 from sqlalchemy import text
@@ -86,7 +86,9 @@ FUZZY_THRESHOLD = 88
 class UpcomingScraper:
 
     def __init__(self):
-        self.session = requests.Session()
+        self.session = cloudscraper.create_scraper(
+            browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+        )
         self.session.headers.update(HEADERS)
         self.existing_ids: set = set()
         self._load_existing_ids()
