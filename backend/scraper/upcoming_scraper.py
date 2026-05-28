@@ -55,7 +55,27 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 UPCOMING_URL = 'http://ufcstats.com/statistics/events/upcoming?page=all'
-HEADERS      = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/125.0.0.0 Safari/537.36'
+    ),
+    'Accept': (
+        'text/html,application/xhtml+xml,application/xml;q=0.9,'
+        'image/avif,image/webp,image/apng,*/*;q=0.8,'
+        'application/signed-exchange;v=b3;q=0.7'
+    ),
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Cache-Control': 'max-age=0',
+}
 FUZZY_THRESHOLD = 88
 
 
@@ -196,6 +216,12 @@ class UpcomingScraper:
         # returned a rate-limit/CAPTCHA/error response — raise so the pipeline fails loudly
         # instead of silently leaving the DB stale.
         if not soup.find(class_=re.compile(r'b-statistics')):
+            page_title = soup.find('title')
+            page_preview = soup.get_text(separator=' ', strip=True)[:300]
+            logger.error(
+                f'Page title: "{page_title.text if page_title else "none"}" | '
+                f'Preview: {page_preview!r}'
+            )
             raise RuntimeError(
                 'UFCStats upcoming page missing expected b-statistics elements — '
                 'possible rate-limit, CAPTCHA, or outage. '
