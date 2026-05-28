@@ -190,9 +190,21 @@ class UpcomingScraper:
         soup = self._get(UPCOMING_URL, delay=(0.5, 1.5))
         events = []
 
+        # Verify the UFCStats page rendered correctly before concluding there are no events.
+        # All UFCStats statistics pages have b-statistics* class elements (table, header,
+        # inner wrapper) even when the data table is empty. If these are absent the page
+        # returned a rate-limit/CAPTCHA/error response — raise so the pipeline fails loudly
+        # instead of silently leaving the DB stale.
+        if not soup.find(class_=re.compile(r'b-statistics')):
+            raise RuntimeError(
+                'UFCStats upcoming page missing expected b-statistics elements — '
+                'possible rate-limit, CAPTCHA, or outage. '
+                'Aborting to preserve existing DB data.'
+            )
+
         tbody = soup.find('tbody')
         if not tbody:
-            logger.warning('No tbody on upcoming events page')
+            logger.warning('No upcoming events on UFCStats (page loaded but tbody absent)')
             return events
 
         for row in tbody.find_all('tr', class_='b-statistics__table-row'):
