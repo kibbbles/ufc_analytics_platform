@@ -25,6 +25,18 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
+      - name: Diagnose UFCStats connectivity
+        run: |
+          echo "=== HTTP status + headers ==="
+          curl -s -o /tmp/ufcstats_body.html -w "HTTP %{http_code} | Final URL: %{url_effective} | Size: %{size_download} bytes\nServer: %header{server}\nCF-Ray: %header{cf-ray}\nContent-Type: %header{content-type}\n" \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" \
+            -L "http://ufcstats.com/statistics/events/upcoming?page=all" || true
+          echo "=== Body preview (first 600 chars) ==="
+          head -c 600 /tmp/ufcstats_body.html || true
+          echo ""
+          echo "=== Title tag ==="
+          grep -o '<title>[^<]*</title>' /tmp/ufcstats_body.html || echo "(no title found)"
+
       - name: Run upcoming scraper + predictions
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
