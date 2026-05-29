@@ -7,7 +7,7 @@ import sys
 import os
 import re
 import pandas as pd
-import cloudscraper
+import requests
 from bs4 import BeautifulSoup
 import time
 import random
@@ -36,9 +36,10 @@ logging.basicConfig(
 
 class LiveUFCScraper:
     def __init__(self):
-        self.session = cloudscraper.create_scraper(
-            browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
-        )
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
         self.db = DatabaseIntegration()
         self.existing_ids = set()  # Track existing IDs to ensure uniqueness
     

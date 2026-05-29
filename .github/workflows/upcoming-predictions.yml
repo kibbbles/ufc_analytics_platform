@@ -25,6 +25,9 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
+      - name: Install Playwright browser
+        run: playwright install chromium --with-deps
+
       - name: Diagnose UFCStats connectivity
         run: |
           echo "=== HTTP status + headers ==="

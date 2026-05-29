@@ -26,7 +26,7 @@ import time
 import argparse
 from datetime import datetime
 
-import cloudscraper
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import pandas as pd
 from sqlalchemy import text
@@ -86,10 +86,21 @@ FUZZY_THRESHOLD = 88
 class UpcomingScraper:
 
     def __init__(self):
-        self.session = cloudscraper.create_scraper(
-            browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+        self._pw = sync_playwright().__enter__()
+        self._browser = self._pw.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-dev-shm-usage'],
         )
-        self.session.headers.update(HEADERS)
+        self._context = self._browser.new_context(
+            user_agent=HEADERS['User-Agent'],
+            viewport={'width': 1920, 'height': 1080},
+            locale='en-US',
+        )
+        # Remove the navigator.webdriver flag that marks headless Chrome as a bot
+        self._context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
+        self._page = self._context.new_page()
         self.existing_ids: set = set()
         self._load_existing_ids()
 
@@ -126,9 +137,16 @@ class UpcomingScraper:
 
     def _get(self, url: str, delay: tuple = (1.5, 3.0)) -> BeautifulSoup:
         time.sleep(random.uniform(*delay))
-        resp = self.session.get(url, timeout=30)
-        resp.raise_for_status()
-        return BeautifulSoup(resp.content, 'html.parser')
+        # networkidle waits for the JS challenge to execute and the real page to load
+        self._page.goto(url, wait_until='networkidle', timeout=60_000)
+        return BeautifulSoup(self._page.content(), 'html.parser')
+
+    def _close(self):
+        try:
+            self._browser.close()
+            self._pw.__exit__(None, None, None)
+        except Exception:
+            pass
 
     def _fight_is_title(self, fight_url: str) -> tuple[bool, bool]:
         """Fetch the fight-details page and check for title-fight text.
@@ -628,6 +646,8 @@ class UpcomingScraper:
             logger.error(f'Scraper failed: {e}', exc_info=True)
             print(f'\nERROR: {e}')
             return False
+        finally:
+            self._close()
 
 
 # ---------------------------------------------------------------------------
