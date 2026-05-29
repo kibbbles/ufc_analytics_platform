@@ -7,7 +7,7 @@ import sys
 import os
 import re
 import pandas as pd
-import requests
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import time
 import random
@@ -36,12 +36,37 @@ logging.basicConfig(
 
 class LiveUFCScraper:
     def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
+        self._pw = sync_playwright().__enter__()
+        self._browser = self._pw.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-dev-shm-usage'],
+        )
+        self._context = self._browser.new_context(
+            user_agent=(
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+            ),
+            viewport={'width': 1920, 'height': 1080},
+            locale='en-US',
+        )
+        self._context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
+        self._page = self._context.new_page()
         self.db = DatabaseIntegration()
-        self.existing_ids = set()  # Track existing IDs to ensure uniqueness
+        self.existing_ids = set()
+
+    def _get_soup(self, url: str, delay: tuple = (1.5, 3.0)) -> BeautifulSoup:
+        time.sleep(random.uniform(*delay))
+        self._page.goto(url, wait_until='networkidle', timeout=60_000)
+        return BeautifulSoup(self._page.content(), 'html.parser')
+
+    def _close(self):
+        try:
+            self._browser.close()
+            self._pw.__exit__(None, None, None)
+        except Exception:
+            pass
     
     def generate_alphanumeric_id(self):
         """Generate a random 6-character alphanumeric ID."""
@@ -88,13 +113,7 @@ class LiveUFCScraper:
             - sub_avg: Submission Average per 15 min
         """
         try:
-            # Rate limiting
-            time.sleep(random.uniform(2, 4))
-
-            response = self.session.get(fighter_url, timeout=30)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = self._get_soup(fighter_url, delay=(2.0, 4.0))
             items = soup.find_all('li', class_='b-list__box-list-item')
 
             stats = {}
@@ -152,11 +171,17 @@ class LiveUFCScraper:
 
         try:
             logging.info(f"Scraping events from: {url}")
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = self._get_soup(url, delay=(0.5, 1.5))
             events = []
+
+            if not soup.find(class_=re.compile(r'b-statistics')):
+                page_title = soup.find('title')
+                preview = soup.get_text(separator=' ', strip=True)[:300]
+                logging.error(
+                    f'Events page missing b-statistics elements. '
+                    f'Title: "{page_title.text if page_title else "none"}" | Preview: {preview!r}'
+                )
+                raise RuntimeError('UFCStats completed-events page did not render — bot challenge not solved')
 
             tbody = soup.find('tbody')
             if not tbody:
@@ -243,11 +268,7 @@ class LiveUFCScraper:
         """
         try:
             logging.info(f"Scraping fights from: {event_url}")
-            time.sleep(random.uniform(1, 3))
-
-            response = self.session.get(event_url, timeout=30)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = self._get_soup(event_url, delay=(1.0, 3.0))
             stubs = []
 
             # Greco's exact row selector — only clickable fight rows
@@ -600,10 +621,7 @@ class LiveUFCScraper:
         """
         empty = {'fighter_a_tott': {}, 'fighter_b_tott': {}, 'round_stats': [], 'fight_meta': {}}
         try:
-            time.sleep(random.uniform(1.5, 3.0))
-            response = self.session.get(fight_url, timeout=30)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = self._get_soup(fight_url, delay=(1.5, 3.0))
 
             result = {'fighter_a_tott': {}, 'fighter_b_tott': {}, 'round_stats': []}
 
@@ -814,10 +832,7 @@ class LiveUFCScraper:
     def scrape_fighter_physical_stats(self, fighter_url):
         """Scrape height/weight/reach/stance/DOB and all-time career record from a fighter profile page."""
         try:
-            time.sleep(random.uniform(2, 4))
-            response = self.session.get(fighter_url, timeout=30)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = self._get_soup(fighter_url, delay=(2.0, 4.0))
             items = soup.find_all('li', class_='b-list__box-list-item')
             stats = {}
             for item in items:
@@ -1011,6 +1026,8 @@ class LiveUFCScraper:
             print("=" * 60)
             logging.error(f"Live scraping failed: {e}")
             return False
+        finally:
+            self._close()
 
 def main():
     """Run live scraping"""
