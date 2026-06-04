@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import { LoadingSkeleton } from '@components/common'
 import { formatDate } from '@utils/format'
-import type { PastPredictionModalStats, PastPredictionItem, VegasComparison } from '@t/api'
+import type { PastPredictionModalStats, PastPredictionItem, VegasComparison, VegasBucketStat } from '@t/api'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -302,10 +302,12 @@ export default function ScorecardModal({ mode, onClose }: Props) {
               {mode === 'all' && stats?.vegas && stats.vegas.sample_size > 0 && (() => {
                 const v = stats.vegas as VegasComparison
                 return (
-                  <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-2">
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                       Model vs Vegas ({v.sample_size} fights)
                     </h3>
+
+                    {/* Overall summary */}
                     <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] overflow-hidden">
                       <table className="w-full text-xs">
                         <thead>
@@ -338,6 +340,42 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Per-conviction breakdown — only when there's at least one disagreement */}
+                    {v.by_conviction.length > 0 && v.disagree_count > 0 && (
+                      <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-border)]/10">
+                              <th className="text-left px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Conviction</th>
+                              <th className="text-right px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Model</th>
+                              <th className="text-right px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Vegas</th>
+                              <th className="text-right px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Disagree</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {v.by_conviction.map((b: VegasBucketStat) => (
+                              <tr
+                                key={b.label}
+                                className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0"
+                              >
+                                <td className="px-3 py-2 font-mono tabular-nums">{b.label}</td>
+                                <td className="px-3 py-2 font-mono tabular-nums text-right">{formatPct(b.model_accuracy)}</td>
+                                <td className="px-3 py-2 font-mono tabular-nums text-right text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">{formatPct(b.vegas_accuracy)}</td>
+                                <td className="px-3 py-2 font-mono tabular-nums text-right">
+                                  {b.disagree_count === 0 || b.disagree_accuracy == null
+                                    ? <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">—</span>
+                                    : <span className={b.disagree_accuracy >= b.vegas_accuracy ? 'text-green-500' : 'text-[var(--color-primary)]'}>
+                                        {formatPct(b.disagree_accuracy)} <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">({b.disagree_count})</span>
+                                      </span>
+                                  }
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )
               })()}

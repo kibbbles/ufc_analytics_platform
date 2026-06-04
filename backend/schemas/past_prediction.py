@@ -133,12 +133,22 @@ class ModalStatsSection(BaseModel):
     roc_auc: Optional[float] = None
 
 
+class VegasBucketStat(BaseModel):
+    label: str
+    sample_size: int
+    model_accuracy: float
+    vegas_accuracy: float
+    disagree_count: int
+    disagree_accuracy: Optional[float] = None
+
+
 class VegasComparison(BaseModel):
     sample_size: int
     vegas_accuracy: float
     model_accuracy: float
     disagree_count: int
     disagree_accuracy: Optional[float] = None
+    by_conviction: list[VegasBucketStat] = []
 
 
 class PastPredictionModalStats(BaseModel):

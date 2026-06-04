@@ -444,12 +444,22 @@ export interface ModalStatsSection {
   roc_auc: number | null
 }
 
+export interface VegasBucketStat {
+  label: string
+  sample_size: number
+  model_accuracy: number
+  vegas_accuracy: number
+  disagree_count: number
+  disagree_accuracy: number | null
+}
+
 export interface VegasComparison {
   sample_size: number
   vegas_accuracy: number
   model_accuracy: number
   disagree_count: number
   disagree_accuracy: number | null
+  by_conviction: VegasBucketStat[]
 }
 
 export interface PastPredictionModalStats {

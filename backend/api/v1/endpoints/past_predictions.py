@@ -42,6 +42,7 @@ from schemas.past_prediction import (
     ModalStatsSection,
     PastPredictionModalStats,
     VegasComparison,
+    VegasBucketStat,
 )
 
 logger = logging.getLogger(__name__)
@@ -539,36 +540,65 @@ def get_past_prediction_stats(
     pf_avg_correct,  pf_avg_incorrect,  pf_brier,  pf_bss,  pf_auc  = _section_metrics(pf_raw)
 
     # ── vs-Vegas comparison ───────────────────────────────────────────────────
-    vegas_row = db.execute(text("""
+    _VEGAS_CTE = """
         WITH best AS (
             SELECT DISTINCT ON (fight_id)
-                implied_prob_a, win_prob_a, actual_winner_id, fighter_a_id
+                implied_prob_a, win_prob_a, actual_winner_id, fighter_a_id, confidence
             FROM past_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
-        SELECT
-            COUNT(*) AS sample_size,
-            SUM(CASE WHEN
-                (implied_prob_a > 0.5 AND actual_winner_id = fighter_a_id)
-                OR (implied_prob_a <= 0.5 AND actual_winner_id != fighter_a_id)
-                THEN 1 ELSE 0 END) AS vegas_correct,
-            SUM(CASE WHEN
-                (win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
-                OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id)
-                THEN 1 ELSE 0 END) AS model_correct,
-            SUM(CASE WHEN
-                (win_prob_a >= 0.5) != (implied_prob_a > 0.5)
-                THEN 1 ELSE 0 END) AS disagree_count,
-            SUM(CASE WHEN
-                (win_prob_a >= 0.5) != (implied_prob_a > 0.5)
-                AND ((win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
-                     OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id))
-                THEN 1 ELSE 0 END) AS disagree_correct
-        FROM best
+    """
+    _VEGAS_COLS = """
+        COUNT(*) AS sample_size,
+        SUM(CASE WHEN
+            (implied_prob_a > 0.5 AND actual_winner_id = fighter_a_id)
+            OR (implied_prob_a <= 0.5 AND actual_winner_id != fighter_a_id)
+            THEN 1 ELSE 0 END) AS vegas_correct,
+        SUM(CASE WHEN
+            (win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
+            OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id)
+            THEN 1 ELSE 0 END) AS model_correct,
+        SUM(CASE WHEN
+            (win_prob_a >= 0.5) != (implied_prob_a > 0.5)
+            THEN 1 ELSE 0 END) AS disagree_count,
+        SUM(CASE WHEN
+            (win_prob_a >= 0.5) != (implied_prob_a > 0.5)
+            AND ((win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
+                 OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id))
+            THEN 1 ELSE 0 END) AS disagree_correct
+    """
+    _VEGAS_WHERE = """
         WHERE implied_prob_a IS NOT NULL
           AND actual_winner_id IS NOT NULL
+          AND win_prob_a IS NOT NULL
+    """
+    _BUCKET_CASE = """
+        CASE
+            WHEN confidence >= 0.30 THEN '30%+'
+            WHEN confidence >= 0.20 THEN '20-30%'
+            WHEN confidence >= 0.10 THEN '10-20%'
+            ELSE 'Under 10%'
+        END
+    """
+
+    vegas_row = db.execute(text(f"""
+        {_VEGAS_CTE}
+        SELECT {_VEGAS_COLS}
+        FROM best
+        {_VEGAS_WHERE}
     """)).mappings().first()
+
+    vegas_bucket_rows = db.execute(text(f"""
+        {_VEGAS_CTE}
+        SELECT
+            ({_BUCKET_CASE}) AS bucket,
+            {_VEGAS_COLS}
+        FROM best
+        {_VEGAS_WHERE}
+        GROUP BY bucket
+        ORDER BY MIN(confidence) DESC
+    """)).mappings().all()
 
     vegas_cmp = None
     if vegas_row and int(vegas_row["sample_size"]) > 0:
@@ -577,12 +607,28 @@ def get_past_prediction_stats(
         mc = int(vegas_row["model_correct"])
         dc = int(vegas_row["disagree_count"])
         dcc = int(vegas_row["disagree_correct"])
+
+        by_conviction = []
+        for br in vegas_bucket_rows:
+            bn = int(br["sample_size"])
+            bdc = int(br["disagree_count"])
+            bdcc = int(br["disagree_correct"])
+            by_conviction.append(VegasBucketStat(
+                label=br["bucket"],
+                sample_size=bn,
+                model_accuracy=int(br["model_correct"]) / bn if bn else 0.0,
+                vegas_accuracy=int(br["vegas_correct"]) / bn if bn else 0.0,
+                disagree_count=bdc,
+                disagree_accuracy=(bdcc / bdc) if bdc > 0 else None,
+            ))
+
         vegas_cmp = VegasComparison(
             sample_size=n,
             vegas_accuracy=vc / n,
             model_accuracy=mc / n,
             disagree_count=dc,
             disagree_accuracy=(dcc / dc) if dc > 0 else None,
+            by_conviction=by_conviction,
         )
 
     return PastPredictionModalStats(
