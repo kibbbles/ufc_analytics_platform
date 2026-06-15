@@ -399,6 +399,21 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                   No fights recorded yet.
                 </p>
               )}
+
+              {/* No look-ahead explanation — pre_fight modal only */}
+              {mode === 'pre_fight' && (
+                <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-3 space-y-2">
+                  <p className="text-[11px] uppercase tracking-wide font-semibold text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    About these predictions
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    Live pre-fight predictions began March 14, 2026. Every Saturday before fight day, the model scores each announced bout using only fighter data available at that moment, then freezes the prediction. No future results, retraining runs, or updated stats can change it after lock-in.
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    This is the honest accuracy number. The "All Predictions" figure includes retroactive backfill estimates for older fights — because those were computed after the fact, the rolling features for a 2023 fight were built with 2024–2025 data already in the dataset, giving the model information it couldn't have had at the time. The live pre-fight numbers have no such advantage.
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>

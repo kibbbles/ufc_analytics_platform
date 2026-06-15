@@ -251,7 +251,7 @@ function ModelScorecard() {
             )}
           </div>
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. Live pre-fight predictions are frozen before each event before any results are known, and the model retrains automatically every Sunday on completed fight data only — no look-ahead bias.
+            Random Forest ensemble using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. Live pre-fight predictions (tracked since March 14, 2026) are frozen the Saturday before each event — the model retrains automatically every Sunday on completed fight data only, with features built using only past fights. No future results can influence a frozen prediction, so there is no look-ahead bias in the live numbers.
           </p>
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
             Conviction measures how far the model's prediction is from a coin flip, scaled to 0–100%. A 60/40 prediction = 20% conviction, a 75/25 pick = 50% conviction, an 85/15 pick = 70% conviction. It is not a statistical confidence interval — it reflects how decisive the model is on a given matchup based on the feature differentials going in.
