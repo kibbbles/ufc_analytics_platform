@@ -155,3 +155,4 @@ class PastPredictionModalStats(BaseModel):
     all: ModalStatsSection
     pre_fight: ModalStatsSection
     vegas: Optional[VegasComparison] = None
+    vegas_pre_fight: Optional[VegasComparison] = None

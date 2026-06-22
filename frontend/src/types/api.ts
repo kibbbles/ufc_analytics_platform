@@ -466,6 +466,7 @@ export interface PastPredictionModalStats {
   all: ModalStatsSection
   pre_fight: ModalStatsSection
   vegas: VegasComparison | null
+  vegas_pre_fight: VegasComparison | null
 }
 
 // ── Predictions ──────────────────────────────────────────────────────────────

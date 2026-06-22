@@ -631,6 +631,64 @@ def get_past_prediction_stats(
             by_conviction=by_conviction,
         )
 
+    # ── vs-Vegas (pre_fight_archive only — genuinely no look-ahead) ──────────
+    _VEGAS_PF_CTE = """
+        WITH best AS (
+            SELECT implied_prob_a, win_prob_a, actual_winner_id, fighter_a_id, confidence
+            FROM past_predictions
+            WHERE prediction_source = 'pre_fight_archive'
+        )
+    """
+
+    vegas_pf_row = db.execute(text(f"""
+        {_VEGAS_PF_CTE}
+        SELECT {_VEGAS_COLS}
+        FROM best
+        {_VEGAS_WHERE}
+    """)).mappings().first()
+
+    vegas_pf_bucket_rows = db.execute(text(f"""
+        {_VEGAS_PF_CTE}
+        SELECT
+            ({_BUCKET_CASE}) AS bucket,
+            {_VEGAS_COLS}
+        FROM best
+        {_VEGAS_WHERE}
+        GROUP BY bucket
+        ORDER BY MIN(confidence) DESC
+    """)).mappings().all()
+
+    vegas_pf_cmp = None
+    if vegas_pf_row and int(vegas_pf_row["sample_size"]) > 0:
+        n = int(vegas_pf_row["sample_size"])
+        vc = int(vegas_pf_row["vegas_correct"])
+        mc = int(vegas_pf_row["model_correct"])
+        dc = int(vegas_pf_row["disagree_count"])
+        dcc = int(vegas_pf_row["disagree_correct"])
+
+        by_conviction = []
+        for br in vegas_pf_bucket_rows:
+            bn = int(br["sample_size"])
+            bdc = int(br["disagree_count"])
+            bdcc = int(br["disagree_correct"])
+            by_conviction.append(VegasBucketStat(
+                label=br["bucket"],
+                sample_size=bn,
+                model_accuracy=int(br["model_correct"]) / bn if bn else 0.0,
+                vegas_accuracy=int(br["vegas_correct"]) / bn if bn else 0.0,
+                disagree_count=bdc,
+                disagree_accuracy=(bdcc / bdc) if bdc > 0 else None,
+            ))
+
+        vegas_pf_cmp = VegasComparison(
+            sample_size=n,
+            vegas_accuracy=vc / n,
+            model_accuracy=mc / n,
+            disagree_count=dc,
+            disagree_accuracy=(dcc / dc) if dc > 0 else None,
+            by_conviction=by_conviction,
+        )
+
     return PastPredictionModalStats(
         all=ModalStatsSection(
             conf_buckets=_buckets(all_bucket_rows),
@@ -651,6 +709,7 @@ def get_past_prediction_stats(
             roc_auc=pf_auc,
         ),
         vegas=vegas_cmp,
+        vegas_pre_fight=vegas_pf_cmp,
     )
 
 
