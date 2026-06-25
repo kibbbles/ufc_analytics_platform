@@ -26,8 +26,9 @@ const EventsPage          = lazyWithReload(() => import('@pages/EventsPage'))
 const EventDetailPage     = lazyWithReload(() => import('@pages/EventDetailPage'))
 const UpcomingPage        = lazyWithReload(() => import('@pages/UpcomingPage'))
 const UpcomingFightPage   = lazyWithReload(() => import('@pages/UpcomingFightPage'))
-const StyleEvolutionPage  = lazyWithReload(() => import('@pages/StyleEvolutionPage'))
-const EndurancePage       = lazyWithReload(() => import('@pages/EndurancePage'))
+const StyleEvolutionPage    = lazyWithReload(() => import('@pages/StyleEvolutionPage'))
+const EndurancePage         = lazyWithReload(() => import('@pages/EndurancePage'))
+const BettingInsightsPage   = lazyWithReload(() => import('@pages/BettingInsightsPage'))
 const AboutPage                  = lazyWithReload(() => import('@pages/AboutPage'))
 const PastPredictionEventPage    = lazyWithReload(() => import('@pages/PastPredictionEventPage'))
 const PastPredictionFightPage    = lazyWithReload(() => import('@pages/PastPredictionFightPage'))
@@ -48,7 +49,8 @@ const routes: RouteObject[] = [
       { path: 'upcoming',               element: <Suspense fallback={fallback}><UpcomingPage /></Suspense> },
       { path: 'upcoming/fights/:id',    element: <Suspense fallback={fallback}><UpcomingFightPage /></Suspense> },
       { path: 'analytics/style-evolution', element: <Suspense fallback={fallback}><StyleEvolutionPage /></Suspense> },
-      { path: 'analytics/endurance',    element: <Suspense fallback={fallback}><EndurancePage /></Suspense> },
+      { path: 'analytics/endurance',          element: <Suspense fallback={fallback}><EndurancePage /></Suspense> },
+      { path: 'analytics/betting-insights',  element: <Suspense fallback={fallback}><BettingInsightsPage /></Suspense> },
       { path: 'about',                  element: <Suspense fallback={fallback}><AboutPage /></Suspense> },
       { path: 'past-predictions/events/:event_id', element: <Suspense fallback={fallback}><PastPredictionEventPage /></Suspense> },
       { path: 'past-predictions/fights/:fight_id', element: <Suspense fallback={fallback}><PastPredictionFightPage /></Suspense> },

@@ -17,15 +17,21 @@ from sqlalchemy.orm import Session
 from api.dependencies import get_db
 from schemas.analytics import (
     AgeByWeightClassPoint,
+    BettingInsightsResponse,
+    BettingRoiResponse,
     EnduranceRoundData,
     FighterEnduranceResponse,
     FighterOutputPoint,
     FighterStatsByWeightClass,
     PhysicalStatPoint,
     RoundDistributionPoint,
+    RoiOverTimeRow,
+    StrategyRoiRow,
     StyleEvolutionPoint,
     StyleEvolutionResponse,
     StyleStatsByWeightClassPoint,
+    UpsetRateRow,
+    VegasCalibrationRow,
     WeightClassYearPoint,
 )
 
@@ -220,6 +226,206 @@ def style_evolution(
         ],
         weight_class=weight_class,
     )
+
+
+@router.get(
+    "/betting-insights",
+    response_model=BettingInsightsResponse,
+    summary="Betting insights — strategy ROI, Vegas calibration, upset rates, ROI over time",
+)
+def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
+    strategy_rows = db.execute(text("""
+        SELECT strategy_key, strategy_name, strategy_order, bets, wins, pnl
+        FROM mv_betting_roi
+        ORDER BY strategy_order
+    """)).mappings().all()
+
+    calibration_rows = db.execute(text("""
+        SELECT bucket, bucket_order, avg_implied_prob, fights, wins, actual_win_rate
+        FROM mv_vegas_calibration
+        ORDER BY bucket_order
+    """)).mappings().all()
+
+    upset_rows = db.execute(text("""
+        SELECT weight_class, weight_class_order, total_fights, upset_count, upset_rate
+        FROM mv_upset_rates
+        ORDER BY upset_rate DESC
+    """)).mappings().all()
+
+    time_rows = db.execute(text("""
+        SELECT event_id, event_name, event_date::text, bets, pnl, cumulative_pnl, cumulative_bets
+        FROM mv_roi_over_time
+        ORDER BY event_date
+    """)).mappings().all()
+
+    sample_size: int = db.execute(text("""
+        SELECT COUNT(DISTINCT fight_id)
+        FROM past_predictions
+        WHERE implied_prob_a IS NOT NULL AND actual_winner_id IS NOT NULL
+    """)).scalar() or 0
+
+    def _roi(bets: int, pnl: float) -> float:
+        return round(pnl / bets, 4) if bets else 0.0
+
+    return BettingInsightsResponse(
+        sample_size=sample_size,
+        strategies=[
+            StrategyRoiRow(
+                strategy_key=r["strategy_key"],
+                strategy_name=r["strategy_name"],
+                strategy_order=r["strategy_order"],
+                bets=int(r["bets"]),
+                wins=int(r["wins"]),
+                pnl=float(r["pnl"]),
+                roi=_roi(int(r["bets"]), float(r["pnl"])),
+            )
+            for r in strategy_rows
+        ],
+        calibration=[
+            VegasCalibrationRow(
+                bucket=r["bucket"],
+                bucket_order=int(r["bucket_order"]),
+                avg_implied_prob=float(r["avg_implied_prob"]),
+                fights=int(r["fights"]),
+                wins=int(r["wins"]),
+                actual_win_rate=float(r["actual_win_rate"]),
+            )
+            for r in calibration_rows
+        ],
+        upset_rates=[
+            UpsetRateRow(
+                weight_class=r["weight_class"],
+                weight_class_order=int(r["weight_class_order"]),
+                total_fights=int(r["total_fights"]),
+                upset_count=int(r["upset_count"]),
+                upset_rate=float(r["upset_rate"]),
+            )
+            for r in upset_rows
+        ],
+        roi_over_time=[
+            RoiOverTimeRow(
+                event_id=r["event_id"],
+                event_name=r["event_name"],
+                event_date=r["event_date"],
+                bets=int(r["bets"]),
+                pnl=float(r["pnl"]),
+                cumulative_pnl=float(r["cumulative_pnl"]),
+                cumulative_bets=int(r["cumulative_bets"]),
+            )
+            for r in time_rows
+        ],
+    )
+
+
+@router.get(
+    "/betting-roi",
+    response_model=BettingRoiResponse,
+    summary="Live strategy builder — parameterized ROI query over past_predictions",
+)
+def betting_roi(
+    side: str = Query("model_pick", description="model_pick | vegas_fav | vegas_dog"),
+    conviction_min: float | None = Query(None, ge=0.0, le=0.5),
+    conviction_max: float | None = Query(None, ge=0.0, le=0.5),
+    weight_class: str | None = Query(None),
+    edge_min: float | None = Query(None, ge=-1.0, le=1.0),
+    edge_max: float | None = Query(None, ge=-1.0, le=1.0),
+    upset_filter: str = Query("all", description="all | upsets_only | non_upsets"),
+    title_filter: str = Query("all", description="all | title | non_title"),
+    db: Session = Depends(get_db),
+) -> BettingRoiResponse:
+    if side not in ("model_pick", "vegas_fav", "vegas_dog"):
+        side = "model_pick"
+    if upset_filter not in ("all", "upsets_only", "non_upsets"):
+        upset_filter = "all"
+    if title_filter not in ("all", "title", "non_title"):
+        title_filter = "all"
+
+    if side == "model_pick":
+        bet_odds_expr   = "CASE WHEN pp.win_prob_a >= 0.5 THEN pp.odds_a ELSE pp.odds_b END"
+        bet_won_expr    = "pp.is_correct"
+        model_prob_expr = "CASE WHEN pp.win_prob_a >= 0.5 THEN pp.win_prob_a ELSE pp.win_prob_b END"
+        vegas_prob_expr = "CASE WHEN pp.win_prob_a >= 0.5 THEN pp.implied_prob_a ELSE pp.implied_prob_b END"
+    elif side == "vegas_fav":
+        bet_odds_expr   = "CASE WHEN pp.implied_prob_a > 0.5 THEN pp.odds_a ELSE pp.odds_b END"
+        bet_won_expr    = """(
+            (pp.implied_prob_a > 0.5 AND pp.actual_winner_id = pp.fighter_a_id)
+            OR (pp.implied_prob_a <= 0.5 AND pp.actual_winner_id != pp.fighter_a_id)
+        )"""
+        model_prob_expr = "CASE WHEN pp.implied_prob_a > 0.5 THEN pp.win_prob_a ELSE pp.win_prob_b END"
+        vegas_prob_expr = "CASE WHEN pp.implied_prob_a > 0.5 THEN pp.implied_prob_a ELSE pp.implied_prob_b END"
+    else:  # vegas_dog
+        bet_odds_expr   = "CASE WHEN pp.implied_prob_a <= 0.5 THEN pp.odds_a ELSE pp.odds_b END"
+        bet_won_expr    = """(
+            (pp.implied_prob_a <= 0.5 AND pp.actual_winner_id = pp.fighter_a_id)
+            OR (pp.implied_prob_a > 0.5 AND pp.actual_winner_id != pp.fighter_a_id)
+        )"""
+        model_prob_expr = "CASE WHEN pp.implied_prob_a <= 0.5 THEN pp.win_prob_a ELSE pp.win_prob_b END"
+        vegas_prob_expr = "CASE WHEN pp.implied_prob_a <= 0.5 THEN pp.implied_prob_a ELSE pp.implied_prob_b END"
+
+    params: dict = {
+        "conviction_min": conviction_min,
+        "conviction_max": conviction_max,
+        "weight_class":   weight_class,
+        "edge_min":       edge_min,
+        "edge_max":       edge_max,
+    }
+
+    title_join = ""
+    title_clause = ""
+    if title_filter != "all":
+        title_join   = "LEFT JOIN fight_results fr ON fr.fight_id = pp.fight_id"
+        title_clause = f"AND fr.is_title_fight = {'TRUE' if title_filter == 'title' else 'FALSE'}"
+
+    row = db.execute(text(f"""
+        WITH base AS (
+            SELECT DISTINCT ON (pp.fight_id)
+                pp.fight_id,
+                pp.confidence,
+                pp.is_upset,
+                pp.weight_class,
+                ({bet_odds_expr})   AS bet_odds,
+                ({bet_won_expr})    AS bet_won,
+                ({model_prob_expr}) AS model_prob,
+                ({vegas_prob_expr}) AS vegas_prob
+            FROM past_predictions pp
+            {title_join}
+            WHERE pp.implied_prob_a IS NOT NULL
+              AND pp.actual_winner_id IS NOT NULL
+              AND pp.is_correct IS NOT NULL
+              AND pp.odds_a IS NOT NULL
+              AND pp.odds_b IS NOT NULL
+              {title_clause}
+            ORDER BY pp.fight_id,
+                     CASE WHEN pp.prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT
+            COUNT(*)::int AS bets,
+            SUM(CASE WHEN bet_won THEN 1 ELSE 0 END)::int AS wins,
+            ROUND(SUM(
+                CASE WHEN bet_won
+                    THEN CASE WHEN bet_odds > 0 THEN bet_odds::float / 100.0 ELSE 100.0 / ABS(bet_odds)::float END
+                    ELSE -1.0
+                END
+            )::numeric, 4)::float AS pnl
+        FROM base
+        WHERE (:conviction_min IS NULL OR confidence >= :conviction_min)
+          AND (:conviction_max IS NULL OR confidence < :conviction_max)
+          AND (:weight_class IS NULL OR weight_class = :weight_class)
+          AND (:edge_min IS NULL OR (model_prob - vegas_prob) >= :edge_min)
+          AND (:edge_max IS NULL OR (model_prob - vegas_prob) < :edge_max)
+          AND (
+              '{upset_filter}' = 'all'
+              OR ('{upset_filter}' = 'upsets_only' AND is_upset = TRUE)
+              OR ('{upset_filter}' = 'non_upsets' AND (is_upset = FALSE OR is_upset IS NULL))
+          )
+    """), params).mappings().first()
+
+    bets = int(row["bets"] or 0)
+    wins = int(row["wins"] or 0)
+    pnl  = float(row["pnl"] or 0.0)
+    roi  = round(pnl / bets, 4) if bets else 0.0
+
+    return BettingRoiResponse(bets=bets, wins=wins, pnl=pnl, roi=roi)
 
 
 @router.get(

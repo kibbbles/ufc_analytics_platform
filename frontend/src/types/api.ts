@@ -284,6 +284,60 @@ export interface FighterEnduranceResponse {
   note: string | null
 }
 
+// ── Betting Insights ─────────────────────────────────────────────────────────
+
+export interface StrategyRoiRow {
+  strategy_key: string
+  strategy_name: string
+  strategy_order: number
+  bets: number
+  wins: number
+  pnl: number
+  roi: number
+}
+
+export interface VegasCalibrationRow {
+  bucket: string
+  bucket_order: number
+  avg_implied_prob: number
+  fights: number
+  wins: number
+  actual_win_rate: number
+}
+
+export interface UpsetRateRow {
+  weight_class: string
+  weight_class_order: number
+  total_fights: number
+  upset_count: number
+  upset_rate: number
+}
+
+export interface RoiOverTimeRow {
+  event_id: string
+  event_name: string | null
+  event_date: string | null
+  bets: number
+  pnl: number
+  cumulative_pnl: number
+  cumulative_bets: number
+}
+
+export interface BettingInsightsResponse {
+  sample_size: number
+  strategies: StrategyRoiRow[]
+  calibration: VegasCalibrationRow[]
+  upset_rates: UpsetRateRow[]
+  roi_over_time: RoiOverTimeRow[]
+}
+
+export interface BettingRoiResponse {
+  bets: number
+  wins: number
+  pnl: number
+  roi: number
+}
+
 // ── Upcoming Events ──────────────────────────────────────────────────────────
 
 export interface UpcomingEventListItem {

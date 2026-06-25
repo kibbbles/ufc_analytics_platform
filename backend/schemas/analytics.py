@@ -154,3 +154,69 @@ class FighterEnduranceResponse(BaseModel):
     fighter_name: Optional[str] = None
     rounds: list[EnduranceRoundData]
     note: Optional[str] = None
+
+
+# ── Betting Insights (Task 31) ────────────────────────────────────────────────
+
+class StrategyRoiRow(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    strategy_key: str
+    strategy_name: str
+    strategy_order: int
+    bets: int
+    wins: int
+    pnl: float
+    roi: float          # pnl / bets
+
+
+class VegasCalibrationRow(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    bucket: str
+    bucket_order: int
+    avg_implied_prob: float
+    fights: int
+    wins: int
+    actual_win_rate: float
+
+
+class UpsetRateRow(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    weight_class: str
+    weight_class_order: int
+    total_fights: int
+    upset_count: int
+    upset_rate: float
+
+
+class RoiOverTimeRow(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    event_id: str
+    event_name: Optional[str] = None
+    event_date: Optional[str] = None
+    bets: int
+    pnl: float
+    cumulative_pnl: float
+    cumulative_bets: int
+
+
+class BettingInsightsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    sample_size: int                        # total Vegas-odds fights
+    strategies: list[StrategyRoiRow]
+    calibration: list[VegasCalibrationRow]
+    upset_rates: list[UpsetRateRow]
+    roi_over_time: list[RoiOverTimeRow]
+
+
+class BettingRoiResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    bets: int
+    wins: int
+    pnl: float
+    roi: float

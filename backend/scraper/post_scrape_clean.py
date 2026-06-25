@@ -117,6 +117,11 @@ def phase_5_refresh_materialized_views():
         "mv_age_data",
         "mv_fighter_stats_by_wc",
         "mv_style_stats",
+        # Task 31 — betting insights views
+        "mv_betting_roi",
+        "mv_vegas_calibration",
+        "mv_upset_rates",
+        "mv_roi_over_time",
     ]
 
     session = SessionLocal()

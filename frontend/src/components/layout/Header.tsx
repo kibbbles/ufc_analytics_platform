@@ -16,7 +16,8 @@ const trailingLinks = [
 
 // Analytics dropdown items — add new analytics pages here
 const analyticsLinks = [
-  { to: '/analytics/style-evolution', label: 'How UFC Changed' },
+  { to: '/analytics/style-evolution',   label: 'How UFC Changed' },
+  { to: '/analytics/betting-insights',  label: 'Betting Insights' },
   // { to: '/analytics/fighter-endurance', label: 'Fighter Endurance' },
   // { to: '/analytics/fight-predictor',   label: 'Fight Predictor' },
 ]
