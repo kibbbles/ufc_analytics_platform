@@ -19,17 +19,20 @@ from schemas.analytics import (
     AgeByWeightClassPoint,
     BettingInsightsResponse,
     BettingRoiResponse,
+    BettingUpsetsResponse,
     EnduranceRoundData,
     FighterEnduranceResponse,
     FighterOutputPoint,
     FighterStatsByWeightClass,
     PhysicalStatPoint,
-    RoundDistributionPoint,
+    RoiEventEntry,
+    RoiOverTimeResponse,
     RoiOverTimeRow,
     StrategyRoiRow,
     StyleEvolutionPoint,
     StyleEvolutionResponse,
     StyleStatsByWeightClassPoint,
+    UpsetFightCard,
     UpsetRateRow,
     VegasCalibrationRow,
     WeightClassYearPoint,
@@ -264,11 +267,30 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
         WHERE implied_prob_a IS NOT NULL AND actual_winner_id IS NOT NULL
     """)).scalar() or 0
 
+    avg_edge: float = float(db.execute(text("""
+        SELECT AVG(
+            CASE WHEN win_prob_a >= 0.5
+                THEN win_prob_a - implied_prob_a
+                ELSE win_prob_b - implied_prob_b
+            END
+        )
+        FROM past_predictions
+        WHERE implied_prob_a IS NOT NULL
+          AND actual_winner_id IS NOT NULL
+          AND (
+            CASE WHEN win_prob_a >= 0.5
+                THEN win_prob_a - implied_prob_a
+                ELSE win_prob_b - implied_prob_b
+            END
+          ) BETWEEN 0.05 AND 0.15
+    """)).scalar() or 0.0)
+
     def _roi(bets: int, pnl: float) -> float:
         return round(pnl / bets, 4) if bets else 0.0
 
     return BettingInsightsResponse(
         sample_size=sample_size,
+        avg_edge_qualifying=round(avg_edge, 4),
         strategies=[
             StrategyRoiRow(
                 strategy_key=r["strategy_key"],
@@ -426,6 +448,160 @@ def betting_roi(
     roi  = round(pnl / bets, 4) if bets else 0.0
 
     return BettingRoiResponse(bets=bets, wins=wins, pnl=pnl, roi=roi)
+
+
+@router.get(
+    "/roi-over-time",
+    response_model=RoiOverTimeResponse,
+    summary="Per-event P&L for a given strategy (client computes cumulative + time slice)",
+)
+def roi_over_time(
+    strategy: str = Query("model_pick", description="model_pick | vegas_fav | vegas_dog | model_edge_5_15"),
+    db: Session = Depends(get_db),
+) -> RoiOverTimeResponse:
+    if strategy not in ("model_pick", "vegas_fav", "vegas_dog", "model_edge_5_15"):
+        strategy = "model_pick"
+
+    if strategy == "model_pick":
+        bet_odds_expr = "CASE WHEN win_prob_a >= 0.5 THEN odds_a ELSE odds_b END"
+        bet_won_expr  = "is_correct"
+        extra_filter  = ""
+    elif strategy == "vegas_fav":
+        bet_odds_expr = "CASE WHEN implied_prob_a > 0.5 THEN odds_a ELSE odds_b END"
+        bet_won_expr  = """(
+            (implied_prob_a > 0.5 AND actual_winner_id = fighter_a_id)
+            OR (implied_prob_a <= 0.5 AND actual_winner_id != fighter_a_id)
+        )"""
+        extra_filter  = ""
+    elif strategy == "vegas_dog":
+        bet_odds_expr = "CASE WHEN implied_prob_a <= 0.5 THEN odds_a ELSE odds_b END"
+        bet_won_expr  = """(
+            (implied_prob_a <= 0.5 AND actual_winner_id = fighter_a_id)
+            OR (implied_prob_a > 0.5 AND actual_winner_id != fighter_a_id)
+        )"""
+        extra_filter  = ""
+    else:  # model_edge_5_15
+        bet_odds_expr = "CASE WHEN win_prob_a >= 0.5 THEN odds_a ELSE odds_b END"
+        bet_won_expr  = "is_correct"
+        extra_filter  = """AND (
+            CASE WHEN win_prob_a >= 0.5
+                THEN win_prob_a - implied_prob_a
+                ELSE win_prob_b - implied_prob_b
+            END
+        ) BETWEEN 0.05 AND 0.15"""
+
+    rows = db.execute(text(f"""
+        WITH base AS (
+            SELECT DISTINCT ON (fight_id)
+                event_id,
+                event_name,
+                event_date,
+                ({bet_odds_expr}) AS bet_odds,
+                ({bet_won_expr})  AS bet_won
+            FROM past_predictions
+            WHERE implied_prob_a IS NOT NULL
+              AND actual_winner_id IS NOT NULL
+              AND is_correct IS NOT NULL
+              AND odds_a IS NOT NULL
+              AND odds_b IS NOT NULL
+              {extra_filter}
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT
+            event_id,
+            MAX(event_name)  AS event_name,
+            MAX(event_date)::text  AS event_date,
+            COUNT(*)::int    AS bets,
+            ROUND(SUM(
+                CASE WHEN bet_won
+                    THEN CASE WHEN bet_odds > 0 THEN bet_odds::float/100.0 ELSE 100.0/ABS(bet_odds)::float END
+                    ELSE -1.0
+                END
+            )::numeric, 4)::float AS pnl
+        FROM base
+        GROUP BY event_id
+        ORDER BY MAX(event_date)
+    """)).mappings().all()
+
+    return RoiOverTimeResponse(
+        strategy=strategy,
+        events=[
+            RoiEventEntry(
+                event_id=r["event_id"],
+                event_name=r["event_name"],
+                event_date=r["event_date"],
+                bets=int(r["bets"]),
+                pnl=float(r["pnl"]),
+            )
+            for r in rows
+        ],
+    )
+
+
+@router.get(
+    "/betting-upsets",
+    response_model=BettingUpsetsResponse,
+    summary="Individual upset fight cards — model high-conviction wrong",
+)
+def betting_upsets(
+    weight_class: str | None = Query(None),
+    conviction_min: float = Query(0.30, ge=0.0, le=0.5),
+    db: Session = Depends(get_db),
+) -> BettingUpsetsResponse:
+    rows = db.execute(text("""
+        WITH best AS (
+            SELECT DISTINCT ON (pp.fight_id)
+                pp.fight_id,
+                pp.event_id,
+                pp.event_name,
+                pp.event_date::text            AS event_date,
+                pp.weight_class,
+                pp.fighter_a_name,
+                pp.fighter_b_name,
+                pp.fighter_a_id,
+                pp.actual_winner_id,
+                pp.confidence,
+                pp.win_prob_a,
+                pp.win_prob_b,
+                pp.odds_a,
+                pp.odds_b,
+                fr."METHOD"                    AS method,
+                CASE WHEN pp.win_prob_a >= 0.5 THEN pp.fighter_a_name ELSE pp.fighter_b_name END
+                    AS model_pick_name,
+                CASE WHEN pp.actual_winner_id = pp.fighter_a_id THEN pp.fighter_a_name ELSE pp.fighter_b_name END
+                    AS winner_name,
+                CASE WHEN pp.win_prob_a >= 0.5 THEN pp.odds_a ELSE pp.odds_b END
+                    AS model_pick_odds
+            FROM past_predictions pp
+            LEFT JOIN fight_results fr ON fr.fight_id = pp.fight_id
+            WHERE pp.is_upset = TRUE
+              AND pp.confidence >= :conviction_min
+              AND (:weight_class IS NULL OR pp.weight_class = :weight_class)
+            ORDER BY pp.fight_id,
+                     CASE WHEN pp.prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        )
+        SELECT * FROM best ORDER BY event_date DESC NULLS LAST
+    """), {"conviction_min": conviction_min, "weight_class": weight_class}).mappings().all()
+
+    cards = [
+        UpsetFightCard(
+            fight_id=r["fight_id"],
+            event_id=r["event_id"],
+            event_name=r["event_name"],
+            event_date=r["event_date"],
+            weight_class=r["weight_class"],
+            fighter_a_name=r["fighter_a_name"],
+            fighter_b_name=r["fighter_b_name"],
+            model_pick_name=r["model_pick_name"],
+            winner_name=r["winner_name"],
+            method=r["method"],
+            conviction=float(r["confidence"]),
+            model_pick_odds=int(r["model_pick_odds"]) if r["model_pick_odds"] is not None else None,
+        )
+        for r in rows
+    ]
+    return BettingUpsetsResponse(fights=cards, total=len(cards))
 
 
 @router.get(

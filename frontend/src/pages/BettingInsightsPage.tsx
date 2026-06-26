@@ -1,22 +1,36 @@
+import { useState } from 'react'
 import { useApi } from '@hooks/useApi'
 import { analyticsService } from '@services/analyticsService'
+import { StrategyTicker } from '@components/features/StrategyTicker'
+import { BettingHero } from '@components/features/BettingHero'
+import { BettingKPIRow } from '@components/features/BettingKPIRow'
+import { ROIOverTimeChart } from '@components/features/ROIOverTimeChart'
 import { StrategyLeaderboard } from '@components/features/StrategyLeaderboard'
 import { VegasCalibrationChart } from '@components/features/VegasCalibrationChart'
-import { UpsetRateChart } from '@components/features/UpsetRateChart'
-import { ROIOverTimeChart } from '@components/features/ROIOverTimeChart'
+import { UpsetFightCards } from '@components/features/UpsetFightCards'
 import { StrategyBuilder } from '@components/features/StrategyBuilder'
 
+const TABS = [
+  { id: 'overview',    label: 'Overview' },
+  { id: 'strategies',  label: 'Strategies' },
+  { id: 'calibration', label: 'Calibration' },
+  { id: 'upsets',      label: 'Upsets' },
+  { id: 'builder',     label: 'Build a Strategy' },
+] as const
+
+type TabId = (typeof TABS)[number]['id']
+
 export default function BettingInsightsPage() {
+  const [activeTab, setActiveTab] = useState<TabId>('overview')
   const { data, loading, error } = useApi(() => analyticsService.getBettingInsights(), [])
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="h-8 w-48 rounded bg-[var(--color-border)] animate-pulse mb-2" />
-        <div className="h-4 w-64 rounded bg-[var(--color-border)] animate-pulse" />
-        <div className="mt-12 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="h-8 w-64 rounded bg-[var(--color-border)] animate-pulse mb-4" />
+        <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-48 rounded-lg bg-[var(--color-border)] animate-pulse" />
+            <div key={i} className="h-20 rounded-lg bg-[var(--color-border)] animate-pulse" />
           ))}
         </div>
       </div>
@@ -32,77 +46,59 @@ export default function BettingInsightsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-14">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Betting Insights</h1>
-        <p className="mt-1 text-[var(--color-text-muted)]">
-          Model vs Vegas: strategy ROI, calibration, and upset patterns.{' '}
-          <span className="font-mono tabular-nums">{data.sample_size}</span> fights with Vegas odds
-          tracked so far — sample grows weekly.
-        </p>
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-0">
+      {/* Ticker */}
+      <StrategyTicker strategies={data.strategies} />
+
+      {/* Hero */}
+      <BettingHero data={data} />
+
+      {/* KPI row */}
+      <BettingKPIRow data={data} />
+
+      {/* Tab bar */}
+      <div
+        className="flex border-b border-[var(--color-border)] overflow-x-auto"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
+              activeTab === tab.id
+                ? 'border-b-2 border-[var(--color-text)] text-[var(--color-text)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+            }`}
+            style={{ marginBottom: activeTab === tab.id ? '-1px' : 0 }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Strategy Leaderboard */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Strategy ROI Leaderboard</h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Flat $1 unit per bet. Ranked by ROI.
-          </p>
-        </div>
-        <StrategyLeaderboard strategies={data.strategies} />
-      </section>
+      {/* Tab content */}
+      <div className="pt-6 pb-12">
+        {activeTab === 'overview' && <ROIOverTimeChart />}
 
-      {/* Vegas Calibration */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Vegas Calibration</h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Does Vegas implied probability match actual favourite win rates? Bars above the implied
-            line mean Vegas underpriced the favourite.
-          </p>
-        </div>
-        <VegasCalibrationChart data={data.calibration} />
-      </section>
+        {activeTab === 'strategies' && <StrategyLeaderboard strategies={data.strategies} />}
 
-      {/* Upset Rate by Weight Class */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Model Upset Rate by Weight Class</h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Where does the model get caught out? An "upset" here means the model was wrong{' '}
-            <em>and</em> had high conviction (≥30%). Uses all predictions, not just Vegas fights.
-          </p>
-        </div>
-        <UpsetRateChart data={data.upset_rates} />
-      </section>
+        {activeTab === 'calibration' && <VegasCalibrationChart data={data.calibration} />}
 
-      {/* ROI Over Time */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">ROI Over Time (model-pick strategy)</h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Cumulative P&L per event since Vegas odds tracking began. Upward trend = model has edge.
-          </p>
-        </div>
-        <ROIOverTimeChart data={data.roi_over_time} />
-      </section>
+        {activeTab === 'upsets' && <UpsetFightCards />}
 
-      {/* Strategy Builder */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Build Your Own Strategy</h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Combine filters to define a custom betting strategy. Results update live.
-          </p>
-        </div>
-        <StrategyBuilder />
-        <p className="text-xs text-[var(--color-text-muted)]">
-          Note: edge filter is relative to Vegas implied probability on the selected bet side.
-          Conviction = max(win prob) − 50%.
-        </p>
-      </section>
+        {activeTab === 'builder' && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-base font-semibold">Build Your Own Strategy</h2>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Combine filters to define a custom betting strategy. Results update live.
+              </p>
+            </div>
+            <StrategyBuilder />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -206,7 +206,8 @@ class RoiOverTimeRow(BaseModel):
 class BettingInsightsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
-    sample_size: int                        # total Vegas-odds fights
+    sample_size: int
+    avg_edge_qualifying: float
     strategies: list[StrategyRoiRow]
     calibration: list[VegasCalibrationRow]
     upset_rates: list[UpsetRateRow]
@@ -220,3 +221,44 @@ class BettingRoiResponse(BaseModel):
     wins: int
     pnl: float
     roi: float
+
+
+class RoiEventEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    event_id: str
+    event_name: Optional[str] = None
+    event_date: Optional[str] = None
+    bets: int
+    pnl: float                          # per-event P&L, $1 unit
+
+
+class RoiOverTimeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    strategy: str
+    events: list[RoiEventEntry]
+
+
+class UpsetFightCard(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    fight_id: str
+    event_id: Optional[str] = None
+    event_name: Optional[str] = None
+    event_date: Optional[str] = None
+    weight_class: Optional[str] = None
+    fighter_a_name: Optional[str] = None
+    fighter_b_name: Optional[str] = None
+    model_pick_name: Optional[str] = None
+    winner_name: Optional[str] = None
+    method: Optional[str] = None
+    conviction: float
+    model_pick_odds: Optional[int] = None
+
+
+class BettingUpsetsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    fights: list[UpsetFightCard]
+    total: int

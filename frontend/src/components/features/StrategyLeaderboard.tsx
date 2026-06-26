@@ -5,8 +5,9 @@ interface Props {
 }
 
 function pnlLabel(pnl: number): string {
-  const sign = pnl >= 0 ? '+' : ''
-  return `${sign}$${pnl.toFixed(2)}`
+  const usd = pnl * 100
+  const sign = usd >= 0 ? '+' : ''
+  return `${sign}$${Math.abs(usd).toFixed(0)}`
 }
 
 function roiLabel(roi: number): string {
@@ -19,13 +20,13 @@ export function StrategyLeaderboard({ strategies }: Props) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-[13px]">
         <thead>
           <tr className="border-b border-[var(--color-border)]">
             <th className="py-2 pr-4 text-left font-medium text-[var(--color-text-muted)]">Strategy</th>
             <th className="py-2 px-3 text-right font-medium text-[var(--color-text-muted)]">Bets</th>
             <th className="py-2 px-3 text-right font-medium text-[var(--color-text-muted)]">Wins</th>
-            <th className="py-2 px-3 text-right font-medium text-[var(--color-text-muted)]">P&L / bet</th>
+            <th className="py-2 px-3 text-right font-medium text-[var(--color-text-muted)]">Total P&L</th>
             <th className="py-2 pl-3 text-right font-medium text-[var(--color-text-muted)]">ROI</th>
           </tr>
         </thead>
@@ -37,25 +38,29 @@ export function StrategyLeaderboard({ strategies }: Props) {
             return (
               <tr
                 key={row.strategy_key}
-                className={`border-b border-[var(--color-border)] transition-opacity ${lowSample ? 'opacity-40' : ''}`}
+                className="border-b border-[var(--color-border)]"
+                style={{ opacity: lowSample ? 0.45 : 1 }}
               >
-                <td className="py-3 pr-4 font-medium">
+                <td className="py-3 pr-4">
                   {row.strategy_name}
                   {lowSample && (
-                    <span className="ml-2 text-xs text-[var(--color-text-muted)]">
-                      (n={row.bets}, low sample)
+                    <span
+                      className="ml-2 rounded px-1.5 py-px text-[10px] text-[var(--color-text-muted)]"
+                      style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+                    >
+                      n={row.bets}, low sample
                     </span>
                   )}
                 </td>
                 <td className="py-3 px-3 text-right font-mono tabular-nums">{row.bets}</td>
                 <td className="py-3 px-3 text-right font-mono tabular-nums">{row.wins}</td>
-                <td className="py-3 px-3 text-right font-mono tabular-nums">
-                  <span className={positive ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}>
+                <td className="py-3 px-3 text-right font-mono tabular-nums font-medium">
+                  <span className={positive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
                     {pnlLabel(row.pnl)}
                   </span>
                 </td>
                 <td className="py-3 pl-3 text-right font-mono tabular-nums font-semibold">
-                  <span className={positive ? 'text-emerald-500' : 'text-red-400'}>
+                  <span className={positive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
                     {roiLabel(row.roi)}
                   </span>
                 </td>
@@ -65,7 +70,9 @@ export function StrategyLeaderboard({ strategies }: Props) {
         </tbody>
       </table>
       <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-        Rows faded at n&nbsp;&lt;&nbsp;50. Flat $1 unit per bet. P&amp;L = profit/loss in units.
+        Flat $100/bet. Vegas fav and underdog are both negative due to the sportsbook vig — every
+        line is shaded to give the house edge, so blindly betting either side loses regardless of
+        win rate. Faded rows: n &lt; 50, treat as early signal only.
       </p>
     </div>
   )

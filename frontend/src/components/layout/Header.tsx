@@ -221,7 +221,7 @@ export default function Header() {
           <span className="font-bold text-base tracking-tight">
             <span className="text-[var(--color-primary)]">Kabe's</span>
             {' '}Maybes
-            <span className="hidden md:inline text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] font-normal"> — UFC odds, my way</span>
+            <span className="hidden md:inline text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] font-normal"> | UFC odds, my way</span>
           </span>
         </NavLink>
 

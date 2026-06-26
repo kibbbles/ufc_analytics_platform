@@ -2,7 +2,9 @@ import { apiClient } from './api'
 import type {
   BettingInsightsResponse,
   BettingRoiResponse,
+  BettingUpsetsResponse,
   FighterEnduranceResponse,
+  RoiOverTimeResponse,
   StyleEvolutionResponse,
 } from '@t/api'
 
@@ -36,5 +38,15 @@ export const analyticsService = {
   }) =>
     apiClient
       .get<BettingRoiResponse>('/analytics/betting-roi', { params })
+      .then((r) => r.data),
+
+  getRoiOverTime: (strategy: string) =>
+    apiClient
+      .get<RoiOverTimeResponse>('/analytics/roi-over-time', { params: { strategy } })
+      .then((r) => r.data),
+
+  getBettingUpsets: (params: { weight_class?: string | null; conviction_min?: number }) =>
+    apiClient
+      .get<BettingUpsetsResponse>('/analytics/betting-upsets', { params })
       .then((r) => r.data),
 }
