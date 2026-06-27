@@ -47,7 +47,7 @@ export function StrategyTicker({ strategies }: Props) {
               {item.roiLabel}
             </span>
             <span className="text-[var(--color-text-muted)]">
-              {item.bets}B · {item.wins}W
+              {item.bets} bets · {item.wins} wins
             </span>
             <span className="text-[var(--color-border)]">·</span>
           </span>

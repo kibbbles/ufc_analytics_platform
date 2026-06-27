@@ -120,9 +120,9 @@ FROM enriched
 
 UNION ALL
 
--- Strategy 5: Model pick when model has 5–15% edge over Vegas implied prob
+-- Strategy 5: Model pick when model has 5-15% edge over Vegas implied prob
 SELECT 'model_edge_5_15',
-       'Model Edge 5–15% Over Vegas',
+       'Model Edge 5-15% Over Vegas',
        5,
        COUNT(*) FILTER (WHERE (model_prob_pick - vegas_implied_pick) BETWEEN 0.05 AND 0.15),
        SUM(CASE WHEN (model_prob_pick - vegas_implied_pick) BETWEEN 0.05 AND 0.15 AND model_won THEN 1 ELSE 0 END),

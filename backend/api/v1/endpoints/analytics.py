@@ -285,6 +285,14 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
           ) BETWEEN 0.05 AND 0.15
     """)).scalar() or 0.0)
 
+    # Canonical display names — avoids encoding issues with stored MV strings
+    _strategy_names = {
+        "model_pick":      "Always Bet Model Pick",
+        "vegas_fav":       "Always Bet Vegas Favourite",
+        "vegas_dog":       "Always Bet Vegas Underdog",
+        "model_edge_5_15": "Model Edge 5-15% Over Vegas",
+    }
+
     def _roi(bets: int, pnl: float) -> float:
         return round(pnl / bets, 4) if bets else 0.0
 
@@ -294,7 +302,7 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
         strategies=[
             StrategyRoiRow(
                 strategy_key=r["strategy_key"],
-                strategy_name=r["strategy_name"],
+                strategy_name=_strategy_names.get(r["strategy_key"], r["strategy_name"]),
                 strategy_order=r["strategy_order"],
                 bets=int(r["bets"]),
                 wins=int(r["wins"]),
