@@ -148,7 +148,7 @@ export function ROIOverTimeChart() {
               width={52}
             />
             <Tooltip
-              formatter={(v: number) => [`$${v.toFixed(2)}`, 'Cumulative P&L']}
+              formatter={(v) => [`$${Number(v).toFixed(2)}`, 'Cumulative P&L']}
               labelFormatter={(label) => label}
               contentStyle={{
                 background: 'var(--color-surface)',

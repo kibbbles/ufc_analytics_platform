@@ -62,7 +62,7 @@ export function VegasCalibrationChart({ data }: Props) {
             width={44}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [`${value}%`, name]}
+            formatter={(value, name) => [`${value}%`, String(name)]}
             contentStyle={{
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
