@@ -28,6 +28,7 @@ from schemas.analytics import (
     RoiEventEntry,
     RoiOverTimeResponse,
     RoiOverTimeRow,
+    RoundDistributionPoint,
     StrategyRoiRow,
     StyleEvolutionPoint,
     StyleEvolutionResponse,
