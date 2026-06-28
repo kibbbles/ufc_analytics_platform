@@ -119,7 +119,7 @@ export function StrategyBuilder() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Field label="Bet side" value={params.side} onChange={set('side')} options={[
           { value: 'model_pick', label: 'Model pick' },
-          { value: 'vegas_fav',  label: 'Vegas favourite' },
+          { value: 'vegas_fav',  label: 'Vegas favorite' },
           { value: 'vegas_dog',  label: 'Vegas underdog' },
         ]} />
         <Field label="Model conviction" value={params.conviction} onChange={set('conviction')} options={[
@@ -141,7 +141,7 @@ export function StrategyBuilder() {
         ]} />
         <Field label="Upset filter" value={params.upset_filter} onChange={set('upset_filter')} options={[
           { value: 'all',         label: 'All fights' },
-          { value: 'upsets_only', label: 'Upsets only' },
+          { value: 'upsets_only', label: 'Upsets only (≥20pp conviction wrong)' },
           { value: 'non_upsets',  label: 'Non-upsets only' },
         ]} />
         <Field label="Title fight" value={params.title_filter} onChange={set('title_filter')} options={[

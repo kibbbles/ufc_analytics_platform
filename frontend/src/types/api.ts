@@ -326,6 +326,8 @@ export interface RoiOverTimeRow {
 export interface BettingInsightsResponse {
   sample_size: number
   avg_edge_qualifying: number
+  upset_count_20pp: number
+  upset_rate_20pp: number
   strategies: StrategyRoiRow[]
   calibration: VegasCalibrationRow[]
   upset_rates: UpsetRateRow[]
@@ -369,6 +371,38 @@ export interface UpsetFightCard {
 
 export interface BettingUpsetsResponse {
   fights: UpsetFightCard[]
+  total: number
+}
+
+export interface BettingFightRow {
+  fight_id: string
+  event_id: string | null
+  event_name: string | null
+  event_date: string | null
+  weight_class: string | null
+  is_title: boolean
+  fighter_a_name: string | null
+  fighter_b_name: string | null
+  win_prob_a: number
+  win_prob_b: number
+  pick: string | null
+  opponent: string | null
+  pick_prob: number
+  opp_prob: number
+  conviction_pp: number
+  edge_pp: number
+  vegas_implied_pct: number
+  model_pick_odds: number | null
+  is_correct: boolean
+  actual_winner_name: string | null
+  result_method: string | null
+  pl_model: number
+  pl_fav: number
+  pl_dog: number
+}
+
+export interface BettingFightsResponse {
+  fights: BettingFightRow[]
   total: number
 }
 

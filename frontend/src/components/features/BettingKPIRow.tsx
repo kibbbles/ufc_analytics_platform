@@ -15,16 +15,14 @@ export function BettingKPIRow({ data }: Props) {
   const accuracy = modelPick ? ((modelPick.wins / modelPick.bets) * 100).toFixed(1) : '—'
   const accuracySub = modelPick ? `${modelPick.wins} of ${modelPick.bets} correct` : ''
 
-  const totalFights = data.upset_rates.reduce((sum, r) => sum + r.total_fights, 0)
-  const totalUpsets = data.upset_rates.reduce((sum, r) => sum + r.upset_count, 0)
-  const upsetRate = totalFights > 0 ? ((totalUpsets / totalFights) * 100).toFixed(1) : '—'
+  const upsetRate = data.upset_rate_20pp > 0 ? (data.upset_rate_20pp * 100).toFixed(1) : '—'
 
   const avgEdgePp = (data.avg_edge_qualifying * 100).toFixed(1)
 
   const kpis: KPI[] = [
     { label: 'Fights tracked', value: String(data.sample_size), sub: 'since Mar 2026' },
     { label: 'Model accuracy', value: `${accuracy}%`, sub: accuracySub },
-    { label: 'Upset rate', value: `${upsetRate}%`, sub: 'high-conviction misses' },
+    { label: 'Upset rate', value: `${upsetRate}%`, sub: '≥20pp conviction wrong' },
     { label: 'Avg model edge', value: `${avgEdgePp}pp`, sub: '5–15% filter' },
   ]
 

@@ -208,6 +208,8 @@ class BettingInsightsResponse(BaseModel):
 
     sample_size: int
     avg_edge_qualifying: float
+    upset_count_20pp: int = 0
+    upset_rate_20pp: float = 0.0
     strategies: list[StrategyRoiRow]
     calibration: list[VegasCalibrationRow]
     upset_rates: list[UpsetRateRow]
@@ -261,4 +263,40 @@ class BettingUpsetsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
     fights: list[UpsetFightCard]
+    total: int
+
+
+class BettingFightRow(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    fight_id: str
+    event_id: Optional[str] = None
+    event_name: Optional[str] = None
+    event_date: Optional[str] = None
+    weight_class: Optional[str] = None
+    is_title: bool = False
+    fighter_a_name: Optional[str] = None
+    fighter_b_name: Optional[str] = None
+    win_prob_a: float
+    win_prob_b: float
+    pick: Optional[str] = None          # model's pick fighter name
+    opponent: Optional[str] = None      # other fighter name
+    pick_prob: float                    # model prob for pick (0–1)
+    opp_prob: float
+    conviction_pp: float                # (pick_prob − 0.5) × 100
+    edge_pp: float                      # (pick_prob − vegas_implied) × 100
+    vegas_implied_pct: float            # vegas implied for model's pick (0–100)
+    model_pick_odds: Optional[int] = None
+    is_correct: bool
+    actual_winner_name: Optional[str] = None
+    result_method: Optional[str] = None
+    pl_model: float                     # net P&L per $1 bet — model pick strategy
+    pl_fav: float                       # net P&L per $1 bet — always bet favorite
+    pl_dog: float                       # net P&L per $1 bet — always bet underdog
+
+
+class BettingFightsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    fights: list[BettingFightRow]
     total: int

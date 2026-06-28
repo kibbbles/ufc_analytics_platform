@@ -1,5 +1,6 @@
 import { apiClient } from './api'
 import type {
+  BettingFightsResponse,
   BettingInsightsResponse,
   BettingRoiResponse,
   BettingUpsetsResponse,
@@ -48,5 +49,10 @@ export const analyticsService = {
   getBettingUpsets: (params: { weight_class?: string | null; conviction_min?: number }) =>
     apiClient
       .get<BettingUpsetsResponse>('/analytics/betting-upsets', { params })
+      .then((r) => r.data),
+
+  getBettingFights: () =>
+    apiClient
+      .get<BettingFightsResponse>('/analytics/betting-insights/fights')
       .then((r) => r.data),
 }

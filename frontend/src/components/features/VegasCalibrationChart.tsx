@@ -17,7 +17,7 @@ interface Props {
 const CALLOUTS = [
   {
     bucket: '50–60%',
-    text: 'Vegas implied ~55.9%, actual 61.7%. These modest favourites are consistently underestimated — this slight miscalibration is where the 5–15% edge filter finds its signal.',
+    text: 'Vegas implied ~55.9%, actual 61.7%. These modest favorites are consistently underestimated — this slight miscalibration is where the 5–15% edge filter finds its signal.',
   },
   {
     bucket: '60–70%',
@@ -29,7 +29,7 @@ const CALLOUTS = [
   },
   {
     bucket: '80%+',
-    text: 'Heavy favourites. Vegas is right. The model is rarely wrong here — but when it disagrees, results are very bad (−61.6% ROI).',
+    text: 'Heavy favorites. Vegas is right. The model is rarely wrong here — but when it disagrees, results are very bad (−61.6% ROI).',
   },
 ]
 

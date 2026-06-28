@@ -17,6 +17,8 @@ from sqlalchemy.orm import Session
 from api.dependencies import get_db
 from schemas.analytics import (
     AgeByWeightClassPoint,
+    BettingFightRow,
+    BettingFightsResponse,
     BettingInsightsResponse,
     BettingRoiResponse,
     BettingUpsetsResponse,
@@ -286,10 +288,79 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
           ) BETWEEN 0.05 AND 0.15
     """)).scalar() or 0.0)
 
+    # ── Extra strategies computed on-the-fly from raw past_predictions ───────────
+    raw_fights = db.execute(text("""
+        SELECT DISTINCT ON (fight_id)
+            fighter_a_id, actual_winner_id,
+            win_prob_a, win_prob_b,
+            implied_prob_a, implied_prob_b,
+            odds_a, odds_b,
+            confidence, is_correct
+        FROM past_predictions
+        WHERE implied_prob_a IS NOT NULL
+          AND actual_winner_id IS NOT NULL
+          AND odds_a IS NOT NULL AND odds_b IS NOT NULL
+        ORDER BY fight_id,
+                 CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+    """)).mappings().all()
+
+    def _payout(odds: int | None) -> float:
+        if not odds: return 0.0
+        return odds / 100.0 if odds > 0 else 100.0 / abs(odds)
+
+    def _model_pl(r: dict) -> float:
+        pick_odds = r["odds_a"] if (r["win_prob_a"] or 0) >= 0.5 else r["odds_b"]
+        return _payout(pick_odds) if r["is_correct"] else -1.0
+
+    def _model_edge(r: dict) -> float:
+        if (r["win_prob_a"] or 0) >= 0.5:
+            return float(r["win_prob_a"] or 0) - float(r["implied_prob_a"] or 0)
+        return float(r["win_prob_b"] or 0) - float(r["implied_prob_b"] or 0)
+
+    def _is_disagree(r: dict) -> bool:
+        return ((r["win_prob_a"] or 0) >= 0.5) != ((r["implied_prob_a"] or 0) > (r["implied_prob_b"] or 0))
+
+    def _extra_strategy(rows: list, key: str, name: str, order: int) -> StrategyRoiRow:
+        bets = len(rows)
+        wins = sum(1 for r in rows if r["is_correct"])
+        pnl  = round(sum(_model_pl(r) for r in rows), 4)
+        roi  = round(pnl / bets, 4) if bets else 0.0
+        return StrategyRoiRow(strategy_key=key, strategy_name=name, strategy_order=order,
+                              bets=bets, wins=wins, pnl=pnl, roi=roi)
+
+    disagree_rows   = [r for r in raw_fights if _is_disagree(r)]
+    conv20_rows     = [r for r in raw_fights if (r["confidence"] or 0) >= 0.20]
+    edge_conv_rows  = [r for r in raw_fights
+                       if (r["confidence"] or 0) >= 0.20 and 0.05 <= _model_edge(r) <= 0.15]
+
+    extra_strategies = [
+        _extra_strategy(disagree_rows,  "model_disagree",     "Model Pick on Vegas Disagreements", 5),
+        _extra_strategy(conv20_rows,    "high_conviction_20", "High Conviction 20pp+",              6),
+        _extra_strategy(edge_conv_rows, "edge_5_15_conv_20",  "Edge 5-15pp + Conviction 20pp+",     7),
+    ]
+
+    # ── Upset rate at 20pp threshold (full past_predictions, not Vegas-filtered) ─
+    upset_stats = db.execute(text("""
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN NOT is_correct AND confidence >= 0.20 THEN 1 ELSE 0 END) AS upset_count
+        FROM (
+            SELECT DISTINCT ON (fight_id) is_correct, confidence
+            FROM past_predictions
+            WHERE actual_winner_id IS NOT NULL
+            ORDER BY fight_id,
+                     CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        ) deduped
+    """)).mappings().first()
+
+    upset_total    = int(upset_stats["total"] or 0)
+    upset_count_20 = int(upset_stats["upset_count"] or 0)
+    upset_rate_20  = round(upset_count_20 / upset_total, 4) if upset_total else 0.0
+
     # Canonical display names — avoids encoding issues with stored MV strings
     _strategy_names = {
         "model_pick":      "Always Bet Model Pick",
-        "vegas_fav":       "Always Bet Vegas Favourite",
+        "vegas_fav":       "Always Bet Vegas Favorite",
         "vegas_dog":       "Always Bet Vegas Underdog",
         "model_edge_5_15": "Model Edge 5-15% Over Vegas",
     }
@@ -300,6 +371,8 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
     return BettingInsightsResponse(
         sample_size=sample_size,
         avg_edge_qualifying=round(avg_edge, 4),
+        upset_count_20pp=upset_count_20,
+        upset_rate_20pp=upset_rate_20,
         strategies=[
             StrategyRoiRow(
                 strategy_key=r["strategy_key"],
@@ -311,7 +384,7 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
                 roi=_roi(int(r["bets"]), float(r["pnl"])),
             )
             for r in strategy_rows
-        ],
+        ] + extra_strategies,
         calibration=[
             VegasCalibrationRow(
                 bucket=r["bucket"],
@@ -346,6 +419,108 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
             for r in time_rows
         ],
     )
+
+
+@router.get(
+    "/betting-insights/fights",
+    response_model=BettingFightsResponse,
+    summary="Per-fight payload for client-side filtering in the Overview tab (~132 rows)",
+)
+def betting_insights_fights(db: Session = Depends(get_db)) -> BettingFightsResponse:
+    rows = db.execute(text("""
+        SELECT DISTINCT ON (pp.fight_id)
+            pp.fight_id,
+            pp.event_id,
+            pp.event_name,
+            pp.event_date::text            AS event_date,
+            pp.weight_class,
+            pp.fighter_a_id,
+            pp.fighter_b_id,
+            pp.fighter_a_name,
+            pp.fighter_b_name,
+            pp.win_prob_a,
+            pp.win_prob_b,
+            pp.implied_prob_a,
+            pp.implied_prob_b,
+            pp.odds_a,
+            pp.odds_b,
+            pp.is_correct,
+            pp.confidence,
+            pp.actual_winner_id,
+            pp.actual_method,
+            COALESCE(fr.is_title_fight, FALSE) AS is_title
+        FROM past_predictions pp
+        LEFT JOIN fight_results fr ON fr.fight_id = pp.fight_id
+        WHERE pp.implied_prob_a IS NOT NULL
+          AND pp.actual_winner_id IS NOT NULL
+          AND pp.odds_a IS NOT NULL
+          AND pp.odds_b IS NOT NULL
+        ORDER BY pp.fight_id,
+                 CASE WHEN pp.prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+    """)).mappings().all()
+
+    def _payout_f(odds: int | None) -> float:
+        if not odds: return 0.0
+        return odds / 100.0 if odds > 0 else 100.0 / abs(odds)
+
+    def _pl(won: bool, payout: float) -> float:
+        return payout if won else -1.0
+
+    fights: list[BettingFightRow] = []
+    for r in rows:
+        wa = float(r["win_prob_a"] or 0.5)
+        wb = float(r["win_prob_b"] or 0.5)
+        ia = float(r["implied_prob_a"] or 0.5)
+        ib = float(r["implied_prob_b"] or 0.5)
+        oa = int(r["odds_a"]) if r["odds_a"] is not None else None
+        ob = int(r["odds_b"]) if r["odds_b"] is not None else None
+
+        is_pick_a = wa >= 0.5
+        pick      = r["fighter_a_name"] if is_pick_a else r["fighter_b_name"]
+        opponent  = r["fighter_b_name"] if is_pick_a else r["fighter_a_name"]
+        pick_prob = wa if is_pick_a else wb
+        opp_prob  = wb if is_pick_a else wa
+        pick_imp  = ia if is_pick_a else ib
+        model_odds = oa if is_pick_a else ob
+
+        fav_is_a  = ia > ib
+        fav_odds  = oa if fav_is_a else ob
+        dog_odds  = ob if fav_is_a else oa
+
+        winner_is_a  = r["actual_winner_id"] == r["fighter_a_id"]
+        model_won    = bool(r["is_correct"])
+        fav_won      = winner_is_a == fav_is_a
+        dog_won      = not fav_won
+        winner_name  = r["fighter_a_name"] if winner_is_a else r["fighter_b_name"]
+
+        fights.append(BettingFightRow(
+            fight_id=r["fight_id"],
+            event_id=r["event_id"],
+            event_name=r["event_name"],
+            event_date=r["event_date"],
+            weight_class=r["weight_class"],
+            is_title=bool(r["is_title"]),
+            fighter_a_name=r["fighter_a_name"],
+            fighter_b_name=r["fighter_b_name"],
+            win_prob_a=wa,
+            win_prob_b=wb,
+            pick=pick,
+            opponent=opponent,
+            pick_prob=round(pick_prob, 4),
+            opp_prob=round(opp_prob, 4),
+            conviction_pp=round((pick_prob - 0.5) * 100, 1),
+            edge_pp=round((pick_prob - pick_imp) * 100, 1),
+            vegas_implied_pct=round(pick_imp * 100, 1),
+            model_pick_odds=model_odds,
+            is_correct=model_won,
+            actual_winner_name=winner_name,
+            result_method=r["actual_method"],
+            pl_model=_pl(model_won,  _payout_f(model_odds)),
+            pl_fav  =_pl(fav_won,   _payout_f(fav_odds)),
+            pl_dog  =_pl(dog_won,   _payout_f(dog_odds)),
+        ))
+
+    return BettingFightsResponse(fights=fights, total=len(fights))
 
 
 @router.get(
@@ -555,7 +730,7 @@ def roi_over_time(
 )
 def betting_upsets(
     weight_class: str | None = Query(None),
-    conviction_min: float = Query(0.30, ge=0.0, le=0.5),
+    conviction_min: float = Query(0.20, ge=0.0, le=0.5),
     db: Session = Depends(get_db),
 ) -> BettingUpsetsResponse:
     rows = db.execute(text("""
@@ -584,8 +759,9 @@ def betting_upsets(
                     AS model_pick_odds
             FROM past_predictions pp
             LEFT JOIN fight_results fr ON fr.fight_id = pp.fight_id
-            WHERE pp.is_upset = TRUE
+            WHERE NOT pp.is_correct
               AND pp.confidence >= :conviction_min
+              AND pp.actual_winner_id IS NOT NULL
               AND (:weight_class IS NULL OR pp.weight_class = :weight_class)
             ORDER BY pp.fight_id,
                      CASE WHEN pp.prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END

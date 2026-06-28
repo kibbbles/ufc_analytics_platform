@@ -4,7 +4,7 @@ import { analyticsService } from '@services/analyticsService'
 import { StrategyTicker } from '@components/features/StrategyTicker'
 import { BettingHero } from '@components/features/BettingHero'
 import { BettingKPIRow } from '@components/features/BettingKPIRow'
-import { ROIOverTimeChart } from '@components/features/ROIOverTimeChart'
+import { OverviewTab } from '@components/features/OverviewTab'
 import { StrategyLeaderboard } from '@components/features/StrategyLeaderboard'
 import { VegasCalibrationChart } from '@components/features/VegasCalibrationChart'
 import { UpsetFightCards } from '@components/features/UpsetFightCards'
@@ -79,7 +79,7 @@ export default function BettingInsightsPage() {
 
       {/* Tab content */}
       <div className="pt-6 pb-12">
-        {activeTab === 'overview' && <ROIOverTimeChart />}
+        {activeTab === 'overview' && <OverviewTab />}
 
         {activeTab === 'strategies' && <StrategyLeaderboard strategies={data.strategies} />}
 

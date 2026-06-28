@@ -55,12 +55,12 @@ export function StrategyLeaderboard({ strategies }: Props) {
                 <td className="py-3 px-3 text-right font-mono tabular-nums">{row.bets}</td>
                 <td className="py-3 px-3 text-right font-mono tabular-nums">{row.wins}</td>
                 <td className="py-3 px-3 text-right font-mono tabular-nums font-medium">
-                  <span className={positive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
+                  <span style={{ color: positive ? '#3b6d11' : '#a32d2d' }}>
                     {pnlLabel(row.pnl)}
                   </span>
                 </td>
                 <td className="py-3 pl-3 text-right font-mono tabular-nums font-semibold">
-                  <span className={positive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
+                  <span style={{ color: positive ? '#3b6d11' : '#a32d2d', fontWeight: 500 }}>
                     {roiLabel(row.roi)}
                   </span>
                 </td>
@@ -70,9 +70,9 @@ export function StrategyLeaderboard({ strategies }: Props) {
         </tbody>
       </table>
       <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-        Flat $100/bet. Vegas fav and underdog are both negative due to the sportsbook vig — every
-        line is shaded to give the house edge, so blindly betting either side loses regardless of
-        win rate. Faded rows: n &lt; 50, treat as early signal only.
+        Flat $100/bet. Vegas favorite and underdog are both negative due to the sportsbook vig —
+        every line is shaded to give the house edge, so blindly betting either side loses regardless
+        of win rate. Faded rows: n &lt; 50, treat as early signal only.
       </p>
     </div>
   )
