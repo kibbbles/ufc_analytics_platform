@@ -40,7 +40,7 @@
    - Name: `DATABASE_URL`
    - Value: Copy from your `.env` file:
      ```
-     postgresql://postgres:p2GrvZEea/XEY%d@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres
+     postgresql://postgres:<PASSWORD>@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres
      ```
    - Click "Add secret"
 

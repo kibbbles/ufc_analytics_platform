@@ -121,7 +121,7 @@ frontend/src/
 **Access Methods**:
 1. **SQL Editor**: https://supabase.com/dashboard/project/mklpmbqpegbsistkoskm/sql
 2. **Python (SQLAlchemy)**: Via `DATABASE_URL` in `.env`
-3. **Direct Connection**: `postgresql://postgres:p2GrvZEea/XEY%d@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres`
+3. **Direct Connection**: see `DATABASE_URL` in `.env` (never commit credentials)
 
 ### Quick Database Query Examples
 ```python
@@ -158,7 +158,7 @@ GET  /api/v1/fights                                 paginated list (filters: eve
 GET  /api/v1/fights/{id}                            fight detail + round-by-round stats
 GET  /api/v1/events                                 paginated list (?year=)
 GET  /api/v1/events/{id}                            event + fight card
-POST /api/v1/predictions/fight-outcome              win probability (Random Forest ensemble)
+POST /api/v1/predictions/fight-outcome              win probability (best-of-3 selection: LR, RF, XGBoost)
 GET  /api/v1/analytics/style-evolution              finish rates by year (?weight_class=)
 GET  /api/v1/analytics/fighter-endurance/{id}       round-by-round performance profile
 GET  /api/v1/upcoming/events                        list upcoming events (ordered by date ASC)
@@ -270,6 +270,7 @@ Sunday  14:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
 ## Database Schema & Relationships
 
 ### Actual Production Tables (Supabase)
+Note: this shows the base column structure. Typed columns (fight_time_seconds, sig_str_landed, height_inches, etc.) and derived columns (weight_class, is_title_fight, etc.) added by the ETL pipeline are documented in the Database State section above.
 ```sql
 -- Core tables with actual column names
 event_details (
@@ -351,7 +352,7 @@ fight_stats (  -- Per fighter, per round statistics
 );
 ```
 
-### Phase 2 Tables (to be created — Tasks 11-20)
+### Live Phase 2 Tables
 ```sql
 upcoming_events (
     id            VARCHAR(6) PRIMARY KEY,
@@ -524,7 +525,7 @@ Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
-When creating .md files, place them in the docs/ directory (C:\Users\kabec\Documents\ufc_analytics_platform\docs).
+When creating .md files, place them in the docs/ directory.
 
 ## Task Master AI Instructions
 **Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**

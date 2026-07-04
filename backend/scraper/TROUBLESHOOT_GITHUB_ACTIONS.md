@@ -29,7 +29,7 @@ sqlalchemy.exc.ArgumentError: Could not parse SQLAlchemy URL from string ''
 3. Name: `DATABASE_URL` (exactly, case-sensitive)
 4. Value: Your database URL from `.env`:
    ```
-   postgresql://postgres:p2GrvZEea/XEY%d@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres
+   postgresql://postgres:<PASSWORD>@db.mklpmbqpegbsistkoskm.supabase.co:5432/postgres
    ```
 5. Click "Add secret"
 6. Re-run the workflow
