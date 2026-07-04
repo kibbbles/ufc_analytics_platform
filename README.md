@@ -10,6 +10,9 @@ ML-powered UFC fight analytics. Scrapes every UFC event from UFCStats.com, train
 - **Model Scorecard** — past prediction accuracy with per-event breakdown and fight search; predictions are frozen before each event to prevent data leakage
 - **Fighter Lookup** — search any fighter, view career record, physical stats, and fight history
 - **Completed Events** — browse all historical UFC events and fight cards
+- **Style Evolution** — interactive timeline of how UFC fighting styles have changed since 1994; finish rates, fighter output metrics, physical stat trends by weight class, and a year-by-weight-class heatmap
+- **Fighter Endurance** — round-by-round performance profiles and cardio prediction for individual fighters
+- **Betting Insights** — five-tab dashboard comparing model picks against Vegas closing lines; strategy leaderboard with ROI breakdown, calibration chart, upset gallery, and a custom strategy builder
 - **UFC Stats Assistant** — floating chat widget on every page; ask natural-language questions about any fighter or fight and get answers powered by live SQL queries against the full database (e.g. "What is Khabib's UFC record?", "Who has the most KO wins at lightweight?", "How did the Adesanya vs Pyfer fight end?")
 
 ## Tech Stack
@@ -17,7 +20,7 @@ ML-powered UFC fight analytics. Scrapes every UFC event from UFCStats.com, train
 ### Backend
 - **Framework**: FastAPI 0.115.5
 - **Database**: PostgreSQL (Supabase)
-- **ML**: Random Forest (win/loss) + method classifier — 63.85% test accuracy, 84.2% at ≥65% confidence
+- **ML**: Logistic Regression (win/loss) + method classifier — 63.57% test accuracy (958 fights, Apr 2024 - Jun 2026)
 - **ORM**: SQLAlchemy 2.0 (raw SQL via `text()`, no ORM model layer)
 - **Server**: Uvicorn (dev) / Gunicorn + UvicornWorker (prod)
 - **Hosting**: Google Cloud Run (`kabes-maybes-api`, `us-central1`)
@@ -50,8 +53,11 @@ All endpoints versioned under `/api/v1`. Swagger docs at `/docs`.
 | GET | `/api/v1/events/{id}` | Event detail + full fight card |
 | POST | `/api/v1/predictions/fight-outcome` | Win probability + method breakdown |
 | POST | `/api/v1/chat` | Natural-language Q&A — converts question to SQL, executes, returns formatted answer (Groq/llama-3.3-70b) |
-| GET | `/api/v1/analytics/style-evolution` | Finish rates by year (`?weight_class=`) |
+| GET | `/api/v1/analytics/style-evolution` | Finish rates, output metrics, and physical stats by year (`?weight_class=`) |
 | GET | `/api/v1/analytics/fighter-endurance/{id}` | Round-by-round performance profile |
+| GET | `/api/v1/analytics/betting-insights` | Model vs Vegas ROI summary, strategy leaderboard, calibration data |
+| GET | `/api/v1/analytics/betting-insights/fights` | Fight-level model vs Vegas breakdown (filterable by conviction, weight class) |
+| GET | `/api/v1/analytics/betting-roi` | Aggregated ROI by strategy and conviction bucket |
 | GET | `/api/v1/upcoming/events` | Upcoming UFC events ordered by date |
 | GET | `/api/v1/upcoming/events/{id}` | Upcoming event card + pre-computed predictions |
 | GET | `/api/v1/upcoming/fights/{id}` | Single upcoming fight + full feature differentials |
@@ -82,24 +88,13 @@ Sunday   14:00 UTC  →  weekly-ufc-scraper       scrape completed events from U
 
 | Subset | Accuracy | Fights |
 |--------|----------|--------|
-| All fights (test set, Dec 2023–present) | **63.85%** | 935 |
-| Numbered events (PPV) | **69.11%** | 327 |
-| Fight Night cards | **61.02%** | 608 |
-| Title fights only | **61.90%** | 42 |
-| High confidence (≥65%) | **84.2%** | — |
+| All fights (test set) | **63.57%** | 958 |
 
-**By conviction bucket** (conviction = `(max_win_prob − 0.5) × 2`, normalized distance from a coin flip):
-
-| Conviction | Accuracy |
-|------------|----------|
-| Under 10% | **56.9%** |
-| 10–20% | **63.5%** |
-| 20–30% | — |
-| 30%+ | — |
-
-Test period: Dec 2023 – Mar 2026. Model: Random Forest, selected by validation AUC.
+Test period: Apr 2024 - Jun 2026.
+Model: Logistic Regression, selected by validation AUC.
 
 Features: 30 differentials across physical attributes, rolling striking/grappling metrics, experience, and time-based features.
+Full per-event and conviction-bucket breakdowns are live on the Betting Insights page.
 
 ## Local Development
 
@@ -162,7 +157,7 @@ ufc_analytics_platform/
 │   │   ├── rolling_metrics.py         # 3/5/7-fight rolling averages + EWA
 │   │   └── run_build.py               # Entry point → training_data.parquet
 │   ├── ml/                            # Models + evaluation
-│   │   ├── win_loss_v1.joblib         # Random Forest win/loss classifier
+│   │   ├── win_loss_v1.joblib         # Logistic Regression win/loss classifier
 │   │   ├── method_v1.joblib           # Method classifier (KO/TKO, Sub, Dec)
 │   │   ├── metrics.json               # Test set metrics
 │   │   └── run_train.py               # Entry point
@@ -199,4 +194,4 @@ ufc_analytics_platform/
 
 ---
 
-**Last Updated:** 2026-03-31
+**Last Updated:** 2026-07-03
