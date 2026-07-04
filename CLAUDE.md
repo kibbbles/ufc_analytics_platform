@@ -1,55 +1,8 @@
 # UFC Analytics Platform
 
 ## Project Overview
-Full-stack web application providing ML-powered UFC fight analytics with interactive visualizations. Built to demonstrate production-level data science and software engineering skills.
-
-## Business Problem
-UFC fans and analysts lack sophisticated tools to:
-- Predict fight outcomes with interactive parameter exploration
-- Understand evolution of fighting styles over time
-- Analyze fighter endurance and pacing patterns
-
-## Three Core Products
-
-### 1. Fight Outcome Predictor with Interactive Sliders
-**Description:** Real-time ML predictions with user-adjustable fighter attributes
-**Features:**
-- Interactive sliders for height, weight, reach, age, experience, striking accuracy
-- Live win probability updates as users adjust parameters  
-- Similar historical fights display based on current inputs
-- Method prediction (KO/TKO, Submission, Decision) with confidence scores
-
-**ML Approach:**
-- Models: XGBoost, Random Forest, Logistic Regression
-- Features: Physical differentials, performance metrics, experience gaps
-- Target: Binary classification (Fighter A wins) + multi-class method prediction
-
-### 2. Style Evolution Timeline Analyzer  
-**Description:** Interactive timeline showing how fighting styles evolved in UFC history
-**Features:**
-- Timeline visualization of finish rates by method (KO/TKO vs Submission vs Decision)
-- Filter by weight class, era, specific time ranges
-- Trend analysis of striking vs grappling effectiveness over time
-- Animated transitions between different eras
-
-**ML Approach:**
-- Time series analysis of style metrics by year
-- Clustering fighters by fighting style patterns
-- Regression models for trend forecasting
-- Statistical analysis of style effectiveness changes
-
-### 3. Fighter Endurance & Pacing Dashboard
-**Description:** Round-by-round performance analysis and cardio predictions  
-**Features:**
-- Individual fighter endurance profiles showing performance by round
-- Predictions of performance degradation in longer fights
-- Comparison of cardio between different fighting styles
-- Fight pacing analysis (early finisher vs marathon fighter classification)
-
-**ML Approach:**
-- Time series modeling of round-by-round performance
-- Survival analysis for fight finish probability by round
-- Regression models predicting cardio performance based on style/age
+Full-stack web application providing ML-powered UFC fight analytics with interactive visualizations.
+Built to demonstrate production-level data science and software engineering skills.
 
 ## Technical Architecture
 
@@ -62,7 +15,7 @@ UFC fans and analysts lack sophisticated tools to:
 - **Middleware:** CORS, RequestID (X-Request-ID header), Timing (logs per-request duration)
 - **Logging:** Structured JSON via python-json-logger, rotating file handler (`logs/app.log`)
 - **Server:** Uvicorn (dev, `run_dev.py`) / Gunicorn + UvicornWorker (prod, `gunicorn.conf.py`)
-- **Hosting:** Google Cloud Run (`kabes-maybes-api`, `us-central1`, `min-instances=0`); auto-deploys via `deploy-backend.yml` on push to `main`
+- **Hosting:** Google Cloud Run (`kabes-maybes-api`, `us-central1`, `min-instances=1`); auto-deploys via `deploy-backend.yml` on push to `main`
 
 ### Frontend Stack
 - **Framework:** React 19 with TypeScript 5.9 (Vite scaffold)
@@ -81,26 +34,18 @@ cd frontend && npm run lint       # ESLint
 cd frontend && npm run format     # Prettier
 ```
 
-**Task status (Task 7 — React Frontend Foundation — ✅ COMPLETE 2026-03-08):**
-- ✅ 7.1 Vite scaffold, path aliases, dev proxy, ESLint + Prettier
-- ✅ 7.2 Tailwind v4 design tokens, dark mode (localStorage + prefers-color-scheme)
-- ✅ 7.3 React Router v6, lazy-loaded routes, Layout + Header + LoadingSpinner
-- ✅ 7.4 State management (Context API, useReducer, typed actions, localStorage persistence)
-- ✅ 7.5 Axios API client, service classes, common UI components (Button, Card, Badge, Toast, etc.)
-- ✅ 7.6 Data-connected pages: EventsPage, EventDetailPage, FightersPage, FighterDetailPage
-
 **Frontend file structure:**
 ```
 frontend/src/
 ├── components/
 │   ├── common/          # LoadingSpinner, RouteGuard
 │   ├── layout/          # ThemeProvider, Layout, Header
-│   └── features/        # (Task 7.5+) feature-specific components
-├── hooks/               # useDarkMode (+ future custom hooks)
+│   └── features/        # feature-specific components
+├── hooks/               # useDarkMode, useApi, useDebounce
 ├── pages/               # One file per route (lazy-loaded)
 ├── router/              # index.tsx — createBrowserRouter
-├── services/            # (Task 7.5) Axios instances + API service classes
-├── store/               # (Task 7.4) Context + reducers
+├── services/            # Axios instances + API service classes
+├── store/               # Context + reducers
 ├── types/               # Shared TypeScript interfaces
 └── utils/               # Pure helpers
 ```
@@ -109,7 +54,7 @@ frontend/src/
 `@/` → `src/`, `@components/` → `src/components/`, `@pages/`, `@hooks/`, `@services/`, `@store/`, `@types/`, `@utils/`
 
 ### Data Pipeline
-- **Source:** UFCStats.com via enhanced Greco scraper (744 events, 8287 fights, 4429 fighters available)
+- **Source:** UFCStats.com — 756 events, 8,482 fights, 4,449 fighters
 - **Processing:** Python pandas for cleaning and feature engineering
 - **Storage:** PostgreSQL with SQLAlchemy ORM
 - **Updates:** Automated weekly scraping optimized for UFC event schedule
@@ -136,7 +81,6 @@ session.close()
 ```
 
 ### Current Data Status
-**✅ CLEAN DATA — ETL Pipeline Complete (Task 3 done 2026-02-23)**
 - **Current State**: 756 events, 4,449 fighters, 8,482 fight results, 39,912 fight stats
 - **Validation**: Petr Yan verified with correct 16 UFC fights (12W-4L)
 - **Date Range**: 1994-03-11 to 2025-12-07 (UFC Fight Night: Covington vs. Buckley)
@@ -144,7 +88,7 @@ session.close()
 - **Typed columns**: fight_stats (sig_str_landed, ctrl_seconds, kd_int, etc.), fight_results (fight_time_seconds, total_fight_time_seconds), fighter_tott (height_inches, weight_lbs, reach_inches, dob_date)
 - **Derived columns**: fight_results.weight_class, is_title_fight, is_interim_title, is_championship_rounds
 
-### FastAPI Backend (Task 4 — COMPLETE 2026-02-28)
+### FastAPI Backend
 
 **Entry point:** `cd backend && python run_dev.py` (dev) or `gunicorn api.main:app -c gunicorn.conf.py` (prod)
 
@@ -159,8 +103,11 @@ GET  /api/v1/fights/{id}                            fight detail + round-by-roun
 GET  /api/v1/events                                 paginated list (?year=)
 GET  /api/v1/events/{id}                            event + fight card
 POST /api/v1/predictions/fight-outcome              win probability (best-of-3 selection: LR, RF, XGBoost)
-GET  /api/v1/analytics/style-evolution              finish rates by year (?weight_class=)
+GET  /api/v1/analytics/style-evolution              finish rates + output metrics by year (?weight_class=)
 GET  /api/v1/analytics/fighter-endurance/{id}       round-by-round performance profile
+GET  /api/v1/analytics/betting-insights             model vs Vegas ROI summary + strategy leaderboard
+GET  /api/v1/analytics/betting-insights/fights      fight-level model vs Vegas breakdown
+GET  /api/v1/analytics/betting-roi                  aggregated ROI by strategy and conviction bucket
 GET  /api/v1/upcoming/events                        list upcoming events (ordered by date ASC)
 GET  /api/v1/upcoming/events/{id}                   event card + fight list + pre-computed predictions
 GET  /api/v1/upcoming/fights/{id}                   single fight prediction + full feature differentials
@@ -169,6 +116,7 @@ GET  /api/v1/past-predictions/events                paginated past events with p
 GET  /api/v1/past-predictions/events/{id}           all predictions for a specific past event
 GET  /api/v1/past-predictions/fights                fight-level search across all past predictions
 GET  /api/v1/past-predictions/fights/{id}           single past prediction by fight ID
+POST /api/v1/chat                                   natural-language Q&A (Groq/llama-3.3-70b → SQL → answer)
 ```
 
 **Key files:**
@@ -178,7 +126,7 @@ GET  /api/v1/past-predictions/fights/{id}           single past prediction by fi
 - `backend/core/middleware.py` — RequestIDMiddleware, TimingMiddleware
 - `backend/schemas/` — Pydantic v2 schemas for all endpoints
 
-### ETL Pipeline (Task 3 — COMPLETE)
+### ETL Pipeline
 Post-scrape cleanup runs automatically via GitHub Actions after each weekly scrape.
 
 **Scripts**:
@@ -200,10 +148,6 @@ python backend/scraper/post_scrape_clean.py --dry-run  # preview without DB chan
 python backend/scraper/validate_etl.py                # standalone validation
 ```
 
-**Workflows**:
-- `.github/workflows/weekly-ufc-scraper.yml` — weekly scrape (live_scraper.py)
-- `.github/workflows/post-scrape-clean.yml` — ETL + validation, triggered after scrape succeeds
-
 ### Available Scrapers
 - `backend/scraper/live_scraper.py` — Active scraper; writes to all 6 tables (events, fights, results, stats, fighter profiles, tott)
 - `backend/scraper/upcoming_scraper.py` — Scrapes UFCStats /upcoming, stores in upcoming_events/upcoming_fights/upcoming_predictions tables
@@ -213,204 +157,132 @@ python backend/scraper/validate_etl.py                # standalone validation
 - `backend/scraper/bulk_scrape_career_stats.py` — Career stats scraper (manual use)
 - `backend/scraper/bulk_scrape_physical_stats.py` — Physical stats scraper (manual use)
 
-### Database Schema (Current)
+## Database Schema
+
 ```sql
 -- Core historical tables
-event_details (756 rows)       -- UFC events
-fighter_details (4,449 rows)   -- Fighter profiles
-fight_details (~8,482 rows)    -- Fight matchups
-fight_results (8,482 rows)     -- Fight outcomes + typed/derived columns
-fighter_tott (4,435 rows)      -- Tale of the Tape + typed columns
-fight_stats (39,912 rows)      -- Round-by-round stats + typed columns
-
--- Upcoming event tables (live)
-upcoming_events                -- Booked UFC events not yet completed
-upcoming_fights                -- Announced bouts with fighter FK refs (nullable for new fighters)
-upcoming_predictions           -- Pre-computed ML predictions + full feature differential JSON
-
--- Model scorecard table (live)
-past_predictions               -- prediction_source: 'pre_fight_archive' | 'backfill'
-                               -- DISTINCT ON (fight_id) dedup prefers pre_fight_archive
-```
-
-### Data Loading Procedure
-**To reload database from Greko CSVs:**
-```bash
-cd backend/scraper
-python load_greko_csvs.py          # Clear & load CSVs
-python fix_foreign_key_columns.py  # Fix column types to VARCHAR(8)
-python populate_foreign_keys.py    # Populate relationships
-python validate_greko_data.py      # Verify data integrity
-python post_scrape_clean.py        # Run full ETL pipeline + validation
-```
-
-### Automation
-- `.github/workflows/daily-keepalive.yml` — Daily 03:00 UTC: ping Supabase to prevent free tier pause
-- `.github/workflows/weekly-ufc-scraper.yml` — Sunday 14:00 UTC (10 AM EDT): live_scraper.py → completed events
-- `.github/workflows/post-scrape-clean.yml` — ETL cleanup + archive_completed_predictions.py, auto-triggered after scrape
-- `.github/workflows/feature-engineering.yml` — Rebuild training matrix, auto-triggered after ETL
-- `.github/workflows/retrain.yml` — Retrain ML models, auto-triggered after feature engineering
-- `.github/workflows/deploy-backend.yml` — Build Docker image + deploy to Cloud Run; triggers on push to `main` (backend paths only)
-- `.github/workflows/upcoming-predictions.yml` — Saturday 15:00 UTC (10 AM EST): upcoming_scraper + pre-compute predictions
-
-**Weekly automation chain:**
-```
-Daily   03:00 UTC  → daily-keepalive       (keep Supabase alive)
-
-Saturday 15:00 UTC  → upcoming-predictions  (scrape same-day card + pre-compute)
-
-Sunday  14:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
-                   → post-scrape-clean     (ETL cleanup + archive pre-fight predictions)
-                   → feature-engineering  (rebuild training_data.parquet)
-                   → retrain              (retrain + commit model artefacts)
-                   → deploy-backend       (build + deploy updated image to Cloud Run)
-```
-
-
-## Database Schema & Relationships
-
-### Actual Production Tables (Supabase)
-Note: this shows the base column structure. Typed columns (fight_time_seconds, sig_str_landed, height_inches, etc.) and derived columns (weight_class, is_title_fight, etc.) added by the ETL pipeline are documented in the Database State section above.
-```sql
--- Core tables with actual column names
-event_details (
-    id VARCHAR(6) PRIMARY KEY,  -- Alphanumeric ID
+event_details (756 rows)
+    id VARCHAR(6) PRIMARY KEY,
     "EVENT" TEXT,
-    "URL" TEXT, 
+    "URL" TEXT,
     date_proper DATE,
     "LOCATION" TEXT
-);
 
-fighter_details (
-    id VARCHAR(6) PRIMARY KEY,  -- Alphanumeric ID
+fighter_details (4,449 rows)
+    id VARCHAR(6) PRIMARY KEY,
     "FIRST" TEXT,
     "LAST" TEXT,
     "NICKNAME" TEXT,
     "URL" TEXT
-);
 
-fight_details (
-    id VARCHAR(6) PRIMARY KEY,  -- Alphanumeric ID
+fight_details (8,482 rows)
+    id VARCHAR(6) PRIMARY KEY,
     "EVENT" TEXT,
     "BOUT" TEXT,  -- Format: "Fighter A vs. Fighter B"
     "URL" TEXT,
     event_id VARCHAR(6) REFERENCES event_details(id),
-    fighter_a_id VARCHAR(6),  -- Parsed from BOUT
-    fighter_b_id VARCHAR(6)   -- Parsed from BOUT
-);
+    fighter_a_id VARCHAR(6),
+    fighter_b_id VARCHAR(6)
 
-fight_results (
+fight_results (8,482 rows)  -- ONE row per fight
     id VARCHAR(6) PRIMARY KEY,
     "EVENT" TEXT,
     "BOUT" TEXT,
-    "OUTCOME" TEXT,  -- Format: "W/L" or "L/W" (winner/loser)
+    "OUTCOME" TEXT,  -- "W/L" or "L/W" (winner listed first)
     "WEIGHTCLASS" TEXT,
     "METHOD" TEXT,
     "ROUND" TEXT,
     "TIME" TEXT,
     event_id VARCHAR(6) REFERENCES event_details(id),
     fight_id VARCHAR(6) REFERENCES fight_details(id),
-    result_data JSONB  -- Stores additional result data
-);
+    fighter_id VARCHAR(6),      -- winner FK
+    opponent_id VARCHAR(6),     -- loser FK
+    fight_time_seconds INTEGER,
+    total_fight_time_seconds INTEGER,
+    weight_class TEXT,          -- derived
+    is_title_fight BOOLEAN,     -- derived
+    is_interim_title BOOLEAN,   -- derived
+    is_championship_rounds BOOLEAN  -- derived
 
-fighter_tott (  -- Tale of the Tape
+fighter_tott (4,435 rows)  -- Tale of the Tape
     id VARCHAR(6) PRIMARY KEY,
     "FIGHTER" TEXT,
-    "HEIGHT" TEXT,
-    "WEIGHT" TEXT,
-    "REACH" TEXT,
-    "STANCE" TEXT,
-    "DOB" TEXT,
+    "HEIGHT" TEXT, "WEIGHT" TEXT, "REACH" TEXT, "STANCE" TEXT, "DOB" TEXT,
     "URL" TEXT,
-    fighter_id VARCHAR(6) REFERENCES fighter_details(id),  -- ✅ Connected
-    tott_data JSONB
-);
+    fighter_id VARCHAR(6) REFERENCES fighter_details(id),
+    height_inches FLOAT, weight_lbs FLOAT, reach_inches FLOAT,
+    dob_date DATE
 
-fight_stats (  -- Per fighter, per round statistics
+fight_stats (39,912 rows)  -- per fighter, per round
     id VARCHAR(6) PRIMARY KEY,
-    "EVENT" TEXT,
-    "BOUT" TEXT,
-    "ROUND" TEXT,
-    "FIGHTER" TEXT,  -- Fighter name (text only, no FK)
+    "EVENT" TEXT, "BOUT" TEXT, "ROUND" TEXT,
+    "FIGHTER" TEXT,       -- name only, no FK
     "KD" TEXT,
-    "SIG.STR." TEXT,  -- Format: "17 of 37" (landed of attempted)
+    "SIG.STR." TEXT,      -- Format: "17 of 37" (landed of attempted)
     "SIG.STR.%" TEXT,
     "TOTAL STR." TEXT,
-    "TD" TEXT,  -- Takedowns: "0 of 2" format
-    "TD%" TEXT,
-    "SUB.ATT" TEXT,
-    "REV." TEXT,
-    "CTRL" TEXT,
-    "HEAD" TEXT,
-    "BODY" TEXT,
-    "LEG" TEXT,
-    "DISTANCE" TEXT,
-    "CLINCH" TEXT,
-    "GROUND" TEXT,
+    "TD" TEXT,            -- Takedowns: "0 of 2" format
+    "TD%" TEXT, "SUB.ATT" TEXT, "REV." TEXT, "CTRL" TEXT,
+    "HEAD" TEXT, "BODY" TEXT, "LEG" TEXT,
+    "DISTANCE" TEXT, "CLINCH" TEXT, "GROUND" TEXT,
     event_id VARCHAR(6) REFERENCES event_details(id),
-    fight_id VARCHAR(6) REFERENCES fight_details(id)  -- 64% connected
-);
+    fight_id VARCHAR(6) REFERENCES fight_details(id),
+    fighter_id VARCHAR(6) REFERENCES fighter_details(id),
+    sig_str_landed INT, sig_str_attempted INT, sig_str_pct FLOAT,
+    kd_int INT, ctrl_seconds INT
+
+-- Live upcoming tables
+upcoming_events
+    id VARCHAR(6) PRIMARY KEY,
+    event_name TEXT, date_proper DATE, location TEXT,
+    ufcstats_url TEXT UNIQUE,
+    is_numbered BOOLEAN,
+    scraped_at TIMESTAMPTZ
+
+upcoming_fights
+    id VARCHAR(6) PRIMARY KEY,
+    event_id VARCHAR(6) REFERENCES upcoming_events(id),
+    fighter_a_name TEXT, fighter_b_name TEXT,
+    fighter_a_id VARCHAR(6) REFERENCES fighter_details(id),  -- nullable
+    fighter_b_id VARCHAR(6) REFERENCES fighter_details(id),  -- nullable
+    fighter_a_url TEXT, fighter_b_url TEXT,
+    weight_class TEXT, is_title_fight BOOLEAN,
+    ufcstats_url TEXT,
+    scraped_at TIMESTAMPTZ,
+    UNIQUE(event_id, fighter_a_url, fighter_b_url)
+
+upcoming_predictions
+    id VARCHAR(6) PRIMARY KEY,
+    fight_id VARCHAR(6) UNIQUE REFERENCES upcoming_fights(id),
+    model_version TEXT,
+    win_prob_a FLOAT, win_prob_b FLOAT,
+    method_ko_tko FLOAT, method_sub FLOAT, method_dec FLOAT,
+    features_json JSONB,
+    feature_hash TEXT,
+    predicted_at TIMESTAMPTZ
+
+-- Model scorecard
+past_predictions
+    prediction_source: 'pre_fight_archive' | 'backfill'
+    -- DISTINCT ON (fight_id) dedup prefers pre_fight_archive
 ```
 
-### Live Phase 2 Tables
-```sql
-upcoming_events (
-    id            VARCHAR(6) PRIMARY KEY,
-    event_name    TEXT,
-    date_proper   DATE,
-    location      TEXT,
-    ufcstats_url  TEXT UNIQUE,       -- used for upsert deduplication
-    is_numbered   BOOLEAN,           -- TRUE if "UFC [number]:" format
-    scraped_at    TIMESTAMPTZ DEFAULT now()
-);
-
-upcoming_fights (
-    id              VARCHAR(6) PRIMARY KEY,
-    event_id        VARCHAR(6) REFERENCES upcoming_events(id),
-    fighter_a_name  TEXT,
-    fighter_b_name  TEXT,
-    fighter_a_id    VARCHAR(6) REFERENCES fighter_details(id),  -- nullable (new fighters)
-    fighter_b_id    VARCHAR(6) REFERENCES fighter_details(id),  -- nullable (new fighters)
-    fighter_a_url   TEXT,            -- UFCStats profile URL, used for fighter matching
-    fighter_b_url   TEXT,
-    weight_class    TEXT,
-    is_title_fight  BOOLEAN DEFAULT FALSE,
-    ufcstats_url    TEXT,            -- fight-details page URL
-    scraped_at      TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(event_id, fighter_a_url, fighter_b_url)  -- idempotent upsert key
-);
-
-upcoming_predictions (
-    id             VARCHAR(6) PRIMARY KEY,
-    fight_id       VARCHAR(6) UNIQUE REFERENCES upcoming_fights(id),
-    model_version  TEXT DEFAULT 'win_loss_v1',
-    win_prob_a     FLOAT,            -- P(fighter_a wins)
-    win_prob_b     FLOAT,            -- P(fighter_b wins)
-    method_ko_tko  FLOAT,
-    method_sub     FLOAT,
-    method_dec     FLOAT,
-    features_json  JSONB,            -- full 31-feature differential dict
-    feature_hash   TEXT,             -- hash of feature vector for staleness detection
-    predicted_at   TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**Fighter Matching Logic (upcoming_scraper.py):**
+### Fighter Matching Logic (upcoming_scraper.py)
 UFCStats event page cell[1] contains `<a href="http://ufcstats.com/fighter-details/XXXXX">`.
 This URL matches `fighter_details."URL"` exactly.
 Primary: `SELECT id FROM fighter_details WHERE "URL" = :ufcstats_url`
 Fallback: fuzzy FIRST+LAST name match if URL not found.
 If no match: store fight with fighter_a_id/b_id = NULL, skip prediction.
 
-### Relationship Status (Updated 2026-02-23)
-- ✅ **Complete**: event_details ↔ fight_details via event_id (100%)
-- ✅ **Complete**: event_details ↔ fight_results via event_id (100%)
-- ✅ **Complete**: event_details ↔ fight_stats via event_id (100%)
-- ✅ **Complete**: fight_details ↔ fight_results via fight_id (100%)
-- ✅ **Complete**: fight_details ↔ fight_stats via fight_id (100%)
-- ✅ **Complete**: fighter_details ↔ fighter_tott via fighter_id (99.75%)
-- ✅ **Complete**: fight_stats.fighter_id → fighter_details (99.8%+ coverage)
-- ✅ **Complete**: fight_results.fighter_id / opponent_id → fighter_details (100%)
+### Relationship Status
+- ✅ event_details ↔ fight_details via event_id (100%)
+- ✅ event_details ↔ fight_results via event_id (100%)
+- ✅ event_details ↔ fight_stats via event_id (100%)
+- ✅ fight_details ↔ fight_results via fight_id (100%)
+- ✅ fight_details ↔ fight_stats via fight_id (100%)
+- ✅ fighter_details ↔ fighter_tott via fighter_id (99.75%)
+- ✅ fight_stats.fighter_id → fighter_details (99.8%+)
+- ✅ fight_results.fighter_id / opponent_id → fighter_details (100%)
 
 ### Data Format Notes
 - **Stats Format**: "X of Y" means X landed, Y attempted
@@ -439,6 +311,30 @@ ORDER BY e.date_proper
 via UNION ALL — training pipeline is unaffected. The OR pattern is only needed
 for ad-hoc queries and API endpoints that return fighter history.
 
+### Data Loading Procedure
+**To reload database from Greko CSVs:**
+```bash
+cd backend/scraper
+python load_greko_csvs.py          # Clear & load CSVs
+python fix_foreign_key_columns.py  # Fix column types to VARCHAR(8)
+python populate_foreign_keys.py    # Populate relationships
+python validate_greko_data.py      # Verify data integrity
+python post_scrape_clean.py        # Run full ETL pipeline + validation
+```
+
+### Automation
+```
+Daily    03:00 UTC  → daily-keepalive       (keep Supabase alive)
+
+Saturday 15:00 UTC  → upcoming-predictions  (scrape same-day card + pre-compute)
+
+Sunday   14:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
+                    → post-scrape-clean     (ETL cleanup + archive pre-fight predictions)
+                    → feature-engineering   (rebuild training_data.parquet)
+                    → retrain               (retrain + commit model artefacts)
+                    → deploy-backend        (build + deploy updated image to Cloud Run)
+```
+
 ## Hosting & Deployment
 
 ### Architecture
@@ -459,20 +355,19 @@ User's browser → Vercel — kabes-maybes.vercel.app (frontend) ✅ LIVE
 
 ### Backend — Google Cloud Run
 - Project: `kabes-maybes` (GCP, `kabe.chin@gmail.com`)
-- Service: `kabes-maybes-api`, region `us-central1`, `min-instances=0`
+- Service: `kabes-maybes-api`, region `us-central1`, `min-instances=1`
 - Image: `us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api:latest`
 - Secrets via Google Cloud Secret Manager: `DATABASE_URL`, `ALLOWED_ORIGINS`
 - Auto-deploys via `deploy-backend.yml` GitHub Actions on push to `main` (backend paths)
 - URL: `https://kabes-maybes-api-417674442311.us-central1.run.app` ✅ LIVE
 - Verify: `/health` → `{"status":"ok"}` | `/docs` → Swagger UI
 
-**Rollback to Render:** change `VITE_API_BASE_URL` in Vercel to `https://ufc-analytics-platform.onrender.com/api/v1` — no code changes needed.
-
 ## Frontend Design Philosophy
 
 **Aesthetic direction: Analytics Showcase / Learning Tool**
 
-This is a portfolio project that demonstrates data science and engineering skill — not a commercial product for sale. It should feel like high-quality editorial data journalism (FiveThirtyEight, The Pudding, NYT data desk) with a UFC subject matter.
+This is a portfolio project that demonstrates data science and engineering skill — not a commercial product for sale.
+It should feel like high-quality editorial data journalism (FiveThirtyEight, The Pudding, NYT data desk) with a UFC subject matter.
 
 **Core visual principles:**
 - **Purpose over polish**: Content and data legibility come first. Every design decision should make the data easier to read and understand, not impress with visual effects
@@ -489,15 +384,17 @@ All colors, shadows, and fonts are defined as CSS custom properties — never ha
 
 ## Frontend Architecture & Scalability
 
-**Routing approach: page-based navigation (already implemented)**
+**Routing approach: page-based navigation**
 
-Each feature is a separate route with its own lazy-loaded JS chunk. This is the right pattern for a data analytics platform — each tool is a complete independent experience, not a scroll section.
+Each feature is a separate route with its own lazy-loaded JS chunk.
+This is the right pattern for a data analytics platform — each tool is a complete independent experience, not a scroll section.
 
 **Adding new features:** two steps, no architectural changes needed:
 1. Create `frontend/src/pages/YourNewPage.tsx`
 2. Add the route to `frontend/src/router/index.tsx`
 
-**Sub-tabs within a page:** For related views (e.g., an `/analytics` page with style-evolution and endurance as tabs), use a tab component rendered inside the page, keeping the parent route at `/analytics` and the tab state in URL params (`?tab=style-evolution`). Do not nest routes unless the sub-pages are truly independent experiences.
+**Sub-tabs within a page:** use a tab component rendered inside the page, keeping the parent route stable and tab state in URL params (`?tab=style-evolution`).
+Do not nest routes unless the sub-pages are truly independent experiences.
 
 **Component organization:**
 - `components/common/` — reusable primitives (Button, Card, Badge, Modal)
@@ -505,7 +402,8 @@ Each feature is a separate route with its own lazy-loaded JS chunk. This is the 
 - `components/features/` — feature-specific components (FighterCard, FightCard, PredictionSlider, etc.)
 - Each feature page imports from `components/features/` — not from other pages
 
-**State philosophy:** Local state first (useState), Context for truly cross-cutting state (theme, auth if added). Avoid global stores for page-specific data — use fetch-on-mount with loading/error states per page.
+**State philosophy:** Local state first (useState), Context for truly cross-cutting state (theme, auth if added).
+Avoid global stores for page-specific data — use fetch-on-mount with loading/error states per page.
 
 **Mobile patterns:**
 - Header: logo + toggle visible always; hamburger on < md; full nav on md+
@@ -518,7 +416,6 @@ Each feature is a separate route with its own lazy-loaded JS chunk. This is the 
 - Keep documentation organized and up-to-date with code changes
 - **Auto-update README.md**: Update README.md whenever significant project changes occur
 - **Auto-update requirements.txt**: Add new dependencies immediately when introduced
-- **Track progress**: Update task status in task-master when completing work
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
