@@ -266,6 +266,90 @@ def build_training_matrix(
     return mat
 
 
+# ---------------------------------------------------------------------------
+# Inference-time augmentation (Option B — synthetic "upcoming fight" row)
+# ---------------------------------------------------------------------------
+
+# Sentinel fight_id prefix for the phantom row.  "~" is ASCII 126, so a
+# ~UP_<id> fight_id sorts AFTER every real fight hash (lowercase hex and
+# uppercase alphanumerics) — guaranteeing the phantom is last even on a
+# same-day date tie.  Combined with date_proper = as_of (>= every completed
+# fight), this makes the phantom strictly the last row per fighter, so every
+# shift-based builder shifts the phantom's own values out of its own features.
+_UPCOMING_PREFIX = "~UP_"
+
+
+def _phantom_fight_id(fighter_id: str) -> str:
+    return f"{_UPCOMING_PREFIX}{fighter_id}"
+
+
+def _augment_for_inference(
+    fights: pd.DataFrame,
+    stats: pd.DataFrame,
+    fighter_a_id: str,
+    fighter_b_id: str,
+    weight_class: Optional[str],
+    as_of: pd.Timestamp,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """Append one synthetic "upcoming fight" row per fighter to *fights* and
+    *stats* so the existing shift-based builders roll every completed fight
+    into the phantom row.
+
+    The phantom carries no outcome or stats of its own: is_winner=False and
+    method=None are inert (only ever read via shift into a later row, which
+    does not exist), and all stat columns are 0 (summed to 0, then shifted
+    out by every rolling/expanding/ewm window).  The phantom therefore
+    contributes NOTHING to its own features — see the field-by-field mapping
+    in the PR notes.  Training (build_training_matrix) is untouched.
+
+    Returns (fights_aug, stats_aug, {fighter_id: phantom_fight_id}).
+    """
+    phantom_ids = {
+        fighter_a_id: _phantom_fight_id(fighter_a_id),
+        fighter_b_id: _phantom_fight_id(fighter_b_id),
+    }
+
+    # ---- fights (long) phantom rows — one per fighter --------------------
+    fight_rows = []
+    for fid, opp in ((fighter_a_id, fighter_b_id), (fighter_b_id, fighter_a_id)):
+        fight_rows.append({
+            "fight_id":                 phantom_ids[fid],
+            "fighter_id":               fid,
+            "opponent_id":              opp,
+            "is_winner":                False,      # inert: shifted out, never read for its own row
+            "weight_class":             weight_class,
+            "method":                   None,
+            "total_fight_time_seconds": np.nan,
+            "date_proper":              as_of,
+        })
+    fights_ph  = pd.DataFrame(fight_rows, columns=fights.columns)
+    fights_aug = pd.concat([fights, fights_ph], ignore_index=True)
+    fights_aug["date_proper"] = pd.to_datetime(fights_aug["date_proper"])
+
+    # ---- stats (per round) phantom rows — one "Round 1" row per fighter --
+    stat_num_cols = [
+        c for c in stats.columns
+        if c not in ("id", "fight_id", "event_id", "fighter_id", "ROUND", "date_proper")
+    ]
+    stat_rows = []
+    for fid in (fighter_a_id, fighter_b_id):
+        row = {c: 0 for c in stat_num_cols}      # 0 → summed to 0 → shifted out
+        row.update({
+            "id":          phantom_ids[fid],
+            "fight_id":    phantom_ids[fid],
+            "event_id":    None,
+            "fighter_id":  fid,
+            "ROUND":       "Round 1",             # numeric-matching so it survives the round filter
+            "date_proper": as_of,
+        })
+        stat_rows.append(row)
+    stats_ph  = pd.DataFrame(stat_rows, columns=stats.columns)
+    stats_aug = pd.concat([stats, stats_ph], ignore_index=True)
+    stats_aug["date_proper"] = pd.to_datetime(stats_aug["date_proper"])
+
+    return fights_aug, stats_aug, phantom_ids
+
+
 def build_prediction_features(
     fighter_a_id: str,
     fighter_b_id: str,
@@ -297,74 +381,10 @@ def build_prediction_features(
     stats    = get_stats_df()
     fights   = get_fights_long_df()
     fighters = get_fighters_df()
-
-    # ---- Compute feature modules ------------------------------------------
-    rm_df = build_rolling_metrics(stats)
-    sf_df = build_style_features(stats, fights)
-    tf_df = build_time_features(fights, fighters)
-    oq_df = build_opponent_quality(fights)
-
-    # fight_id → date lookup for ordering
-    fight_dates = (
-        fights[["fight_id", "date_proper"]]
-        .drop_duplicates("fight_id")
-        .assign(date_proper=lambda d: pd.to_datetime(d["date_proper"]))
-    )
-
-    def _latest(feat_df: pd.DataFrame, fid: str) -> dict:
-        """Return the most recent feature row for a fighter as a plain dict."""
-        rows = feat_df[feat_df["fighter_id"] == fid].copy()
-        if rows.empty:
-            return {}
-        rows = rows.merge(fight_dates, on="fight_id", how="left")
-        rows = rows.sort_values("date_proper")
-        row  = rows.iloc[-1]
-        drop = [c for c in ("fighter_id", "fight_id", "date_proper") if c in row.index]
-        return row.drop(drop).to_dict()
-
-    a_rm = _latest(rm_df, fighter_a_id)
-    b_rm = _latest(rm_df, fighter_b_id)
-    a_sf = _latest(sf_df, fighter_a_id)
-    b_sf = _latest(sf_df, fighter_b_id)
-    a_tf = _latest(tf_df, fighter_a_id)
-    b_tf = _latest(tf_df, fighter_b_id)
-    a_oq = _latest(oq_df, fighter_a_id)
-    b_oq = _latest(oq_df, fighter_b_id)
-
-    # ---- Override time-based features using `as_of` -----------------------
     fighters_idx = fighters.set_index("id")
 
-    def _override_time(fid: str, tf_feats: dict, wc: Optional[str]) -> dict:
-        tf = dict(tf_feats)
-        fighter_fights = fights[fights["fighter_id"] == fid].copy()
-        fighter_fights["date_proper"] = pd.to_datetime(fighter_fights["date_proper"])
-        fighter_fights = fighter_fights[fighter_fights["date_proper"] <= today]
-
-        if not fighter_fights.empty:
-            last_fight  = fighter_fights["date_proper"].max()
-            first_fight = fighter_fights["date_proper"].min()
-            tf["days_since_last_fight"] = int((today - last_fight).days)
-            tf["career_length_days"]    = int((today - first_fight).days)
-            if wc:
-                wc_fights = fighter_fights[fighter_fights["weight_class"] == wc]
-                if not wc_fights.empty:
-                    tf["days_in_weight_class"] = int((today - wc_fights["date_proper"].min()).days)
-                else:
-                    tf["days_in_weight_class"] = 0
-        else:
-            tf["days_since_last_fight"] = 365   # debut encoding
-            tf["career_length_days"]    = 0
-            tf["days_in_weight_class"]  = 0
-
-        # age_at_fight — recompute with as_of date
-        if fid in fighters_idx.index:
-            dob = fighters_idx.at[fid, "dob_date"]
-            if dob is not None and not (isinstance(dob, float) and np.isnan(dob)):
-                tf["age_at_fight"] = int((today - pd.Timestamp(dob)).days)
-
-        return tf
-
-    # Determine weight class (fallback to fighter_a's most recent)
+    # Determine weight class (fallback to fighter_a's most recent) BEFORE
+    # augmentation so the phantom row carries the correct weight class.
     if weight_class is None:
         a_fights = fights[fights["fighter_id"] == fighter_a_id]
         if not a_fights.empty:
@@ -372,26 +392,67 @@ def build_prediction_features(
             a_fights["date_proper"] = pd.to_datetime(a_fights["date_proper"])
             weight_class = a_fights.sort_values("date_proper").iloc[-1]["weight_class"]
 
-    a_tf = _override_time(fighter_a_id, a_tf, weight_class)
-    b_tf = _override_time(fighter_b_id, b_tf, weight_class)
+    # ---- Option B: synthetic "upcoming fight" row -------------------------
+    # Append one phantom fight per fighter (dated `today`, no outcome/stats)
+    # so the existing shift-based builders roll every completed fight into the
+    # phantom row.  The selected phantom row is each fighter's CURRENT state
+    # going into the upcoming fight — most recent result INCLUDED — whereas
+    # reading a real fight row lags by one fight by design (no-leakage
+    # training).  This also removes the systemic one-fight lag that affected
+    # rolling / style / opponent-quality at inference.  Training is untouched.
+    fights_aug, stats_aug, phantom_ids = _augment_for_inference(
+        fights, stats, fighter_a_id, fighter_b_id, weight_class, today
+    )
 
-    # ---- Physical + experience differentials ------------------------------
-    # Recompute career stats (experience, streaks) using full DB history
-    career = _career_stats(fights)
-    career = career.sort_values(["fighter_id", "fight_id"])
+    # ---- Compute feature modules on the augmented data --------------------
+    career = _career_stats(fights_aug)
+    rm_df  = build_rolling_metrics(stats_aug)
+    sf_df  = build_style_features(stats_aug, fights_aug)
+    tf_df  = build_time_features(fights_aug, fighters)
+    oq_df  = build_opponent_quality(fights_aug)
+
+    def _phantom_feats(feat_df: pd.DataFrame, fid: str) -> dict:
+        """Return the phantom-row feature values for a fighter as a plain dict."""
+        sentinel = phantom_ids[fid]
+        rows = feat_df[
+            (feat_df["fighter_id"] == fid) & (feat_df["fight_id"] == sentinel)
+        ]
+        if rows.empty:
+            return {}
+        row  = rows.iloc[-1]
+        drop = [c for c in ("fighter_id", "fight_id") if c in row.index]
+        return row.drop(drop).to_dict()
+
+    a_rm = _phantom_feats(rm_df, fighter_a_id)
+    b_rm = _phantom_feats(rm_df, fighter_b_id)
+    a_sf = _phantom_feats(sf_df, fighter_a_id)
+    b_sf = _phantom_feats(sf_df, fighter_b_id)
+    a_tf = _phantom_feats(tf_df, fighter_a_id)
+    b_tf = _phantom_feats(tf_df, fighter_b_id)
+    a_oq = _phantom_feats(oq_df, fighter_a_id)
+    b_oq = _phantom_feats(oq_df, fighter_b_id)
 
     def _current_career(fid: str) -> dict:
-        rows = career[career["fighter_id"] == fid]
+        """Current career state from the fighter's phantom upcoming-fight row.
+
+        The phantom row's win_streak / loss_streak / win_rate reflect ALL
+        completed fights (the shift excludes only the phantom itself), so the
+        most recent result IS included — unlike reading a real fight row,
+        whose streak reflects the state BEFORE that fight.
+        """
+        sentinel = phantom_ids[fid]
+        rows = career[
+            (career["fighter_id"] == fid) & (career["fight_id"] == sentinel)
+        ]
         if rows.empty:
-            return {"total_fights_before": 0, "win_streak": 0, "loss_streak": 0}
-        # Last row = state BEFORE their next (upcoming) fight
-        last = rows.iloc[-1]
-        # cumcount is 0-indexed fights_before; after last fight it's len(rows)-1
-        # We want total fights = len(rows) (all fights are "before" the upcoming one)
+            return {"total_fights_before": 0, "win_streak": 0,
+                    "loss_streak": 0, "win_rate": None}
+        r = rows.iloc[-1]
         return {
-            "total_fights_before": int(len(rows)),
-            "win_streak":          int(last["win_streak"]),
-            "loss_streak":         int(last["loss_streak"]),
+            "total_fights_before": int(r["total_fights_before"]),
+            "win_streak":          int(r["win_streak"]),
+            "loss_streak":         int(r["loss_streak"]),
+            "win_rate":            (None if pd.isna(r["win_rate"]) else float(r["win_rate"])),
         }
 
     a_career = _current_career(fighter_a_id)
@@ -435,6 +496,7 @@ def build_prediction_features(
     feat["experience_diff"]    = _diff(a_career["total_fights_before"], b_career["total_fights_before"])
     feat["win_streak_diff"]    = _diff(a_career["win_streak"],  b_career["win_streak"])
     feat["loss_streak_diff"]   = _diff(a_career["loss_streak"], b_career["loss_streak"])
+    feat["win_rate_diff"]      = _diff(a_career["win_rate"],    b_career["win_rate"])
 
     # Per-fighter module diffs (diff_ prefix matches _add_fighter_diffs convention)
     for col in set(a_rm) | set(b_rm):
