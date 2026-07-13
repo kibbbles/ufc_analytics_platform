@@ -76,7 +76,7 @@ function ModalFightRow({ item }: { item: PastPredictionItem }) {
 // Props
 // ---------------------------------------------------------------------------
 
-export type ScorecardModalMode = 'all' | 'pre_fight'
+export type ScorecardModalMode = 'backtest' | 'pre_fight'
 
 interface Props {
   mode: ScorecardModalMode
@@ -93,7 +93,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError]   = useState<string | null>(null)
 
-  const title = mode === 'all' ? 'All Predictions' : 'Live Pre-Fight'
+  const title = mode === 'backtest' ? 'Backtested (Corrected Model)' : 'Live Track Record'
 
   // Keyboard + scroll lock
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
   // Fetch on open
   useEffect(() => {
     let cancelled = false
-    const source = mode === 'pre_fight' ? 'pre_fight_archive' : undefined
+    const source = mode === 'pre_fight' ? 'pre_fight_archive' : 'backfill'
 
     Promise.all([
       pastPredictionsService.getModalStats(),
@@ -136,7 +136,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
     return () => { cancelled = true }
   }, [mode])
 
-  const section = stats ? (mode === 'all' ? stats.all : stats.pre_fight) : null
+  const section = stats ? (mode === 'backtest' ? stats.backtest : stats.pre_fight) : null
 
   return (
     <>
@@ -371,9 +371,9 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                 )
               })()}
 
-              {/* vs-Vegas comparison — only shown on All Predictions modal, only when sample > 0 */}
-              {mode === 'all' && stats?.vegas && stats.vegas.sample_size > 0 && (() => {
-                const v = stats.vegas as VegasComparison
+              {/* vs-Vegas comparison — backtested modal (backfill only), when sample > 0 */}
+              {mode === 'backtest' && stats?.vegas_backtest && stats.vegas_backtest.sample_size > 0 && (() => {
+                const v = stats.vegas_backtest as VegasComparison
                 return (
                   <div className="space-y-3">
                     <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
@@ -483,7 +483,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                     Live pre-fight predictions began March 14, 2026. Every Saturday before fight day, the model scores each announced bout using only fighter data available at that moment, then freezes the prediction. No future results, retraining runs, or updated stats can change it after lock-in.
                   </p>
                   <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                    This is the honest accuracy number. The "All Predictions" figure includes retroactive backfill estimates for older fights — because those were computed after the fact, the rolling features for a 2023 fight were built with 2024–2025 data already in the dataset, giving the model information it couldn't have had at the time. The live pre-fight numbers have no such advantage.
+                    This is the honest accuracy number — the model's real calls, never revised. The "Backtested" figure instead reconstructs the current model over past fights: because features are rebuilt after the fact, a 2023 fight's rolling inputs are computed with hindsight already in the dataset, so it is not a live record. A feature bug affecting win/loss streak inputs was corrected in July 2026; live predictions frozen before then used the earlier pipeline and are kept unchanged.
                   </p>
                 </div>
               )}

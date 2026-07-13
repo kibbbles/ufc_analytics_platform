@@ -499,13 +499,13 @@ export default function PastPredictionFightPage() {
               <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Model Breakdown</span>}>
                 <p className="mb-4 text-center text-sm text-[var(--color-text-muted)]">
                   <span className="font-semibold">{winnerCount} of {total}</span>
-                  {' metrics favoured '}
+                  {' metrics favored '}
                   <span className="font-semibold">{winnerLastName}</span>
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                      Favoured {nameA.split(' ').pop()}
+                      Favored {nameA.split(' ').pop()}
                     </h3>
                     {favA.length === 0 ? (
                       <p className="text-xs text-[var(--color-text-muted)]">No clear advantages</p>
@@ -518,7 +518,7 @@ export default function PastPredictionFightPage() {
                   </div>
                   <div>
                     <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                      Favoured {nameB.split(' ').pop()}
+                      Favored {nameB.split(' ').pop()}
                     </h3>
                     {favB.length === 0 ? (
                       <p className="text-xs text-[var(--color-text-muted)]">No clear advantages</p>
@@ -532,7 +532,7 @@ export default function PastPredictionFightPage() {
                 </div>
                 <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
                   Values are per-fight averages (Fighter A − Fighter B), sorted by magnitude. Model: {predItem.model_version ?? 'win_loss_v1'}.{' '}
-                  The metric count shows how many of the model's input features point in the predicted winner's favour — a higher share means the prediction is backed by broader evidence, not just one or two stats.
+                  The metric count shows how many of the model's input features point in the predicted winner's favor — a higher share means the prediction is backed by broader evidence, not just one or two stats.
                 </p>
               </Card>
             )

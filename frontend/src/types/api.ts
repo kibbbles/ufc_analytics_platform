@@ -489,6 +489,7 @@ export interface PastPredictionSummary {
   total_fights: number
   correct: number
   accuracy: number
+  model_name: string
   avg_confidence: number
   high_conf_fights: number
   high_conf_correct: number
@@ -496,7 +497,7 @@ export interface PastPredictionSummary {
   date_from: string
   date_to: string
   available_years: number[]
-  // Pre-fight only (prediction_source = 'pre_fight_archive')
+  // Live track record (prediction_source = 'pre_fight_archive')
   pre_fight_total: number
   pre_fight_correct: number
   pre_fight_accuracy: number
@@ -504,6 +505,20 @@ export interface PastPredictionSummary {
   pre_fight_high_conf_fights: number
   pre_fight_high_conf_correct: number
   pre_fight_high_conf_accuracy: number
+  // Backtested (prediction_source = 'backfill') — corrected model, reconstructed
+  backtest_total: number
+  backtest_correct: number
+  backtest_accuracy: number
+  backtest_avg_confidence: number
+  backtest_high_conf_fights: number
+  backtest_high_conf_correct: number
+  backtest_high_conf_accuracy: number
+  // Live vs Vegas baseline (live fights that carry odds)
+  baseline_sample: number
+  baseline_vegas_accuracy: number
+  baseline_model_accuracy: number
+  baseline_disagree_count: number
+  baseline_disagree_accuracy: number | null
 }
 
 export interface PastPredictionsResponse {
@@ -587,8 +602,10 @@ export interface VegasComparison {
 export interface PastPredictionModalStats {
   all: ModalStatsSection
   pre_fight: ModalStatsSection
+  backtest: ModalStatsSection
   vegas: VegasComparison | null
   vegas_pre_fight: VegasComparison | null
+  vegas_backtest: VegasComparison | null
 }
 
 // ── Predictions ──────────────────────────────────────────────────────────────

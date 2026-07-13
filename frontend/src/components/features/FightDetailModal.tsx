@@ -180,14 +180,14 @@ export default function FightDetailModal({ fight, onClose }: Props) {
             <>
               <p className="mb-3 text-center text-sm text-[var(--color-text-muted)]">
                 <span className="font-semibold">{aWins ? favA.length : favB.length} of {favA.length + favB.length}</span>
-                {' metrics favour '}
+                {' metrics favor '}
                 <span className="font-semibold">{(aWins ? fighter_a_name : fighter_b_name)?.split(' ').pop()}</span>
               </p>
             <div className="grid grid-cols-2 gap-4">
               {/* Fighter A advantages */}
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                  Favours {fighter_a_name?.split(' ').pop() ?? 'A'}
+                  Favors {fighter_a_name?.split(' ').pop() ?? 'A'}
                 </h3>
                 {favA.slice(0, 7).map(({ label, display }) => (
                   <div key={label} className="mb-1.5">
@@ -205,7 +205,7 @@ export default function FightDetailModal({ fight, onClose }: Props) {
               {/* Fighter B advantages */}
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                  Favours {fighter_b_name?.split(' ').pop() ?? 'B'}
+                  Favors {fighter_b_name?.split(' ').pop() ?? 'B'}
                 </h3>
                 {favB.slice(0, 7).map(({ label, display }) => (
                   <div key={label} className="mb-1.5">

@@ -20,7 +20,7 @@ ML-powered UFC fight analytics. Scrapes every UFC event from UFCStats.com, train
 ### Backend
 - **Framework**: FastAPI 0.115.5
 - **Database**: PostgreSQL (Supabase)
-- **ML**: Logistic Regression (win/loss) + method classifier — 63.57% test accuracy (958 fights, Apr 2024 - Jun 2026)
+- **ML**: Win/loss classifier auto-selected each retrain by validation AUC from logistic regression, random forest, and gradient boosting (XGBoost); method classifier (KO/Sub/Dec) is random forest — 63.57% test accuracy (958 fights, Apr 2024 - Jun 2026)
 - **ORM**: SQLAlchemy 2.0 (raw SQL via `text()`, no ORM model layer)
 - **Server**: Uvicorn (dev) / Gunicorn + UvicornWorker (prod)
 - **Hosting**: Google Cloud Run (`kabes-maybes-api`, `us-central1`)
@@ -91,7 +91,8 @@ Sunday   14:00 UTC  →  weekly-ufc-scraper       scrape completed events from U
 | All fights (test set) | **63.57%** | 958 |
 
 Test period: Apr 2024 - Jun 2026.
-Model: Logistic Regression, selected by validation AUC.
+Model: the win/loss classifier is re-selected on every retrain by validation AUC from three candidates - logistic regression, random forest, and gradient boosting (XGBoost).
+The three sit within noise of each other, so the selected model varies retrain to retrain.
 
 Features: 30 differentials across physical attributes, rolling striking/grappling metrics, experience, and time-based features.
 Full per-event and conviction-bucket breakdowns are live on the Betting Insights page.
@@ -157,7 +158,7 @@ ufc_analytics_platform/
 │   │   ├── rolling_metrics.py         # 3/5/7-fight rolling averages + EWA
 │   │   └── run_build.py               # Entry point → training_data.parquet
 │   ├── ml/                            # Models + evaluation
-│   │   ├── win_loss_v1.joblib         # Logistic Regression win/loss classifier
+│   │   ├── win_loss_v1.joblib         # Win/loss classifier (best of LR / RF / XGBoost by val AUC)
 │   │   ├── method_v1.joblib           # Method classifier (KO/TKO, Sub, Dec)
 │   │   ├── metrics.json               # Test set metrics
 │   │   └── run_train.py               # Entry point

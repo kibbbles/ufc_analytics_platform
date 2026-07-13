@@ -28,6 +28,25 @@ def _test_date_from() -> str:
     except Exception:
         return ""
 
+
+_MODEL_LABELS = {
+    "logistic_regression": "Logistic Regression",
+    "random_forest":       "Random Forest",
+    "xgboost":             "Gradient Boosting (XGBoost)",
+}
+
+
+def _best_model() -> str:
+    """Human-readable name of the current win/loss model, auto-selected weekly
+    by validation AUC. Read live from metrics.json so the UI never hardcodes a
+    single algorithm (the three candidates sit within noise of each other, so
+    the winner varies retrain to retrain)."""
+    try:
+        raw = json.loads(_METRICS_PATH.read_text()).get("best_model", "")
+        return _MODEL_LABELS.get(raw, raw.replace("_", " ").title() if raw else "")
+    except Exception:
+        return ""
+
 from api.dependencies import get_db
 from schemas.past_prediction import (
     PastPredictionItem,
@@ -121,10 +140,68 @@ def get_past_predictions(
     pf_accuracy       = pf_correct / pf_total if pf_total > 0 else 0.0
     pf_hc_accuracy    = pf_hc_correct / pf_hc_fights if pf_hc_fights > 0 else 0.0
 
+    # ---- Backtested only (prediction_source = 'backfill') — corrected model --
+    # reconstructed over past fights.  Kept strictly separate from the live
+    # track record above; the two measure different things and are never blended.
+    bt_row = db.execute(text("""
+        SELECT
+            COUNT(*)                                                            AS total,
+            SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)                        AS correct,
+            AVG(confidence)                                                     AS avg_confidence,
+            SUM(CASE WHEN confidence >= 0.30 THEN 1 ELSE 0 END)               AS high_conf_fights,
+            SUM(CASE WHEN is_correct AND confidence >= 0.30 THEN 1 ELSE 0 END) AS high_conf_correct
+        FROM past_predictions
+        WHERE prediction_source = 'backfill'
+          AND is_correct IS NOT NULL
+          AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
+    """), {"test_from": test_from}).mappings().first()
+
+    bt_total       = int(bt_row["total"] or 0)
+    bt_correct     = int(bt_row["correct"] or 0)
+    bt_avg_conf    = float(bt_row["avg_confidence"] or 0.0)
+    bt_hc_fights   = int(bt_row["high_conf_fights"] or 0)
+    bt_hc_correct  = int(bt_row["high_conf_correct"] or 0)
+    bt_accuracy    = bt_correct / bt_total if bt_total > 0 else 0.0
+    bt_hc_accuracy = bt_hc_correct / bt_hc_fights if bt_hc_fights > 0 else 0.0
+
+    # ---- Live vs Vegas baseline (pre_fight_archive fights with odds) --------
+    # The "versus what baseline" context.  A fight predictor is only interesting
+    # if it beats always-pick-the-favorite; surface that on the headline, not
+    # buried in a modal.
+    base_row = db.execute(text("""
+        SELECT
+            COUNT(*) AS sample,
+            SUM(CASE WHEN (implied_prob_a > 0.5 AND actual_winner_id = fighter_a_id)
+                       OR (implied_prob_a <= 0.5 AND actual_winner_id != fighter_a_id)
+                     THEN 1 ELSE 0 END) AS vegas_correct,
+            SUM(CASE WHEN (win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
+                       OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id)
+                     THEN 1 ELSE 0 END) AS model_correct,
+            SUM(CASE WHEN (win_prob_a >= 0.5) != (implied_prob_a > 0.5)
+                     THEN 1 ELSE 0 END) AS disagree_count,
+            SUM(CASE WHEN (win_prob_a >= 0.5) != (implied_prob_a > 0.5)
+                       AND ((win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
+                            OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id))
+                     THEN 1 ELSE 0 END) AS disagree_correct
+        FROM past_predictions
+        WHERE prediction_source = 'pre_fight_archive'
+          AND implied_prob_a IS NOT NULL
+          AND actual_winner_id IS NOT NULL
+          AND win_prob_a IS NOT NULL
+          AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
+    """), {"test_from": test_from}).mappings().first()
+
+    base_sample    = int(base_row["sample"] or 0)
+    base_vegas_acc = int(base_row["vegas_correct"] or 0) / base_sample if base_sample else 0.0
+    base_model_acc = int(base_row["model_correct"] or 0) / base_sample if base_sample else 0.0
+    base_dis       = int(base_row["disagree_count"] or 0)
+    base_dis_acc   = (int(base_row["disagree_correct"] or 0) / base_dis) if base_dis > 0 else None
+
     summary = PastPredictionSummary(
         total_fights=total_fights,
         correct=correct,
         accuracy=accuracy,
+        model_name=_best_model(),
         avg_confidence=avg_confidence,
         high_conf_fights=high_conf_fights,
         high_conf_correct=high_conf_correct,
@@ -139,6 +216,18 @@ def get_past_predictions(
         pre_fight_high_conf_fights=pf_hc_fights,
         pre_fight_high_conf_correct=pf_hc_correct,
         pre_fight_high_conf_accuracy=pf_hc_accuracy,
+        backtest_total=bt_total,
+        backtest_correct=bt_correct,
+        backtest_accuracy=bt_accuracy,
+        backtest_avg_confidence=bt_avg_conf,
+        backtest_high_conf_fights=bt_hc_fights,
+        backtest_high_conf_correct=bt_hc_correct,
+        backtest_high_conf_accuracy=bt_hc_accuracy,
+        baseline_sample=base_sample,
+        baseline_vegas_accuracy=base_vegas_acc,
+        baseline_model_accuracy=base_model_acc,
+        baseline_disagree_count=base_dis,
+        baseline_disagree_accuracy=base_dis_acc,
     )
 
     # ---- Recent predictions -------------------------------------------------
@@ -481,6 +570,42 @@ def get_past_prediction_stats(
           AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
     """), _params).mappings().all()
 
+    # ── Backtested only (prediction_source = 'backfill') ─────────────────────
+    bt_bucket_rows = db.execute(text(f"""
+        SELECT {_BUCKET_CASE} AS bucket,
+               COUNT(*) AS fights,
+               SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
+        FROM past_predictions
+        WHERE prediction_source = 'backfill'
+          AND confidence IS NOT NULL AND is_correct IS NOT NULL
+          {_DATE_FILTER}
+        GROUP BY bucket
+        ORDER BY MIN(confidence) DESC
+    """), _params).mappings().all()
+
+    bt_wc_rows = db.execute(text(f"""
+        SELECT weight_class,
+               COUNT(*) AS fights,
+               SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
+        FROM past_predictions
+        WHERE prediction_source = 'backfill'
+          AND weight_class IS NOT NULL AND is_correct IS NOT NULL
+          {_DATE_FILTER}
+        GROUP BY weight_class
+        ORDER BY {_WC_ORDER}
+    """), _params).mappings().all()
+
+    bt_raw = db.execute(text("""
+        SELECT confidence, is_correct, win_prob_a, win_prob_b,
+               actual_winner_id, fighter_a_id
+        FROM past_predictions
+        WHERE prediction_source = 'backfill'
+          AND confidence IS NOT NULL AND is_correct IS NOT NULL
+          AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
+          AND actual_winner_id IS NOT NULL AND fighter_a_id IS NOT NULL
+          AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
+    """), _params).mappings().all()
+
     def _roc_auc(y_true: list, y_score: list) -> float | None:
         n_pos = sum(y_true)
         n_neg = len(y_true) - n_pos
@@ -538,6 +663,7 @@ def get_past_prediction_stats(
 
     all_avg_correct, all_avg_incorrect, all_brier, all_bss, all_auc = _section_metrics(all_raw)
     pf_avg_correct,  pf_avg_incorrect,  pf_brier,  pf_bss,  pf_auc  = _section_metrics(pf_raw)
+    bt_avg_correct,  bt_avg_incorrect,  bt_brier,  bt_bss,  bt_auc  = _section_metrics(bt_raw)
 
     # ── vs-Vegas comparison ───────────────────────────────────────────────────
     _VEGAS_CTE = """
@@ -689,6 +815,64 @@ def get_past_prediction_stats(
             by_conviction=by_conviction,
         )
 
+    # ── vs-Vegas (backfill only — backtested corrected model) ────────────────
+    _VEGAS_BT_CTE = """
+        WITH best AS (
+            SELECT implied_prob_a, win_prob_a, actual_winner_id, fighter_a_id, confidence
+            FROM past_predictions
+            WHERE prediction_source = 'backfill'
+        )
+    """
+
+    vegas_bt_row = db.execute(text(f"""
+        {_VEGAS_BT_CTE}
+        SELECT {_VEGAS_COLS}
+        FROM best
+        {_VEGAS_WHERE}
+    """)).mappings().first()
+
+    vegas_bt_bucket_rows = db.execute(text(f"""
+        {_VEGAS_BT_CTE}
+        SELECT
+            ({_BUCKET_CASE}) AS bucket,
+            {_VEGAS_COLS}
+        FROM best
+        {_VEGAS_WHERE}
+        GROUP BY bucket
+        ORDER BY MIN(confidence) DESC
+    """)).mappings().all()
+
+    vegas_bt_cmp = None
+    if vegas_bt_row and int(vegas_bt_row["sample_size"]) > 0:
+        n = int(vegas_bt_row["sample_size"])
+        vc = int(vegas_bt_row["vegas_correct"])
+        mc = int(vegas_bt_row["model_correct"])
+        dc = int(vegas_bt_row["disagree_count"])
+        dcc = int(vegas_bt_row["disagree_correct"])
+
+        by_conviction = []
+        for br in vegas_bt_bucket_rows:
+            bn = int(br["sample_size"])
+            bdc = int(br["disagree_count"])
+            bdcc = int(br["disagree_correct"])
+            by_conviction.append(VegasBucketStat(
+                label=br["bucket"],
+                sample_size=bn,
+                model_accuracy=int(br["model_correct"]) / bn if bn else 0.0,
+                vegas_accuracy=int(br["vegas_correct"]) / bn if bn else 0.0,
+                disagree_count=bdc,
+                disagree_accuracy=(bdcc / bdc) if bdc > 0 else None,
+            ))
+
+        vegas_bt_cmp = VegasComparison(
+            sample_size=n,
+            vegas_accuracy=vc / n,
+            model_accuracy=mc / n,
+            disagree_count=dc,
+            disagree_accuracy=(dcc / dc) if dc > 0 else None,
+            by_conviction=by_conviction,
+        )
+
     return PastPredictionModalStats(
         all=ModalStatsSection(
             conf_buckets=_buckets(all_bucket_rows),
@@ -708,8 +892,18 @@ def get_past_prediction_stats(
             brier_skill_score=pf_bss,
             roc_auc=pf_auc,
         ),
+        backtest=ModalStatsSection(
+            conf_buckets=_buckets(bt_bucket_rows),
+            weight_classes=_wc(bt_wc_rows),
+            avg_conf_correct=bt_avg_correct,
+            avg_conf_incorrect=bt_avg_incorrect,
+            brier_score=bt_brier,
+            brier_skill_score=bt_bss,
+            roc_auc=bt_auc,
+        ),
         vegas=vegas_cmp,
         vegas_pre_fight=vegas_pf_cmp,
+        vegas_backtest=vegas_bt_cmp,
     )
 
 

@@ -50,6 +50,7 @@ class PastPredictionSummary(BaseModel):
     total_fights: int
     correct: int
     accuracy: float
+    model_name: str = ""      # current win/loss model, auto-selected weekly (from metrics.json)
     high_conf_fights: int     # confidence >= 0.65
     high_conf_correct: int
     high_conf_accuracy: float
@@ -57,7 +58,8 @@ class PastPredictionSummary(BaseModel):
     date_to: str
     available_years: list[int] = []
     avg_confidence: float = 0.0
-    # Pre-fight only stats (prediction_source = 'pre_fight_archive')
+    # Live track record (prediction_source = 'pre_fight_archive') — predictions
+    # frozen before each event, exactly as called. Never rewritten.
     pre_fight_total: int = 0
     pre_fight_correct: int = 0
     pre_fight_accuracy: float = 0.0
@@ -65,6 +67,24 @@ class PastPredictionSummary(BaseModel):
     pre_fight_high_conf_fights: int = 0
     pre_fight_high_conf_correct: int = 0
     pre_fight_high_conf_accuracy: float = 0.0
+    # Backtested (prediction_source = 'backfill') — the corrected model
+    # reconstructed over past fights. Not a live record; benefits from hindsight
+    # in the code (features rebuilt after the fact), though not in the data.
+    backtest_total: int = 0
+    backtest_correct: int = 0
+    backtest_accuracy: float = 0.0
+    backtest_avg_confidence: float = 0.0
+    backtest_high_conf_fights: int = 0
+    backtest_high_conf_correct: int = 0
+    backtest_high_conf_accuracy: float = 0.0
+    # Live vs Vegas baseline — the "versus what baseline" context, on the subset
+    # of live fights that carry Vegas odds. Surfaced on the headline card, not
+    # buried, because it is the first question anyone asks of a fight predictor.
+    baseline_sample: int = 0                    # live fights with Vegas odds
+    baseline_vegas_accuracy: float = 0.0        # always-pick-favorite on those fights
+    baseline_model_accuracy: float = 0.0        # model on those same fights
+    baseline_disagree_count: int = 0            # fights where model disagreed with Vegas
+    baseline_disagree_accuracy: Optional[float] = None  # model accuracy when it disagreed
 
 
 class PastPredictionsResponse(BaseModel):
@@ -152,7 +172,9 @@ class VegasComparison(BaseModel):
 
 
 class PastPredictionModalStats(BaseModel):
-    all: ModalStatsSection
-    pre_fight: ModalStatsSection
+    all: ModalStatsSection          # deprecated blended view — kept for back-compat
+    pre_fight: ModalStatsSection    # live track record (pre_fight_archive)
+    backtest: ModalStatsSection     # corrected model, reconstructed (backfill)
     vegas: Optional[VegasComparison] = None
     vegas_pre_fight: Optional[VegasComparison] = None
+    vegas_backtest: Optional[VegasComparison] = None

@@ -201,13 +201,13 @@ function FeatureBreakdown({ fight }: { fight: UpcomingFight }) {
     <>
       <p className="mb-4 text-center text-sm text-[var(--color-text-muted)]">
         <span className="font-semibold">{aWins ? favA.length : favB.length} of {favA.length + favB.length}</span>
-        {' metrics favour '}
+        {' metrics favor '}
         <span className="font-semibold">{aWins ? nameA : nameB}</span>
       </p>
     <div className="grid grid-cols-2 gap-4">
       <div>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-          Favours {nameA}
+          Favors {nameA}
         </h3>
         {favA.length === 0 ? (
           <p className="text-xs text-[var(--color-text-muted)]">No clear advantages</p>
@@ -222,7 +222,7 @@ function FeatureBreakdown({ fight }: { fight: UpcomingFight }) {
       </div>
       <div>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-          Favours {nameB}
+          Favors {nameB}
         </h3>
         {favB.length === 0 ? (
           <p className="text-xs text-[var(--color-text-muted)]">No clear advantages</p>
@@ -549,7 +549,7 @@ export default function UpcomingFightPage() {
               <FeatureBreakdown fight={fight} />
               <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
                 Values are per-fight averages (Fighter A − Fighter B), sorted by magnitude. Model: {pred.model_version ?? 'win_loss_v1'}.{' '}
-                The metric count shows how many of the model's input features point in the predicted winner's favour — a higher share means the prediction is backed by broader evidence, not just one or two stats.
+                The metric count shows how many of the model's input features point in the predicted winner's favor — a higher share means the prediction is backed by broader evidence, not just one or two stats.
               </p>
             </Card>
           )}
