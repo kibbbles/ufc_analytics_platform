@@ -104,6 +104,7 @@ def run(dry_run: bool = False) -> None:
                 up.method_dec        AS pred_method_dec,
                 up.model_version,
                 up.features_json,
+                up.pipeline_version,
                 up.predicted_at      AS pre_fight_predicted_at,
                 fd.id                AS fight_id,
                 fd.event_id,
@@ -205,6 +206,9 @@ def run(dry_run: bool = False) -> None:
             "confidence":            confidence,
             "is_upset":              is_upset,
             "prediction_source":     "pre_fight_archive",
+            # Carried forward from the upcoming_prediction: the version that
+            # actually computed these features, not the archive-time version.
+            "pipeline_version":      r["pipeline_version"],
             "pre_fight_predicted_at": r["pre_fight_predicted_at"],
             "features_json":         json.dumps(r["features_json"]) if r["features_json"] is not None else None,
             "odds_a":                r.get("odds_a"),
@@ -235,7 +239,7 @@ def run(dry_run: bool = False) -> None:
                     predicted_winner_id, predicted_method,
                     actual_winner_id, actual_method,
                     is_correct, confidence, is_upset,
-                    prediction_source, pre_fight_predicted_at, features_json,
+                    prediction_source, pipeline_version, pre_fight_predicted_at, features_json,
                     odds_a, odds_b, implied_prob_a, implied_prob_b
                 ) VALUES (
                     :id, :fight_id, :event_id, :event_name, :event_date,
@@ -246,7 +250,7 @@ def run(dry_run: bool = False) -> None:
                     :predicted_winner_id, :predicted_method,
                     :actual_winner_id, :actual_method,
                     :is_correct, :confidence, :is_upset,
-                    :prediction_source, :pre_fight_predicted_at, :features_json,
+                    :prediction_source, :pipeline_version, :pre_fight_predicted_at, :features_json,
                     :odds_a, :odds_b, :implied_prob_a, :implied_prob_b
                 )
                 ON CONFLICT (fight_id, prediction_source) DO NOTHING

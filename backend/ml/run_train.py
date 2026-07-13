@@ -38,6 +38,16 @@ def main() -> None:
     logger.info("=== Model Training Pipeline ===")
     metrics = train(eval_only=args.eval_only)
 
+    # Guard: verify the inference feature pipeline still produces a complete
+    # feature vector before shipping a retrained model.  Fails loudly on a
+    # structural regression (a selected feature that stopped being produced —
+    # the win_rate_diff failure mode) rather than serving silently degraded
+    # predictions.
+    if not args.eval_only:
+        logger.info("Validating inference pipeline completeness...")
+        from features.pipeline import validate_inference_completeness
+        validate_inference_completeness()
+
     print("\n" + "=" * 50)
     print(f"Win/Loss   accuracy : {metrics['win_accuracy']:.4f}")
     print(f"Win/Loss   ROC-AUC  : {metrics['win_roc_auc']:.4f}")

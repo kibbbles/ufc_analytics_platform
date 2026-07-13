@@ -34,7 +34,7 @@ sys.path.insert(0, backend_dir)
 from sqlalchemy import text
 
 from db.database import engine
-from features.pipeline import build_prediction_features
+from features.pipeline import build_prediction_features, PIPELINE_VERSION
 from ml.loader import ModelStore
 from ml.predictor import predict
 
@@ -165,6 +165,7 @@ def compute_for_fight(
                 method_dec    = :dec,
                 features_json = :feat,
                 feature_hash  = :hash,
+                pipeline_version = :pver,
                 predicted_at  = now()
             WHERE fight_id = :fid
         """), {
@@ -172,6 +173,7 @@ def compute_for_fight(
             'ko': method_ko_tko, 'sub': method_sub, 'dec': method_dec,
             'feat': json.dumps(_sanitize(feat), default=str),
             'hash': fhash,
+            'pver': PIPELINE_VERSION,
             'fid': fight_id,
         })
         logger.info(f'  Updated prediction: {name}')
@@ -181,11 +183,11 @@ def compute_for_fight(
             INSERT INTO upcoming_predictions
                 (id, fight_id, model_version, win_prob_a, win_prob_b,
                  method_ko_tko, method_sub, method_dec,
-                 features_json, feature_hash)
+                 features_json, feature_hash, pipeline_version)
             VALUES
                 (:id, :fid, :ver, :wpa, :wpb,
                  :ko, :sub, :dec,
-                 :feat, :hash)
+                 :feat, :hash, :pver)
         """), {
             'id': pred_id,
             'fid': fight_id,
@@ -194,6 +196,7 @@ def compute_for_fight(
             'ko': method_ko_tko, 'sub': method_sub, 'dec': method_dec,
             'feat': json.dumps(_sanitize(feat), default=str),
             'hash': fhash,
+            'pver': PIPELINE_VERSION,
         })
         logger.info(f'  Inserted prediction: {name} ({pred_id})')
 

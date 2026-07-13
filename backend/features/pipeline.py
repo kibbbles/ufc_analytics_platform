@@ -43,6 +43,12 @@ _HERE        = Path(__file__).parent
 PARQUET_PATH = _HERE / "training_data.parquet"
 _SEL_PATH    = _HERE / "selected_features.json"
 
+# Feature-pipeline version stamped onto prediction rows.  Bump when the
+# inference feature computation changes in a way that alters outputs.
+# "streak_phantom_v2" = the synthetic-upcoming-fight (Option B) fix that
+# corrected win/loss streak lag, the fight_id sort bug, and null win_rate_diff.
+PIPELINE_VERSION = "streak_phantom_v2"
+
 # Weight class → weight limit in lbs (ordinal reference; encoding done in Task 6)
 WEIGHT_CLASS_LBS: dict[str, int] = {
     "Women's Strawweight":   115,
@@ -513,11 +519,119 @@ def build_prediction_features(
     feat["is_women_division"] = int(str(weight_class or "").startswith("Women's"))
     feat["is_title_fight"]    = 0   # unknown for future fights; default non-title
 
-    # ---- Filter to selected features only ---------------------------------
+    # ---- Guard + filter to selected features only -------------------------
     if _SEL_PATH.exists():
         with open(_SEL_PATH, encoding="utf-8") as f:
             sel = json.load(f)
         all_keys = sel["feature_names"] + sel["categorical_features"]
+
+        # Guard against silent wrongness — the failure mode that hid win_rate_diff.
+        # Every selected feature MUST be actively produced above.  A selected key
+        # that is never assigned would fall through `feat.get(k)` to None and then
+        # be imputed to the training median at predict time: a plausible-looking
+        # wrong answer that never errors.  Fail loudly instead.
+        missing = [k for k in all_keys if k not in feat]
+        if missing:
+            raise ValueError(
+                "build_prediction_features: selected feature(s) not produced by the "
+                f"pipeline and would be silently imputed: {sorted(missing)}. Wire them "
+                "in build_prediction_features or remove them from selected_features.json."
+            )
+
+        # Null values can be legitimate (data sparsity, e.g. a fighter with no
+        # takedown attempts), so warn rather than raise here — but surface it so a
+        # feature that is null for well-established fighters is visible in logs.
+        # A hard assertion on fully-populated fighters lives in
+        # validate_inference_completeness(), run at retrain time.
+        null_feats = [
+            k for k in all_keys
+            if feat.get(k) is None or (isinstance(feat.get(k), float) and pd.isna(feat.get(k)))
+        ]
+        if null_feats:
+            logger.warning(
+                "build_prediction_features(%s vs %s): %d selected feature(s) null, "
+                "imputed at predict time: %s",
+                fighter_a_id, fighter_b_id, len(null_feats), sorted(null_feats),
+            )
+
         feat = {k: feat.get(k) for k in all_keys}
 
     return feat
+
+
+def validate_inference_completeness(n_pairs: int = 8, min_fights: int = 12) -> None:
+    """Fail loudly if a selected feature is *structurally* null at inference.
+
+    Builds the inference feature vector for several matchups of veteran fighters
+    (>= `min_fights` UFC bouts, known DOB and reach) and flags any selected
+    feature that is null for **every** tested pair.  The all-pairs criterion is
+    what separates a structural bug from legitimate data sparsity: win_rate_diff
+    was null for every fighter (never produced), whereas a rate like
+    diff_roll5_td_pct is null only for the occasional fighter who attempted no
+    takedowns in the window.  Intended to run at retrain time (see
+    ml/run_train.py) so a regression fails CI rather than shipping silently
+    degraded predictions.
+
+    Raises:
+        RuntimeError if any selected feature is null across all tested pairs.
+    """
+    from sqlalchemy import text as _text
+    from db.database import SessionLocal
+
+    with open(_SEL_PATH, encoding="utf-8") as f:
+        sel = json.load(f)
+    all_keys = sel["feature_names"] + sel["categorical_features"]
+
+    s = SessionLocal()
+    try:
+        rows = s.execute(_text("""
+            SELECT fr.fighter_id
+            FROM fight_results fr
+            JOIN fighter_tott ft ON ft.fighter_id = fr.fighter_id
+            WHERE ft.dob_date IS NOT NULL AND ft.reach_inches IS NOT NULL
+            GROUP BY fr.fighter_id
+            HAVING COUNT(*) >= :min_fights
+            ORDER BY COUNT(*) DESC
+            LIMIT :lim
+        """), {"min_fights": min_fights, "lim": n_pairs * 2}).scalars().all()
+    finally:
+        s.close()
+
+    if len(rows) < 4:
+        logger.warning("validate_inference_completeness: not enough veteran fighters to check")
+        return
+
+    def _is_null(v) -> bool:
+        return v is None or (isinstance(v, float) and pd.isna(v))
+
+    null_counts = {k: 0 for k in all_keys}
+    sparse_seen: dict[str, int] = {}
+    n_tested = 0
+    for i in range(0, len(rows) - 1, 2):
+        a, b = rows[i], rows[i + 1]
+        feat = build_prediction_features(a, b, "Lightweight")
+        n_tested += 1
+        for k in all_keys:
+            if _is_null(feat.get(k)):
+                null_counts[k] += 1
+
+    # Structural = null for EVERY tested pair.  Sparse = null for some but not all.
+    structural = {k: c for k, c in null_counts.items() if c == n_tested and n_tested > 0}
+    sparse_seen = {k: c for k, c in null_counts.items() if 0 < c < n_tested}
+
+    if structural:
+        raise RuntimeError(
+            "validate_inference_completeness: selected feature(s) null for ALL "
+            f"{n_tested} veteran matchups — structural pipeline regression (the "
+            f"win_rate_diff failure mode): {sorted(structural)}"
+        )
+    if sparse_seen:
+        logger.info(
+            "validate_inference_completeness: OK (%d pairs). Occasional data-sparsity "
+            "nulls (not structural): %s", n_tested, sparse_seen,
+        )
+    else:
+        logger.info(
+            "validate_inference_completeness: OK — all %d selected features non-null "
+            "across %d veteran matchups", len(all_keys), n_tested,
+        )
