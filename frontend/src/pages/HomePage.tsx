@@ -284,7 +284,7 @@ function ModelScorecard() {
           )}
           {summary.pre_fight_total > 0 && (
             <p className="mb-3 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-4 py-3 text-xs font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-              Probabilities are roughly honest near 50% but overconfident above 60%: when this model says 70%, it wins closer to 55%.{' '}
+              The live record, made with the now-fixed feature bug, was overconfident above 60%. The corrected model is well-calibrated on held-out test data (ECE 3.65%), but has no live track record yet.{' '}
               <button
                 onClick={() => setModal('pre_fight')}
                 className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-primary)]"
