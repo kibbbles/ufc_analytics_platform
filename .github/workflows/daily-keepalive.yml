@@ -25,16 +25,6 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
-      - name: Force IPv4 DNS resolution
-        run: |
-          # GitHub Actions doesn't support IPv6, so we need to force IPv4
-          # Get IPv4 address for Supabase host and add to /etc/hosts
-          SUPABASE_HOST="db.mklpmbqpegbsistkoskm.supabase.co"
-          IPV4_ADDR=$(dig +short $SUPABASE_HOST A | head -1)
-          echo "Resolved $SUPABASE_HOST to IPv4: $IPV4_ADDR"
-          echo "$IPV4_ADDR $SUPABASE_HOST" | sudo tee -a /etc/hosts
-          echo "Updated /etc/hosts to force IPv4 connection"
-
       - name: Run keepalive ping
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

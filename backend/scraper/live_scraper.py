@@ -96,7 +96,12 @@ class LiveUFCScraper:
                         continue
             logging.info(f"Loaded {len(self.existing_ids)} existing IDs from database")
         except Exception as e:
-            logging.warning(f"Could not load existing IDs: {e}")
+            # A connection-level failure here means we cannot dedup safely and
+            # would treat every event as new. Fail loudly rather than continue
+            # with an empty/partial ID set. (Per-table "table missing" errors are
+            # still tolerated by the inner handler above.)
+            logging.error(f"Could not load existing IDs: {e}")
+            raise
 
     def scrape_fighter_career_stats(self, fighter_url):
         """
@@ -367,9 +372,17 @@ class LiveUFCScraper:
                 
                 conn.commit()
                 logging.info(f"Stored {inserted_count} new events with alphanumeric IDs")
-                
+
+                # Expected to write rows but wrote none/fewer — fail loudly.
+                if inserted_count != len(events):
+                    raise RuntimeError(
+                        f"Expected to store {len(events)} events but wrote {inserted_count}"
+                    )
+
         except Exception as e:
             logging.error(f"Error storing events: {e}")
+            # Propagate: a write failure must fail the run, never pass as green.
+            raise
     
     def store_new_fights(self, fights, event_name, event_id):
         """Store new fights and their results in fight_details + fight_results.
@@ -1033,12 +1046,17 @@ def main():
     """Run live scraping"""
     scraper = LiveUFCScraper()
     success = scraper.run_live_scraping()
-    
+
     # Additional completion message
     if success:
         print("\nUPDATE CHECK COMPLETE! Your UFC database is up to date.")
     else:
         print("\nUPDATE CHECK FAILED! Check logs for details.")
+
+    # Propagate failure to the process exit code. Without this the workflow sees
+    # exit 0 and reports green even when the database was unreachable or nothing
+    # was written — the silent-success failure that lost the UFC 329 record.
+    sys.exit(0 if success else 1)
 
 if __name__ == "__main__":
     main()
