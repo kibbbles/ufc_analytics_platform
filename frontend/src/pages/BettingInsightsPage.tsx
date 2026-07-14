@@ -67,8 +67,8 @@ export default function BettingInsightsPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? 'border-b-2 border-[var(--color-text)] text-[var(--color-text)]'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                ? 'border-b-2 border-[var(--color-text-primary-light)] text-[var(--color-text-primary-light)] dark:border-[var(--color-text-primary)] dark:text-[var(--color-text-primary)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)]'
             }`}
             style={{ marginBottom: activeTab === tab.id ? '-1px' : 0 }}
           >

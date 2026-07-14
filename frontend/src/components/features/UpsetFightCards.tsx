@@ -114,7 +114,7 @@ export function UpsetFightCards() {
     <div className="space-y-5">
       {/* Definition */}
       <p className="text-sm text-[var(--color-text-muted)]">
-        <strong className="text-[var(--color-text)]">"Upset" here</strong> means the model was wrong AND had ≥20pp conviction (model win prob ≥70%) on the losing pick. This is NOT the same as a Vegas underdog winning — it measures where the model gets confidently fooled. Includes all past predictions, not just Vegas-odds fights.
+        <strong className="text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">"Upset" here</strong> means the model was wrong AND had ≥20pp conviction (model win prob ≥70%) on the losing pick. This is NOT the same as a Vegas underdog winning — it measures where the model gets confidently fooled. Includes all past predictions, not just Vegas-odds fights.
       </p>
 
       {/* Filters */}

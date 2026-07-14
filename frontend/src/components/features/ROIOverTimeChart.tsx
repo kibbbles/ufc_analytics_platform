@@ -107,7 +107,11 @@ export function ROIOverTimeChart() {
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${range === r ? 'bg-[var(--color-text)] text-[var(--color-bg)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                range === r
+                  ? 'bg-[var(--color-text-primary-light)] text-[var(--color-bg-light)] dark:bg-[var(--color-text-primary)] dark:text-[var(--color-bg)]'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)]'
+              }`}
             >
               {r}
             </button>

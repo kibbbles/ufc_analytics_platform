@@ -405,7 +405,9 @@ export function OverviewTab() {
             key={r}
             onClick={() => { setTimeRange(r); setPage(1) }}
             className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-              timeRange === r ? 'bg-[var(--color-text)] text-[var(--color-bg)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              timeRange === r
+                ? 'bg-[var(--color-text-primary-light)] text-[var(--color-bg-light)] dark:bg-[var(--color-text-primary)] dark:text-[var(--color-bg)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)]'
             }`}
           >
             {r}

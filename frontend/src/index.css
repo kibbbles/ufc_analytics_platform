@@ -42,6 +42,7 @@
   /* Light text */
   --color-text-primary-light:   #0f172a;   /* slate-900 */
   --color-text-secondary-light: #475569;   /* slate-600 */
+  --color-text-muted-light:     #64748b;   /* slate-500 */
 
   /* Typography */
   --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
