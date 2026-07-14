@@ -300,6 +300,9 @@ function ModelScorecard() {
             Every one of these {summary.pre_fight_total} live predictions was made with a corrupted win/loss streak feature and with win_rate_diff silently imputed to the population mean; both were fixed in July 2026. The corrected model has no live track record yet and cannot be claimed to be better until it accumulates one.
           </p>
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+            UFC 329 (2026-07-11) has no live pre-fight prediction. The archive workflow was down due to a credential failure, and a subsequent recompute overwrote the snapshot before it could be frozen. The event's results are included; its prediction is not.
+          </p>
+          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
             Conviction measures how far the model's prediction is from a coin flip, scaled to 0–100%. A 60/40 prediction = 20% conviction, a 75/25 pick = 50% conviction, an 85/15 pick = 70% conviction. It is not a statistical confidence interval — it reflects how decisive the model is on a given matchup based on the feature differentials going in.
           </p>
         </div>

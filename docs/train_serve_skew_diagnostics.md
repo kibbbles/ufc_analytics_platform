@@ -134,6 +134,19 @@ In the 60-80% range it is overconfident: it claims 64-74% and wins 50-55%.
 It almost never makes a high-confidence call, and the few it made are too sparse to judge.
 This is now shown on the scorecard, so a viewer can see for themselves whether a displayed percentage means what it says.
 
+## Data loss: UFC 329 has no live pre-fight prediction
+
+UFC 329 (2026-07-11) has no live pre-fight prediction, and this is disclosed rather than papered over.
+
+Two failures compounded.
+The GitHub Actions database credential was not updated after a password rotation, so the archive workflow that freezes pre-fight snapshots had been failing for a week.
+Then a bulk recompute of the upcoming predictions, run to apply the streak fix, overwrote UFC 329's original snapshot with an after-the-event vector before it could be frozen.
+The original pre-fight prediction existed nowhere else and is permanently gone.
+
+The event's results are ingested normally; only its prediction is missing.
+No snapshot was fabricated to fill the hole, because a reconstructed prediction dated after the event would contradict the entire point of a pre-fight record.
+The defect that allowed the overwrite was fixed: a bulk recompute now refuses to touch any event whose date has passed.
+
 ## What this project demonstrates
 
 The portfolio-worthy result here is not a winning model.
