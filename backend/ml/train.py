@@ -39,7 +39,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
+    brier_score_loss,
     classification_report,
+    log_loss,
     roc_auc_score,
 )
 from sklearn.pipeline import Pipeline
@@ -416,11 +418,15 @@ def train(eval_only: bool = False) -> dict:
         train_pred = pipeline.predict(X_train)
         train_acc  = float(accuracy_score(y_train, train_pred))
 
-        # Val metrics — used for model selection (never the test set)
+        # Val metrics — diagnostic. Brier is the headline (calibration-aware,
+        # matches the win-probability + conviction the product displays); AUC
+        # and accuracy are kept for reference only.
         val_pred  = pipeline.predict(X_val)
         val_proba = pipeline.predict_proba(X_val)[:, 1]
         val_acc   = float(accuracy_score(y_val, val_pred))
         val_auc   = float(roc_auc_score(y_val, val_proba))
+        val_brier = float(brier_score_loss(y_val, val_proba))
+        val_ll    = float(log_loss(y_val, val_proba, labels=[0, 1]))
 
         # Test metrics — final holdout evaluation only
         test_pred  = pipeline.predict(X_test)
@@ -431,8 +437,8 @@ def train(eval_only: bool = False) -> dict:
         gap = round(val_acc - test_acc, 4)   # Tilburg reports this difference
         logger.info(
             "  %-22s train_acc=%.4f  val_acc=%.4f  val_auc=%.4f  "
-            "test_acc=%.4f  test_auc=%.4f  gap(val-test)=%.4f",
-            name, train_acc, val_acc, val_auc, test_acc, test_auc, gap,
+            "val_brier=%.4f  val_logloss=%.4f  test_acc=%.4f  gap(val-test)=%.4f",
+            name, train_acc, val_acc, val_auc, val_brier, val_ll, test_acc, gap,
         )
         logger.info("\n%s", classification_report(
             y_test, test_pred, target_names=["B wins", "A wins"]
@@ -442,6 +448,8 @@ def train(eval_only: bool = False) -> dict:
             "train_accuracy": round(train_acc, 4),
             "val_accuracy":   round(val_acc,  4),
             "val_auc":        round(val_auc,  4),
+            "val_brier":      round(val_brier, 4),
+            "val_logloss":    round(val_ll,   4),
             "test_accuracy":  round(test_acc, 4),
             "test_auc":       round(test_auc, 4),
             "val_test_gap":   round(gap,      4),
@@ -449,19 +457,42 @@ def train(eval_only: bool = False) -> dict:
         trained_models[name] = pipeline
 
     # ------------------------------------------------------------------ #
-    # 4. Select best model by validation AUC                              #
+    # 4. Deploy the PINNED model (logistic regression)                    #
     # ------------------------------------------------------------------ #
-    best_name     = max(model_results, key=lambda n: model_results[n]["val_auc"])
+    # All three candidates sit within noise of each other on every metric, so
+    # auto-selecting the weekly "best" swapped the deployed artifact on random
+    # fluctuations — injecting variance into the live track record for no real
+    # gain. We pin LR and keep training the others purely as a diagnostic, so a
+    # genuine future divergence is still visible. If another model beats LR on
+    # validation Brier by more than the noise band, we alert rather than
+    # silently swap.
+    DEPLOYED_MODEL     = "logistic_regression"
+    BRIER_ALERT_MARGIN = 0.01   # ~1.5-2 val-set SEs; below this is noise
+
+    best_name     = DEPLOYED_MODEL
     best_pipeline = trained_models[best_name]
     best_res      = model_results[best_name]
 
+    # Diagnostic: who would Brier have picked, and by how much?
+    brier_leader = min(model_results, key=lambda n: model_results[n]["val_brier"])
+    margin       = best_res["val_brier"] - model_results[brier_leader]["val_brier"]
+    if brier_leader != DEPLOYED_MODEL and margin > BRIER_ALERT_MARGIN:
+        logger.warning(
+            "MODEL ALERT: %s beat pinned %s on val Brier by %.4f (> %.4f noise band) "
+            "— review whether to re-pin.",
+            brier_leader, DEPLOYED_MODEL, margin, BRIER_ALERT_MARGIN,
+        )
+    else:
+        logger.info(
+            "Pinned %s deployed. Brier leader this run: %s (margin %.4f, within noise band %.4f).",
+            DEPLOYED_MODEL, brier_leader, margin, BRIER_ALERT_MARGIN,
+        )
+
     logger.info(
-        "Best model: %s  (val_acc=%.4f  val_auc=%.4f  test_acc=%.4f  "
-        "test_auc=%.4f  gap=%.4f)",
+        "Deployed model: %s  (val_acc=%.4f  val_auc=%.4f  val_brier=%.4f  test_acc=%.4f  gap=%.4f)",
         best_name,
-        best_res["val_accuracy"], best_res["val_auc"],
-        best_res["test_accuracy"], best_res["test_auc"],
-        best_res["val_test_gap"],
+        best_res["val_accuracy"], best_res["val_auc"], best_res["val_brier"],
+        best_res["test_accuracy"], best_res["val_test_gap"],
     )
 
     feat_imp = _extract_importance(best_pipeline, feature_names, categorical)
@@ -536,6 +567,9 @@ def train(eval_only: bool = False) -> dict:
         "test_rows":       len(test_df),
         "models":          model_results,
         "best_model":      best_name,
+        "deployed_model":  DEPLOYED_MODEL,       # pinned; not auto-selected
+        "brier_leader":    brier_leader,         # diagnostic: who Brier favored this run
+        "brier_margin":    round(margin, 4),
         "method_accuracy": round(method_acc, 4),
     }
 

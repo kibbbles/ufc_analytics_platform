@@ -171,6 +171,13 @@ class VegasComparison(BaseModel):
     by_conviction: list[VegasBucketStat] = []
 
 
+class CalibrationBin(BaseModel):
+    label: str                # e.g. "70-80%"
+    predicted: float          # mean predicted win prob of the pick in this bin
+    actual: float             # actual hit rate of picks in this bin
+    fights: int
+
+
 class PastPredictionModalStats(BaseModel):
     all: ModalStatsSection          # deprecated blended view — kept for back-compat
     pre_fight: ModalStatsSection    # live track record (pre_fight_archive)
@@ -178,3 +185,4 @@ class PastPredictionModalStats(BaseModel):
     vegas: Optional[VegasComparison] = None
     vegas_pre_fight: Optional[VegasComparison] = None
     vegas_backtest: Optional[VegasComparison] = None
+    calibration_pre_fight: list[CalibrationBin] = []  # are displayed live probs honest?

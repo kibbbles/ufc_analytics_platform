@@ -599,6 +599,13 @@ export interface VegasComparison {
   by_conviction: VegasBucketStat[]
 }
 
+export interface CalibrationBin {
+  label: string
+  predicted: number
+  actual: number
+  fights: number
+}
+
 export interface PastPredictionModalStats {
   all: ModalStatsSection
   pre_fight: ModalStatsSection
@@ -606,6 +613,7 @@ export interface PastPredictionModalStats {
   vegas: VegasComparison | null
   vegas_pre_fight: VegasComparison | null
   vegas_backtest: VegasComparison | null
+  calibration_pre_fight: CalibrationBin[]
 }
 
 // ── Predictions ──────────────────────────────────────────────────────────────

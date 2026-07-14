@@ -62,6 +62,7 @@ from schemas.past_prediction import (
     PastPredictionModalStats,
     VegasComparison,
     VegasBucketStat,
+    CalibrationBin,
 )
 
 logger = logging.getLogger(__name__)
@@ -665,6 +666,45 @@ def get_past_prediction_stats(
     pf_avg_correct,  pf_avg_incorrect,  pf_brier,  pf_bss,  pf_auc  = _section_metrics(pf_raw)
     bt_avg_correct,  bt_avg_incorrect,  bt_brier,  bt_bss,  bt_auc  = _section_metrics(bt_raw)
 
+    # ── Calibration of the live displayed probabilities ──────────────────────
+    # Bin live predictions by the probability shown for the model's PICK
+    # (max of the two win probs). If the displayed number is honest, the actual
+    # hit rate in each bin should track the predicted probability.
+    calib_rows = db.execute(text("""
+        WITH picks AS (
+            SELECT GREATEST(win_prob_a, win_prob_b) AS p, is_correct
+            FROM past_predictions
+            WHERE prediction_source = 'pre_fight_archive'
+              AND is_correct IS NOT NULL
+              AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
+              AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
+        )
+        SELECT
+            CASE
+                WHEN p >= 0.9 THEN '90-100%'
+                WHEN p >= 0.8 THEN '80-90%'
+                WHEN p >= 0.7 THEN '70-80%'
+                WHEN p >= 0.6 THEN '60-70%'
+                ELSE '50-60%'
+            END AS label,
+            AVG(p)                                       AS predicted,
+            AVG(CASE WHEN is_correct THEN 1.0 ELSE 0.0 END) AS actual,
+            COUNT(*)                                     AS fights
+        FROM picks
+        GROUP BY label
+        ORDER BY MIN(p)
+    """), {"test_from": test_from}).mappings().all()
+
+    calibration_pre_fight = [
+        CalibrationBin(
+            label=r["label"],
+            predicted=float(r["predicted"]),
+            actual=float(r["actual"]),
+            fights=int(r["fights"]),
+        )
+        for r in calib_rows
+    ]
+
     # ── vs-Vegas comparison ───────────────────────────────────────────────────
     _VEGAS_CTE = """
         WITH best AS (
@@ -904,6 +944,7 @@ def get_past_prediction_stats(
         vegas=vegas_cmp,
         vegas_pre_fight=vegas_pf_cmp,
         vegas_backtest=vegas_bt_cmp,
+        calibration_pre_fight=calibration_pre_fight,
     )
 
 

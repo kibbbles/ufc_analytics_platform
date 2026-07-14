@@ -282,9 +282,20 @@ function ModelScorecard() {
               </p>
             </div>
           )}
+          {summary.pre_fight_total > 0 && (
+            <p className="mb-3 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-4 py-3 text-xs font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+              Probabilities are roughly honest near 50% but overconfident above 60%: when this model says 70%, it wins closer to 55%.{' '}
+              <button
+                onClick={() => setModal('pre_fight')}
+                className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-primary)]"
+              >
+                See calibration
+              </button>.
+            </p>
+          )}
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            {summary.model_name ? `${summary.model_name} model` : 'A model'} using 30 features including physical differentials, career striking and grappling metrics, and recent fight history — re-selected each week by validation AUC from logistic regression, random forest, and gradient boosting.{' '}
-            <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Live track record</span> is the model's real predictions, frozen the Saturday before each event and never rewritten — the honest number, with no look-ahead.{' '}
+            {summary.model_name ? `${summary.model_name} model` : 'A model'} using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. It is pinned, chosen for best calibration from logistic regression, random forest, and gradient boosting rather than re-selected each retrain, which only added noise among three statistically tied models.{' '}
+            <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Live track record</span> is the model's real predictions, frozen the Saturday before each event and never rewritten: the honest number, with no look-ahead.{' '}
             <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Backtested</span> is the current model reconstructed over past fights; it benefits from hindsight in the code (features rebuilt after the fact), so it is not a live record.{' '}
             Every one of these {summary.pre_fight_total} live predictions was made with a corrupted win/loss streak feature and with win_rate_diff silently imputed to the population mean; both were fixed in July 2026. The corrected model has no live track record yet and cannot be claimed to be better until it accumulates one.
           </p>

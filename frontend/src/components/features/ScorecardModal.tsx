@@ -453,6 +453,44 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                 )
               })()}
 
+              {/* Calibration — are the displayed live probabilities honest? */}
+              {mode === 'pre_fight' && stats?.calibration_pre_fight && stats.calibration_pre_fight.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    Calibration — is the displayed probability honest?
+                  </h3>
+                  <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-[var(--color-border)]/10">
+                          <th className="text-left px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Model said</th>
+                          <th className="text-right px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Actually won</th>
+                          <th className="text-right px-3 py-2 font-medium text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">Fights</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.calibration_pre_fight.map((b) => {
+                          const gap = b.actual - b.predicted
+                          const off = Math.abs(gap) >= 0.1 && b.fights >= 10
+                          return (
+                            <tr key={b.label} className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0">
+                              <td className="px-3 py-2 font-mono tabular-nums">{formatPct(b.predicted)}</td>
+                              <td className={`px-3 py-2 font-mono tabular-nums text-right font-semibold ${off ? 'text-[var(--color-primary)]' : ''}`}>
+                                {formatPct(b.actual)}
+                              </td>
+                              <td className="px-3 py-2 font-mono tabular-nums text-right text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">{b.fights}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    Each row bins live predictions by the probability shown for the model's pick and reports how often that pick actually won. If the two columns diverge, the displayed percentage is not honest — on this record the model is overconfident in the 60-80% range (says ~65-75%, wins ~50-55%), and rarely ventures above 80%.
+                  </p>
+                </div>
+              )}
+
               {/* Recent fights */}
               {fights.length > 0 && (
                 <div>
