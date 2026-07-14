@@ -230,6 +230,15 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
         where = 'WHERE uf.fighter_a_id IS NOT NULL AND uf.fighter_b_id IS NOT NULL'
         if fight_id_filter:
             where += ' AND uf.id = :fight_id'
+        else:
+            # Never recompute a bulk run over events that have already happened.
+            # Recomputing a past event overwrites its frozen pre-fight snapshot
+            # with an after-the-event vector (this permanently destroyed the
+            # UFC 329 pre-fight record in 2026-07). The same-day workflow still
+            # runs because today's card satisfies date_proper >= CURRENT_DATE.
+            # An explicit single-fight recompute (fight_id_filter) bypasses this,
+            # since that is a deliberate, targeted action.
+            where += ' AND ue.date_proper >= CURRENT_DATE'
 
         params = {'fight_id': fight_id_filter} if fight_id_filter else {}
 
