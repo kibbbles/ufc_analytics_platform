@@ -131,8 +131,32 @@ def run(dry_run: bool = False) -> None:
               AND uf.fighter_a_id IS NOT NULL
               AND uf.fighter_b_id IS NOT NULL
               AND (uf.archived IS NULL OR uf.archived = FALSE)
+              -- A pre-fight snapshot must have been computed on or before the
+              -- event. A prediction dated after the event is a post-event
+              -- recompute, not a genuine pre-fight prediction, and must never be
+              -- frozen as one (this is what would have fabricated a UFC 329
+              -- pre-fight record from a 2026-07-13 recompute of a 2026-07-11 event).
+              AND up.predicted_at::date <= ue.date_proper
         """)).mappings().all()
 
+        # Surface, rather than silently skip, any prediction refused above for
+        # being computed after its event date.
+        post_event = conn.execute(text("""
+            SELECT COUNT(*)
+            FROM upcoming_fights uf
+            JOIN upcoming_events ue ON ue.id = uf.event_id
+            JOIN upcoming_predictions up ON up.fight_id = uf.id
+            WHERE ue.date_proper < CURRENT_DATE
+              AND (uf.archived IS NULL OR uf.archived = FALSE)
+              AND up.predicted_at::date > ue.date_proper
+        """)).scalar() or 0
+
+    if post_event:
+        logger.warning(
+            "Refused to archive %d prediction(s) computed AFTER the event date — "
+            "these are post-event recomputes, not pre-fight snapshots.",
+            post_event,
+        )
     logger.info("Found %d predicted fight(s) eligible for archiving.", len(rows))
 
     existing_ids = _load_existing_ids()
