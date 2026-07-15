@@ -42,7 +42,7 @@ export default function InfoTooltip({ label, children }: InfoTooltipProps) {
           e.stopPropagation()
           setOpen((o) => !o)
         }}
-        className="relative inline-flex h-4 w-4 items-center justify-center rounded-full border border-current text-[10px] font-semibold leading-none opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] before:absolute before:-inset-3 before:content-['']"
+        className="relative inline-flex h-4 w-4 items-center justify-center rounded-full border border-current text-xs font-semibold leading-none opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] before:absolute before:-inset-3 before:content-['']"
       >
         i
       </button>

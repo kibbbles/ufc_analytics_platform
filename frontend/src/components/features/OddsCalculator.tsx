@@ -168,19 +168,19 @@ export default function OddsCalculator({
                   <>
                     <div className="grid grid-cols-3 gap-x-1 text-center">
                       <div>
-                        <div className="text-[10px] text-[var(--color-text-muted)]">Implied</div>
+                        <div className="text-xs text-[var(--color-text-muted)]">Implied</div>
                         <div className="font-mono text-xs tabular-nums">
                           {(result.implied * 100).toFixed(1)}%
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-[var(--color-text-muted)]">Model</div>
+                        <div className="text-xs text-[var(--color-text-muted)]">Model</div>
                         <div className="font-mono text-xs tabular-nums">
                           {modelProb != null ? `${(modelProb * 100).toFixed(1)}%` : '—'}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-[var(--color-text-muted)]">Edge</div>
+                        <div className="text-xs text-[var(--color-text-muted)]">Edge</div>
                         <div className={`font-mono text-xs font-semibold tabular-nums ${
                           result.edge > EDGE_THRESHOLD ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]'
                           : result.edge > 0 ? 'text-yellow-500'
@@ -191,18 +191,18 @@ export default function OddsCalculator({
                       </div>
                     </div>
                     <div className="mt-2 border-t border-[var(--color-border)] pt-2 text-center">
-                      <span className="text-[10px] text-[var(--color-text-muted)]">EV </span>
+                      <span className="text-xs text-[var(--color-text-muted)]">EV </span>
                       <span className={`font-mono text-sm font-bold tabular-nums ${result.ev > 0 ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'}`}>
                         {result.ev >= 0 ? `+$${result.ev.toFixed(2)}` : `-$${Math.abs(result.ev).toFixed(2)}`}
                       </span>
-                      <span className="text-[10px] text-[var(--color-text-muted)]"> on ${stake.toFixed(0)}</span>
+                      <span className="text-xs text-[var(--color-text-muted)]"> on ${stake.toFixed(0)}</span>
                     </div>
-                    <div className="text-center text-[10px] text-[var(--color-text-muted)] mt-1">
+                    <div className="text-center text-xs text-[var(--color-text-muted)] mt-1">
                       Collect <span className="font-mono tabular-nums text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">${(stake + americanToPayout(parsedOdds!, stake)).toFixed(2)}</span> if correct
                     </div>
                   </>
                 ) : (
-                  <p className="text-center text-[10px] text-[var(--color-text-muted)]">Enter odds above</p>
+                  <p className="text-center text-xs text-[var(--color-text-muted)]">Enter odds above</p>
                 )}
               </div>
             ))}
@@ -219,7 +219,7 @@ export default function OddsCalculator({
               </div>
             )}
 
-            <p className="text-center text-[10px] text-[var(--color-text-muted)]">
+            <p className="text-center text-xs text-[var(--color-text-muted)]">
               EV = (model win% × payout) − (model loss% × stake). Positive EV means the model thinks Vegas is undervaluing this fighter — you're being paid as if they're less likely to win than our model believes.
             </p>
           </div>

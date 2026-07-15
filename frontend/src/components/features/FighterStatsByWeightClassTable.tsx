@@ -128,7 +128,7 @@ export default function FighterStatsByWeightClassTable({ data }: Props) {
       </table>
 
       {/* Column legend */}
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[var(--color-text-muted)]">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
         <span>Career averages from UFC bouts. Color intensity = relative value within each column.</span>
       </div>
     </div>

@@ -154,7 +154,7 @@ function TimeSeriesView({ data, weightClass }: { data: PhysicalStatPoint[]; weig
         </LineChart>
       </ResponsiveContainer>
       {hasCurrentYear && (
-        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+        <p className="text-xs text-[var(--color-text-muted)] mt-1">
           ○ Open circle = {currentYear} (partial year, fights still ongoing).
         </p>
       )}

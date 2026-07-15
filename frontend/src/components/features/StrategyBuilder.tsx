@@ -47,13 +47,13 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
+      <label className="block text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
         {label}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+        className="w-full rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -177,8 +177,8 @@ export function StrategyBuilder() {
                 { label: 'ROI', value: `${result.roi >= 0 ? '+' : ''}${(result.roi * 100).toFixed(1)}%`, colored: true },
               ].map((stat) => (
                 <div key={stat.label}>
-                  <p className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>{stat.label}</p>
-                  <p className={`mt-0.5 font-mono text-[20px] font-medium tabular-nums leading-tight ${stat.colored ? (positive ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]') : ''}`}>
+                  <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>{stat.label}</p>
+                  <p className={`mt-0.5 font-mono text-xl font-medium tabular-nums leading-tight ${stat.colored ? (positive ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]') : ''}`}>
                     {stat.value}
                   </p>
                 </div>

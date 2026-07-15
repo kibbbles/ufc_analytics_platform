@@ -156,7 +156,7 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
         />
       </div>
 
-      <div className="flex justify-between text-[11px] text-[var(--color-text-muted)] font-mono tabular-nums mt-0.5">
+      <div className="flex justify-between text-xs text-[var(--color-text-muted)] font-mono tabular-nums mt-0.5">
         <span>{min}{unit}</span>
         <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">{valueLo}–{valueHi}{unit}</span>
         <span>{max}{unit}</span>

@@ -20,7 +20,7 @@ export function StrategyLeaderboard({ strategies }: Props) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[13px]">
+      <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--color-border)]">
             <th className="py-2 pr-4 text-left font-medium text-[var(--color-text-muted)]">Strategy</th>
@@ -45,7 +45,7 @@ export function StrategyLeaderboard({ strategies }: Props) {
                   {row.strategy_name}
                   {lowSample && (
                     <span
-                      className="ml-2 rounded px-1.5 py-px text-[10px] text-[var(--color-text-muted)]"
+                      className="ml-2 rounded px-1.5 py-px text-xs text-[var(--color-text-muted)]"
                       style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
                     >
                       n={row.bets}, low sample

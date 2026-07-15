@@ -66,7 +66,7 @@ function PastPredictionEventRow({ item }: { item: PastPredictionItem }) {
             {item.fighter_b_name ?? '?'}
           </span>
         </p>
-        <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded ${resultBadge.cls}`}>
+        <span className={`shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded ${resultBadge.cls}`}>
           {resultBadge.label}
         </span>
       </div>
@@ -100,7 +100,7 @@ function PastPredictionEventRow({ item }: { item: PastPredictionItem }) {
       {/* Prediction row */}
       {hasPred && item.win_prob_a != null && item.win_prob_b != null && (
         <div className="flex items-center gap-2 pt-0.5">
-          <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
+          <span className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
             Model
           </span>
           <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
@@ -108,7 +108,7 @@ function PastPredictionEventRow({ item }: { item: PastPredictionItem }) {
             <span className="mx-1 text-[var(--color-text-muted)]">/</span>
             {item.fighter_b_name?.split(' ').pop()} {formatPct(item.win_prob_b)}
           </span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
             isCorrect
               ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
               : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
@@ -117,7 +117,7 @@ function PastPredictionEventRow({ item }: { item: PastPredictionItem }) {
             {predWinnerIsA ? item.fighter_a_name?.split(' ').pop() : item.fighter_b_name?.split(' ').pop()}
           </span>
           {item.confidence != null && (
-            <span className="text-[10px] text-[var(--color-text-muted)] font-mono tabular-nums">
+            <span className="text-xs text-[var(--color-text-muted)] font-mono tabular-nums">
               · {formatPct(item.confidence)} conviction
             </span>
           )}

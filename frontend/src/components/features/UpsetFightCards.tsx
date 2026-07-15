@@ -33,9 +33,9 @@ function oddsLabel(odds: number | null) {
 
 function UpsetFightCard({ f }: { f: UpsetFightCard }) {
   return (
-    <div className="relative rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-[13px]">
+    <div className="relative rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-sm">
       {/* Upset badge */}
-      <div className="absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-[11px] font-semibold bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]">
+      <div className="absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-xs font-semibold bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]">
         Upset
       </div>
 
@@ -52,16 +52,16 @@ function UpsetFightCard({ f }: { f: UpsetFightCard }) {
       )}
 
       {/* Meta */}
-      <p className="mt-0.5 text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
+      <p className="mt-0.5 text-xs uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
         {[f.event_name ?? f.event_id, fmtDate(f.event_date), f.weight_class]
           .filter(Boolean).join(' · ')}
       </p>
 
       {/* Model row */}
-      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px]">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>MODEL</span>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>MODEL</span>
         {f.model_pick_name && (
-          <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]">
+          <span className="rounded px-1.5 py-0.5 text-xs font-semibold bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]">
             ✗ {f.model_pick_name}
           </span>
         )}

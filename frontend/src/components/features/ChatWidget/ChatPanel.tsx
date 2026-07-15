@@ -135,7 +135,7 @@ export default function ChatPanel({ onClose }: Props) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] shrink-0">
         <div>
           <p className="text-sm font-bold leading-tight">Ask the Maybe</p>
-          <p className="text-[11px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
             Fights, fighters, records — powered by live data
           </p>
         </div>
@@ -186,16 +186,16 @@ export default function ChatPanel({ onClose }: Props) {
 
               {/* Source label or collapsible SQL */}
               {msg.role === 'assistant' && msg.source === 'general_knowledge' && (
-                <p className="mt-2 text-[11px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] italic">
+                <p className="mt-2 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] italic">
                   Based on LLM training data
                 </p>
               )}
               {msg.role === 'assistant' && msg.sql && (
                 <details className="mt-2">
-                  <summary className="text-[11px] cursor-pointer text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary-light)] dark:hover:text-[var(--color-text-secondary)] select-none">
+                  <summary className="text-xs cursor-pointer text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary-light)] dark:hover:text-[var(--color-text-secondary)] select-none">
                     View SQL
                   </summary>
-                  <pre className="mt-1.5 text-[10px] overflow-x-auto rounded bg-[var(--color-border-light)] dark:bg-[var(--color-surface)] p-2 text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] whitespace-pre-wrap break-words">
+                  <pre className="mt-1.5 text-xs overflow-x-auto rounded bg-[var(--color-border-light)] dark:bg-[var(--color-surface)] p-2 text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] whitespace-pre-wrap break-words">
                     {msg.sql}
                   </pre>
                 </details>
@@ -227,7 +227,7 @@ export default function ChatPanel({ onClose }: Props) {
       {/* Input area */}
       <div className="px-3 pb-3 pt-2 shrink-0 border-t border-[var(--color-border-light)] dark:border-[var(--color-border)]">
         {cooldownSecs > 0 && (
-          <p className="text-[11px] text-[var(--color-warning-light)] dark:text-[var(--color-warning)] mb-1.5">
+          <p className="text-xs text-[var(--color-warning-light)] dark:text-[var(--color-warning)] mb-1.5">
             Too many requests — retry in {cooldownSecs}s
           </p>
         )}
@@ -255,7 +255,7 @@ export default function ChatPanel({ onClose }: Props) {
             </svg>
           </button>
         </div>
-        <p className="mt-1.5 text-[10px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] text-center">
+        <p className="mt-1.5 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] text-center">
           Powered by Llama 3.3 70B
         </p>
       </div>

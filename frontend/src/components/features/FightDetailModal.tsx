@@ -117,7 +117,7 @@ export default function FightDetailModal({ fight, onClose }: Props) {
               <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-muted)]">
                 {weight_class && <span>{weight_class}</span>}
                 {is_title_fight && (
-                  <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                  <span className="rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
                     Title
                   </span>
                 )}
@@ -194,7 +194,7 @@ export default function FightDetailModal({ fight, onClose }: Props) {
                     <div className="text-xs font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
                       +{display}
                     </div>
-                    <div className="text-[11px] text-[var(--color-text-muted)]">{label}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">{label}</div>
                   </div>
                 ))}
                 {favA.length === 0 && (
@@ -212,7 +212,7 @@ export default function FightDetailModal({ fight, onClose }: Props) {
                     <div className="text-xs font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
                       +{display}
                     </div>
-                    <div className="text-[11px] text-[var(--color-text-muted)]">{label}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">{label}</div>
                   </div>
                 ))}
                 {favB.length === 0 && (
@@ -222,7 +222,7 @@ export default function FightDetailModal({ fight, onClose }: Props) {
             </div>
             </>
           )}
-          <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
+          <p className="mt-4 text-center text-xs text-[var(--color-text-muted)]">
             Values are per-fight averages (Fighter A − Fighter B). Sorted by magnitude. Model: {prediction?.model_version ?? 'win_loss_v1'}.
           </p>
         </div>

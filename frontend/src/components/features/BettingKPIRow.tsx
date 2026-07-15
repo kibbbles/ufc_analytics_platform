@@ -34,13 +34,13 @@ export function BettingKPIRow({ data }: Props) {
           className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3"
         >
           <p
-            className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]"
+            className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]"
             style={{ letterSpacing: '0.04em' }}
           >
             {k.label}
           </p>
-          <p className="mt-1 text-[20px] font-medium tabular-nums leading-tight">{k.value}</p>
-          <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">{k.sub}</p>
+          <p className="mt-1 font-mono text-xl font-medium tabular-nums leading-tight">{k.value}</p>
+          <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{k.sub}</p>
         </div>
       ))}
     </div>

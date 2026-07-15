@@ -80,7 +80,7 @@ export default function WeightClassHeatmap({ data }: Props) {
   return (
     <div className="overflow-x-auto -mx-1">
       <div
-        className="grid text-[10px] min-w-max px-1"
+        className="grid text-xs min-w-max px-1"
         style={{ gridTemplateColumns: `56px repeat(${years.length}, 26px)` }}
       >
         {/* Year header */}
@@ -148,12 +148,12 @@ export default function WeightClassHeatmap({ data }: Props) {
 
       {/* Color scale legend */}
       <div className="flex items-center gap-2 mt-3 ml-14">
-        <span className="text-[10px] text-[var(--color-text-muted)]">Lower finish rate</span>
+        <span className="text-xs text-[var(--color-text-muted)]">Lower finish rate</span>
         <div
           className="h-2.5 w-28 rounded"
           style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--color-chart-1) 8%, transparent), color-mix(in srgb, var(--color-chart-1) 90%, transparent))' }}
         />
-        <span className="text-[10px] text-[var(--color-text-muted)]">Higher finish rate</span>
+        <span className="text-xs text-[var(--color-text-muted)]">Higher finish rate</span>
       </div>
     </div>
   )

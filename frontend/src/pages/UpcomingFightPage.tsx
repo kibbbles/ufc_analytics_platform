@@ -41,7 +41,7 @@ function FeatureBreakdown({ fight }: { fight: UpcomingFight }) {
           favA.slice(0, 8).map(({ label, display }) => (
             <div key={label} className="mb-2">
               <div className="text-xs font-semibold text-[var(--color-primary)]">+{display}</div>
-              <div className="text-[11px] leading-snug text-[var(--color-text-muted)]">{label}</div>
+              <div className="text-xs leading-snug text-[var(--color-text-muted)]">{label}</div>
             </div>
           ))
         )}
@@ -56,7 +56,7 @@ function FeatureBreakdown({ fight }: { fight: UpcomingFight }) {
           favB.slice(0, 8).map(({ label, display }) => (
             <div key={label} className="mb-2">
               <div className="text-xs font-semibold text-[var(--color-primary)]">+{display}</div>
-              <div className="text-[11px] leading-snug text-[var(--color-text-muted)]">{label}</div>
+              <div className="text-xs leading-snug text-[var(--color-text-muted)]">{label}</div>
             </div>
           ))
         )}
@@ -373,7 +373,7 @@ export default function UpcomingFightPage() {
           {pred?.features_json && (
             <Card header={<span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Model Breakdown</span>}>
               <FeatureBreakdown fight={fight} />
-              <p className="mt-4 text-center text-[10px] text-[var(--color-text-muted)]">
+              <p className="mt-4 text-center text-xs text-[var(--color-text-muted)]">
                 Values are per-fight averages (Fighter A − Fighter B), sorted by magnitude. Model: {pred.model_version ?? 'win_loss_v1'}.{' '}
                 The metric count shows how many of the model's input features point in the predicted winner's favor — a higher share means the prediction is backed by broader evidence, not just one or two stats.
               </p>

@@ -21,7 +21,7 @@ export function BettingHero({ data }: Props) {
       </p>
       <div className="mt-1 flex flex-wrap items-baseline gap-3">
         <span
-          className={`text-[32px] font-medium tabular-nums leading-none ${positive ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'}`}
+          className={`text-3xl font-medium tabular-nums leading-none ${positive ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'}`}
         >
           {positive ? '+' : ''}
           {roi}%

@@ -59,12 +59,12 @@ function FightSearchCard({ fight }: { fight: FightSearchItem }) {
           </p>
         </div>
         {fight.is_title_fight && !fight.is_interim_title && (
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-warning)]/20 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-warning)]/20 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
             Title
           </span>
         )}
         {fight.is_interim_title && (
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-warning)]/20 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-warning)]/20 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
             Interim
           </span>
         )}
@@ -96,7 +96,7 @@ function FightSearchCard({ fight }: { fight: FightSearchItem }) {
       {/* Prediction badge */}
       {hasPred && (
         <div className="flex items-center gap-2 pt-0.5 lg:justify-center">
-          <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
+          <span className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
             Model
           </span>
           <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
@@ -104,7 +104,7 @@ function FightSearchCard({ fight }: { fight: FightSearchItem }) {
             <span className="mx-1 text-[var(--color-text-muted)]">/</span>
             {fight.fighter_b_name?.split(' ').pop()} {(fight.win_prob_b! * 100).toFixed(0)}%
           </span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
             fight.predicted_winner_id === fight.winner_id
               ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
               : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'

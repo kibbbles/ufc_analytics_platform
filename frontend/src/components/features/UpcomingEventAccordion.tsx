@@ -69,12 +69,12 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
           {(isNext || highlighted) && (
             <div className="mb-1 flex justify-center gap-2">
               {isNext && (
-                <span className="rounded-sm bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                <span className="rounded-sm bg-[var(--color-primary)] px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
                   Next
                 </span>
               )}
               {highlighted && (
-                <span className="hidden sm:inline rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                <span className="hidden sm:inline rounded-sm bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
                   Numbered
                 </span>
               )}

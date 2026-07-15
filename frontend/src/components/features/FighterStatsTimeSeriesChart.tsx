@@ -171,12 +171,12 @@ export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props
         ))}
       </div>
       {hasPartialYear && (
-        <p className="text-[11px] text-[var(--color-text-muted)]">
+        <p className="text-xs text-[var(--color-text-muted)]">
           ○ Open circle = {currentYear} (partial year, fights still ongoing).
         </p>
       )}
       {missingYears && (
-        <p className="text-[11px] text-[var(--color-text-muted)]">
+        <p className="text-xs text-[var(--color-text-muted)]">
           Data through {latestYear} only — recent years had fewer than 5 fights with complete stats recorded.
         </p>
       )}

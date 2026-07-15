@@ -69,10 +69,10 @@ function BettingFightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
   const showPills  = mode !== 'fav' && mode !== 'dog'
 
   return (
-    <div className="relative rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-[13px]">
+    <div className="relative rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-sm">
       {/* Corner badge */}
       <div
-        className={`absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-[11px] font-semibold ${
+        className={`absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-xs font-semibold ${
           f.is_correct
             ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
             : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
@@ -96,14 +96,14 @@ function BettingFightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
       )}
 
       {/* Meta */}
-      <p className="mt-0.5 text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
+      <p className="mt-0.5 text-xs uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
         {[f.event_name, fmtEventDate(f.event_date), f.weight_class, f.is_title ? 'Title fight' : null]
           .filter(Boolean).join(' · ')}
       </p>
 
       {/* Model row */}
-      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px]">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>MODEL</span>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>MODEL</span>
         <span className="font-mono">
           {f.fighter_a_name} {Math.round(f.win_prob_a * 100)}% / {f.fighter_b_name} {Math.round(f.win_prob_b * 100)}%
         </span>
@@ -111,7 +111,7 @@ function BettingFightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
         {showPills && (
           <>
             <span
-              className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+              className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
                 f.is_correct
                   ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
                   : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
@@ -123,7 +123,7 @@ function BettingFightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
               {f.conviction_pp.toFixed(0)}pp conv
             </span>
             <span
-              className={`rounded px-1.5 py-0.5 text-[11px] font-mono ${
+              className={`rounded px-1.5 py-0.5 text-xs font-mono ${
                 inHotZone
                   ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)]'
                   : 'border border-[var(--color-border)] text-[var(--color-text-muted)]'
@@ -142,7 +142,7 @@ function BettingFightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
           </>
         )}
         {!showPills && (
-          <span className="text-[var(--color-text-muted)] text-[11px]">
+          <span className="text-[var(--color-text-muted)] text-xs">
             {mode === 'fav' ? 'Vegas favorite' : 'Vegas underdog'} strategy active
           </span>
         )}
@@ -318,7 +318,7 @@ export function OverviewTab() {
     <div className="space-y-5">
       {/* Strategy dropdown */}
       <div className="space-y-1.5">
-        <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
+        <label className="block text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
           Strategy / Bet mode
         </label>
         <select
@@ -344,7 +344,7 @@ export function OverviewTab() {
       {/* Sliders */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
+          <label className="block text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
             Model conviction
           </label>
           <DualRangeSlider
@@ -354,12 +354,12 @@ export function OverviewTab() {
             disabled={slidersDisabled}
             unit="pp"
           />
-          <p className="text-[11px] text-[var(--color-text-muted)]">
+          <p className="text-xs text-[var(--color-text-muted)]">
             Win prob minus 50%. 72% win prob = 22pp. Drag to set window.
           </p>
         </div>
         <div className="space-y-1">
-          <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
+          <label className="block text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
             Model edge over Vegas
           </label>
           <DualRangeSlider
@@ -369,7 +369,7 @@ export function OverviewTab() {
             disabled={slidersDisabled}
             unit="pp"
           />
-          <p className="text-[11px] text-[var(--color-text-muted)]">
+          <p className="text-xs text-[var(--color-text-muted)]">
             Model win % minus Vegas implied %. 5–15pp = historically profitable zone. Drag fill bar to shift window.
           </p>
         </div>
@@ -378,7 +378,7 @@ export function OverviewTab() {
       {/* Additional filters */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
+          <label className="block text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
             Weight class
           </label>
           <select
@@ -391,7 +391,7 @@ export function OverviewTab() {
           </select>
         </div>
         <div className="space-y-1">
-          <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
+          <label className="block text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
             Title fight
           </label>
           <select
@@ -477,8 +477,8 @@ export function OverviewTab() {
               { label: 'ROI', value: `${roi100 >= 0 ? '+' : ''}${roi100.toFixed(1)}%`, colored: true, pos: roi100 >= 0 },
             ].map((s) => (
               <div key={s.label} className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2.5">
-                <p className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>{s.label}</p>
-                <p className={`mt-0.5 font-mono text-[20px] font-medium tabular-nums leading-tight ${
+                <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>{s.label}</p>
+                <p className={`mt-0.5 font-mono text-xl font-medium tabular-nums leading-tight ${
                   s.colored
                     ? s.pos
                       ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]'

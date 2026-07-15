@@ -53,7 +53,7 @@ function ModalFightRow({ item }: { item: PastPredictionItem }) {
         <p className="text-xs font-medium leading-tight truncate">
           {item.fighter_a_name ?? '?'} vs {item.fighter_b_name ?? '?'}
         </p>
-        <p className="text-[11px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] truncate">
+        <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] truncate">
           {item.event_name ?? '—'}
           {item.event_date ? ` · ${formatDate(item.event_date)}` : ''}
         </p>
@@ -64,7 +64,7 @@ function ModalFightRow({ item }: { item: PastPredictionItem }) {
             {formatPct(item.confidence)}
           </p>
         )}
-        <p className="text-[11px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+        <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
           {winnerName(item, item.predicted_winner_id)?.split(' ').pop() ?? '—'}
         </p>
       </div>
@@ -182,26 +182,26 @@ export default function ScorecardModal({ mode, onClose }: Props) {
               {section && (section.brier_score != null || section.roc_auc != null) && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
-                    <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                       Brier Score
                     </p>
                     <p className="font-mono text-lg font-bold tabular-nums mt-0.5">
                       {section.brier_score != null ? section.brier_score.toFixed(3) : '—'}
                     </p>
-                    <p className="text-[10px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
+                    <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
                       {section.brier_skill_score != null
                         ? `${(section.brier_skill_score * 100).toFixed(1)}% better than random`
                         : 'lower is better · 0.25 = random'}
                     </p>
                   </div>
                   <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
-                    <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                       ROC-AUC
                     </p>
                     <p className="font-mono text-lg font-bold tabular-nums mt-0.5">
                       {section.roc_auc != null ? section.roc_auc.toFixed(3) : '—'}
                     </p>
-                    <p className="text-[10px] text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
+                    <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mt-0.5">
                       higher is better · 0.5 = random
                     </p>
                   </div>
@@ -214,7 +214,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
               ) && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
-                    <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                       Avg conviction · correct
                     </p>
                     <p className="font-mono text-lg font-bold tabular-nums text-[var(--color-success-light)] dark:text-[var(--color-success)] mt-0.5">
@@ -222,7 +222,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                     </p>
                   </div>
                   <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-2.5">
-                    <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                    <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                       Avg conviction · wrong
                     </p>
                     <p className="font-mono text-lg font-bold tabular-nums text-[var(--color-primary)] mt-0.5">
@@ -514,7 +514,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
               {/* No look-ahead explanation — pre_fight modal only */}
               {mode === 'pre_fight' && (
                 <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-3 py-3 space-y-2">
-                  <p className="text-[11px] uppercase tracking-wide font-semibold text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+                  <p className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                     About these predictions
                   </p>
                   <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
