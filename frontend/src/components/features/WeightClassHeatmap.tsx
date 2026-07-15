@@ -44,9 +44,9 @@ interface Props {
 }
 
 export default function WeightClassHeatmap({ data }: Props) {
-  if (!data.length) return null
-
   const [active, setActive] = useState<ActiveCell | null>(null)
+
+  if (!data.length) return null
 
   const lookup: Record<string, Record<number, WeightClassYearPoint>> = {}
   for (const d of data) {

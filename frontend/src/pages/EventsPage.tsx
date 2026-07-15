@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { useDebounce } from '@hooks/useDebounce'
@@ -39,8 +39,12 @@ export default function EventsPage() {
     [page, filters.year, debouncedSearch],
   )
 
-  // Reset page when debounced search fires
-  useEffect(() => { setPage(1) }, [debouncedSearch])
+  // Reset page when debounced search fires (adjust-during-render, no effect)
+  const [prevSearch, setPrevSearch] = useState(debouncedSearch)
+  if (debouncedSearch !== prevSearch) {
+    setPrevSearch(debouncedSearch)
+    setPage(1)
+  }
 
   function handleYearChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setYear(e.target.value ? Number(e.target.value) : null)

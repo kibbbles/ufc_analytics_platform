@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useApi } from '@hooks/useApi'
 import { useDebounce } from '@hooks/useDebounce'
 import { fightsService } from '@services/fightsService'
@@ -33,8 +33,13 @@ export default function FightSearchTab() {
 
   const debouncedFighter = useDebounce(fighterQuery, 300)
 
-  // Reset page on any filter change
-  useEffect(() => { setPage(1) }, [debouncedFighter, weightClass, method])
+  // Reset page on any filter change (adjust-during-render, no effect)
+  const filterKey = `${debouncedFighter}|${weightClass}|${method}`
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey)
+    setPage(1)
+  }
 
   const { data, loading, error } = useApi(
     () =>

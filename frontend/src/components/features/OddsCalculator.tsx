@@ -51,14 +51,19 @@ export default function OddsCalculator({
   const [betStr, setBetStr] = useState('100')
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Pre-fill from DB odds once available (don't overwrite user edits)
-  useEffect(() => {
+  // Pre-fill from DB odds once available (don't overwrite user edits).
+  // Adjust-during-render keyed on the incoming prop, so no effect is needed.
+  const [prevInitialOddsA, setPrevInitialOddsA] = useState(initialOddsA)
+  if (initialOddsA !== prevInitialOddsA) {
+    setPrevInitialOddsA(initialOddsA)
     if (initialOddsA != null && oddsAStr === '') setOddsAStr(String(initialOddsA))
-  }, [initialOddsA]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
-  useEffect(() => {
+  const [prevInitialOddsB, setPrevInitialOddsB] = useState(initialOddsB)
+  if (initialOddsB !== prevInitialOddsB) {
+    setPrevInitialOddsB(initialOddsB)
     if (initialOddsB != null && oddsBStr === '') setOddsBStr(String(initialOddsB))
-  }, [initialOddsB]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   // Close on click outside
   useEffect(() => {

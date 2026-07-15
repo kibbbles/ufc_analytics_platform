@@ -65,7 +65,6 @@ export function OverviewTab() {
   const [weightClass, setWeightClass] = useState<string>('')
   const [titleFilter, setTitleFilter] = useState<string>('all')
   const [page, setPage]             = useState(1)
-  const [fellBack, setFellBack]     = useState(false)
 
   const preset  = PRESETS[strategy] ?? PRESETS.custom
   const plSource = preset.plSource
@@ -104,16 +103,14 @@ export function OverviewTab() {
   // Date-range cutoff
   const startDate = useMemo(() => getStartDate(timeRange), [timeRange])
 
-  // Client-side filter
-  const filtered = useMemo(() => {
-    let result = fights.filter(f => {
-      // Date range
-      if (startDate && f.event_date) {
+  // Client-side filter. `fellBack` is derived (not stored) so it never sets
+  // state during render: if the date range produces nothing we retry without it.
+  const { filtered, fellBack } = useMemo(() => {
+    const matches = (f: BettingFightRow, applyDate: boolean): boolean => {
+      if (applyDate && startDate && f.event_date) {
         if (new Date(f.event_date + 'T00:00:00') < startDate) return false
       }
-      // Weight class
       if (weightClass && f.weight_class !== weightClass) return false
-      // Title fight
       if (titleFilter === 'title' && !f.is_title) return false
       if (titleFilter === 'non_title' && f.is_title) return false
       // Vegas strategies: no model filters
@@ -122,28 +119,21 @@ export function OverviewTab() {
       if (f.conviction_pp < convRange[0] || f.conviction_pp > convRange[1]) return false
       if (f.edge_pp < edgeRange[0] || f.edge_pp > edgeRange[1]) return false
       return true
-    })
-
-    // Fall back to ALL if range produces nothing
-    if (result.length === 0 && timeRange !== 'ALL') {
-      setFellBack(true)
-      result = fights.filter(f => {
-        if (weightClass && f.weight_class !== weightClass) return false
-        if (titleFilter === 'title' && !f.is_title) return false
-        if (titleFilter === 'non_title' && f.is_title) return false
-        if (plSource !== 'model') return true
-        if (f.conviction_pp < convRange[0] || f.conviction_pp > convRange[1]) return false
-        if (f.edge_pp < edgeRange[0] || f.edge_pp > edgeRange[1]) return false
-        return true
-      })
-    } else {
-      setFellBack(false)
     }
-    return result
+
+    const withDate = fights.filter(f => matches(f, true))
+    if (withDate.length === 0 && timeRange !== 'ALL') {
+      return { filtered: fights.filter(f => matches(f, false)), fellBack: true }
+    }
+    return { filtered: withDate, fellBack: false }
   }, [fights, startDate, timeRange, weightClass, titleFilter, plSource, convRange, edgeRange])
 
   // Reset page on filter change
-  useEffect(() => setPage(1), [filtered])
+  const [prevFiltered, setPrevFiltered] = useState(filtered)
+  if (filtered !== prevFiltered) {
+    setPrevFiltered(filtered)
+    setPage(1)
+  }
 
   // Cumulative P&L chart data (grouped by event)
   const chartData = useMemo(() => {
@@ -160,13 +150,17 @@ export function OverviewTab() {
       e.pnl += plSource === 'fav' ? f.pl_fav : plSource === 'dog' ? f.pl_dog : f.pl_model
     }
 
-    let cum = 0
-    return Array.from(eventMap.values())
+    const sortedEvents = Array.from(eventMap.values())
       .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-      .map(e => {
-        cum += e.pnl
-        return { date_label: formatEventDate(e.date), event_name: e.name, cumPnl: Math.round(cum * 100 * 100) / 100 }
-      })
+    const cumulative = sortedEvents.reduce<number[]>(
+      (acc, e, i) => [...acc, (acc[i - 1] ?? 0) + e.pnl],
+      [],
+    )
+    return sortedEvents.map((e, i) => ({
+      date_label: formatEventDate(e.date),
+      event_name: e.name,
+      cumPnl: Math.round(cumulative[i] * 100 * 100) / 100,
+    }))
   }, [filtered, plSource])
 
   // Stat totals
