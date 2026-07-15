@@ -7,6 +7,7 @@ import { analyticsService } from '@services/analyticsService'
 import type { BettingFightRow } from '@t/api'
 import { DualRangeSlider } from './DualRangeSlider'
 import Pagination from '@components/common/Pagination'
+import InfoTooltip from '@components/common/InfoTooltip'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,14 @@ function BettingFightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
             >
               {f.edge_pp >= 0 ? '+' : ''}{f.edge_pp.toFixed(1)}pp vs Vegas
             </span>
+            <InfoTooltip label="What does pp vs Vegas mean?">
+              <strong className="font-semibold text-[var(--color-text-light)] dark:text-[var(--color-text)]">
+                pp = percentage points.
+              </strong>{' '}
+              The gap between the model&apos;s win probability and the probability implied by the
+              Vegas line. A positive edge means the model is more confident in this pick than the
+              betting market.
+            </InfoTooltip>
           </>
         )}
         {!showPills && (
