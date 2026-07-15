@@ -4,8 +4,8 @@ import { useApi } from '@hooks/useApi'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import { LoadingSkeleton, Pagination } from '@components/common'
 import ScorecardModal, { type ScorecardModalMode } from '@components/features/ScorecardModal'
+import PastPredictionCard from '@components/features/PastPredictionCard'
 import { formatDate } from '@utils/format'
-import type { PastPredictionItem } from '@t/api'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,77 +15,7 @@ function formatPct(v: number): string {
   return (v * 100).toFixed(1) + '%'
 }
 
-function winnerName(item: PastPredictionItem, id: string | null | undefined): string {
-  if (!id) return '—'
-  if (id === item.fighter_a_id) return item.fighter_a_name ?? '—'
-  if (id === item.fighter_b_id) return item.fighter_b_name ?? '—'
-  return '—'
-}
-
 const PAGE_SIZE = 10
-
-// ---------------------------------------------------------------------------
-// Fight search result row
-// ---------------------------------------------------------------------------
-
-function FightSearchRow({ item }: { item: PastPredictionItem }) {
-  const isUpset   = item.is_upset
-  const isCorrect = item.is_correct
-
-  let indicator: string
-  let color: string
-  if (isUpset)        { indicator = '~'; color = 'text-[var(--color-warning-light)] dark:text-[var(--color-warning)]' }
-  else if (isCorrect) { indicator = '✓'; color = 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' }
-  else                { indicator = '✗'; color = 'text-[var(--color-primary)]' }
-
-  const predWinner   = winnerName(item, item.predicted_winner_id)
-  const actualWinner = winnerName(item, item.actual_winner_id)
-
-  return (
-    <Link
-      to={`/past-predictions/fights/${item.fight_id}`}
-      className="block rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 hover:border-[var(--color-primary)]/50 transition-colors lg:text-center"
-    >
-      {/* Matchup header */}
-      <div className="flex items-start gap-2 mb-1.5 lg:justify-center">
-        <span className={`font-mono font-bold text-sm mt-0.5 w-4 shrink-0 ${color}`}>{indicator}</span>
-        <div className="min-w-0 flex-1 lg:flex-none">
-          <p className="text-sm font-semibold leading-tight truncate">
-            {item.fighter_a_name ?? '?'} vs {item.fighter_b_name ?? '?'}
-          </p>
-          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] truncate">
-            {item.event_name ?? '—'}
-            {item.event_date ? ` · ${formatDate(item.event_date)}` : ''}
-            {item.weight_class ? ` · ${item.weight_class}` : ''}
-          </p>
-        </div>
-      </div>
-      {/* Prediction vs actual */}
-      <div className="ml-6 space-y-0.5 lg:ml-0">
-        <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          <span className="w-16 inline-block">Predicted</span>
-          <span className={isCorrect ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : ''}>
-            {predWinner}
-          </span>
-          {item.predicted_method && <span> via {item.predicted_method}</span>}
-        </p>
-        <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          <span className="w-16 inline-block">Actual</span>
-          <span className="text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-            {actualWinner}
-          </span>
-          {item.actual_method && <span> via {item.actual_method}</span>}
-        </p>
-        {item.confidence != null && (
-          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            <span className="w-16 inline-block">Conviction</span>
-            <span className="font-mono font-semibold tabular-nums">{formatPct(item.confidence)}</span>
-          </p>
-        )}
-      </div>
-    </Link>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Model Scorecard section
@@ -441,7 +371,7 @@ function ModelScorecard() {
           <>
             <div className="space-y-2">
               {fightsData.data.map((fight) => (
-                <FightSearchRow key={fight.fight_id} item={fight} />
+                <PastPredictionCard key={fight.fight_id} variant="search" item={fight} />
               ))}
             </div>
             <Pagination

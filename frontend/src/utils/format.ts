@@ -27,6 +27,15 @@ export function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+/** Compact event date: "Mar 8" within the current year, "Mar 8 '25" otherwise. Empty string for null. */
+export function formatEventDate(dateStr: string | null): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return `${months[d.getMonth()]} ${d.getDate()}${sameYear ? '' : ` '${String(d.getFullYear()).slice(2)}`}`
+}
+
 /** Convert decimal inches to feet'inches" string (e.g. 72 → "6'0\""). */
 export function inchesToFeet(inches: number): string {
   const ft = Math.floor(inches / 12)
