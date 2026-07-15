@@ -53,7 +53,7 @@ function Field({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+        className="w-full rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -156,7 +156,7 @@ export function StrategyBuilder() {
         {loading && (
           <p className="text-sm text-[var(--color-text-muted)] animate-pulse">Calculating…</p>
         )}
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">{error}</p>}
         {!loading && !error && noData && (
           <p className="text-sm text-[var(--color-text-muted)]">
             Not enough data for this combination.
@@ -165,7 +165,7 @@ export function StrategyBuilder() {
         {!loading && !error && result && !noData && (
           <div className="w-full">
             {lowSample && (
-              <p className="mb-2 text-xs text-amber-500">
+              <p className="mb-2 text-xs text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
                 Small sample (n={result.bets}) — treat with caution.
               </p>
             )}
@@ -178,7 +178,7 @@ export function StrategyBuilder() {
               ].map((stat) => (
                 <div key={stat.label}>
                   <p className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>{stat.label}</p>
-                  <p className={`mt-0.5 font-mono text-[20px] font-medium tabular-nums leading-tight ${stat.colored ? (positive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400') : ''}`}>
+                  <p className={`mt-0.5 font-mono text-[20px] font-medium tabular-nums leading-tight ${stat.colored ? (positive ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]') : ''}`}>
                     {stat.value}
                   </p>
                 </div>

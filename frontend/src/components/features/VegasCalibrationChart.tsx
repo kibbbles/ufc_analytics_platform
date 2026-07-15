@@ -49,14 +49,14 @@ export function VegasCalibrationChart({ data }: Props) {
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
           <XAxis
             dataKey="bucket"
-            tick={{ fill: '#898781', fontSize: 12 }}
+            tick={{ fill: 'var(--color-chart-axis)', fontSize: 12 }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
             domain={[40, 100]}
             tickFormatter={(v) => `${v}%`}
-            tick={{ fill: '#898781', fontSize: 12 }}
+            tick={{ fill: 'var(--color-chart-axis)', fontSize: 12 }}
             axisLine={false}
             tickLine={false}
             width={44}
@@ -70,9 +70,9 @@ export function VegasCalibrationChart({ data }: Props) {
               fontSize: 12,
             }}
           />
-          <Legend wrapperStyle={{ fontSize: 12, color: '#898781' }} />
-          <Bar dataKey="Vegas implied" fill="#898781" fillOpacity={0.5} radius={[3, 3, 0, 0]} maxBarSize={40} />
-          <Bar dataKey="Actual win rate" fill="#2a78d6" radius={[3, 3, 0, 0]} maxBarSize={40} />
+          <Legend wrapperStyle={{ fontSize: 12, color: 'var(--color-chart-axis)' }} />
+          <Bar dataKey="Vegas implied" fill="var(--color-chart-6)" fillOpacity={0.5} radius={[3, 3, 0, 0]} maxBarSize={40} />
+          <Bar dataKey="Actual win rate" fill="var(--color-chart-2)" radius={[3, 3, 0, 0]} maxBarSize={40} />
         </BarChart>
       </ResponsiveContainer>
 

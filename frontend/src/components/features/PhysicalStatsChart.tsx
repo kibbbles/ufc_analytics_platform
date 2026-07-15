@@ -138,17 +138,17 @@ function TimeSeriesView({ data, weightClass }: { data: PhysicalStatPoint[]; weig
           <Line
             dataKey="avg_height_inches"
             name="Avg height (in)"
-            stroke="#4361ee"
+            stroke="var(--color-chart-2)"
             strokeWidth={2}
-            dot={partialDot('#4361ee')}
+            dot={partialDot('var(--color-chart-2)')}
             connectNulls
           />
           <Line
             dataKey="avg_reach_inches"
             name="Avg reach (in)"
-            stroke="#e63946"
+            stroke="var(--color-chart-1)"
             strokeWidth={2}
-            dot={partialDot('#e63946')}
+            dot={partialDot('var(--color-chart-1)')}
             connectNulls
           />
         </LineChart>
@@ -228,8 +228,8 @@ function SnapshotView({ data }: { data: PhysicalStatPoint[] }) {
             </span>
           )}
         />
-        <Bar dataKey="avg_height" name="Avg height (in)" fill="#4361ee" radius={[0, 2, 2, 0]} isAnimationActive={false} />
-        <Bar dataKey="avg_reach"  name="Avg reach (in)"  fill="#e63946" radius={[0, 2, 2, 0]} isAnimationActive={false} />
+        <Bar dataKey="avg_height" name="Avg height (in)" fill="var(--color-chart-2)" radius={[0, 2, 2, 0]} isAnimationActive={false} />
+        <Bar dataKey="avg_reach"  name="Avg reach (in)"  fill="var(--color-chart-1)" radius={[0, 2, 2, 0]} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   )

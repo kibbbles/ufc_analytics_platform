@@ -33,12 +33,12 @@ function ModalFightRow({ item }: { item: PastPredictionItem }) {
   let indicator: string
   let indicatorColor: string
   if (!hasPrediction)  { indicator = '·'; indicatorColor = 'text-[var(--color-text-muted)]' }
-  else if (isUpset)    { indicator = '~'; indicatorColor = 'text-amber-500' }
-  else if (isCorrect)  { indicator = '✓'; indicatorColor = 'text-green-500' }
+  else if (isUpset)    { indicator = '~'; indicatorColor = 'text-[var(--color-warning-light)] dark:text-[var(--color-warning)]' }
+  else if (isCorrect)  { indicator = '✓'; indicatorColor = 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' }
   else                 { indicator = '✗'; indicatorColor = 'text-[var(--color-primary)]' }
 
   const rowBg = isUpset
-    ? 'bg-amber-500/5'
+    ? 'bg-[var(--color-warning)]/5'
     : ''
 
   return (
@@ -175,7 +175,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
           {loading ? (
             <LoadingSkeleton lines={8} />
           ) : error ? (
-            <p className="text-sm text-red-500 text-center py-4">{error}</p>
+            <p className="text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)] text-center py-4">{error}</p>
           ) : (
             <>
               {/* Model performance — Brier + ROC-AUC */}
@@ -217,7 +217,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                     <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                       Avg conviction · correct
                     </p>
-                    <p className="font-mono text-lg font-bold tabular-nums text-green-500 mt-0.5">
+                    <p className="font-mono text-lg font-bold tabular-nums text-[var(--color-success-light)] dark:text-[var(--color-success)] mt-0.5">
                       {section.avg_conf_correct != null ? formatPct(section.avg_conf_correct) : '—'}
                     </p>
                   </div>
@@ -356,7 +356,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                                 <td className="px-3 py-2 font-mono tabular-nums text-right">
                                   {b.disagree_count === 0 || b.disagree_accuracy == null
                                     ? <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">—</span>
-                                    : <span className={b.disagree_accuracy >= b.vegas_accuracy ? 'text-green-500' : 'text-[var(--color-primary)]'}>
+                                    : <span className={b.disagree_accuracy >= b.vegas_accuracy ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-primary)]'}>
                                         {formatPct(b.disagree_accuracy)} <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">({b.disagree_count})</span>
                                       </span>
                                   }
@@ -438,7 +438,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                                 <td className="px-3 py-2 font-mono tabular-nums text-right">
                                   {b.disagree_count === 0 || b.disagree_accuracy == null
                                     ? <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">—</span>
-                                    : <span className={b.disagree_accuracy >= b.vegas_accuracy ? 'text-green-500' : 'text-[var(--color-primary)]'}>
+                                    : <span className={b.disagree_accuracy >= b.vegas_accuracy ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-primary)]'}>
                                         {formatPct(b.disagree_accuracy)} <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">({b.disagree_count})</span>
                                       </span>
                                   }

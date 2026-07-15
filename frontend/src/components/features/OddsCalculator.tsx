@@ -182,9 +182,9 @@ export default function OddsCalculator({
                       <div>
                         <div className="text-[10px] text-[var(--color-text-muted)]">Edge</div>
                         <div className={`font-mono text-xs font-semibold tabular-nums ${
-                          result.edge > EDGE_THRESHOLD ? 'text-green-500'
+                          result.edge > EDGE_THRESHOLD ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]'
                           : result.edge > 0 ? 'text-yellow-500'
-                          : 'text-red-500'
+                          : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'
                         }`}>
                           {result.edge >= 0 ? '+' : ''}{(result.edge * 100).toFixed(1)}%
                         </div>
@@ -192,7 +192,7 @@ export default function OddsCalculator({
                     </div>
                     <div className="mt-2 border-t border-[var(--color-border)] pt-2 text-center">
                       <span className="text-[10px] text-[var(--color-text-muted)]">EV </span>
-                      <span className={`font-mono text-sm font-bold tabular-nums ${result.ev > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      <span className={`font-mono text-sm font-bold tabular-nums ${result.ev > 0 ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'}`}>
                         {result.ev >= 0 ? `+$${result.ev.toFixed(2)}` : `-$${Math.abs(result.ev).toFixed(2)}`}
                       </span>
                       <span className="text-[10px] text-[var(--color-text-muted)]"> on ${stake.toFixed(0)}</span>
@@ -210,9 +210,9 @@ export default function OddsCalculator({
             {verdict && (
               <div className={`rounded-lg px-3 py-2 text-center text-xs font-semibold ${
                 verdictGood
-                  ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                  ? 'bg-[var(--color-success)]/10 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
                   : verdict.startsWith('No')
-                  ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                  ? 'bg-[var(--color-error)]/10 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
                   : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
               }`}>
                 {verdict}

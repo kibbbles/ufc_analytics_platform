@@ -63,19 +63,19 @@ function getStartDate(range: Range): Date | null {
 
 // ── Fight card ───────────────────────────────────────────────────────────────
 
-function FightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
+function BettingFightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
   const inHotZone  = f.edge_pp >= 5 && f.edge_pp <= 15
   const showPills  = mode !== 'fav' && mode !== 'dog'
 
   return (
-    <div className="relative rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[13px]">
+    <div className="relative rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-[13px]">
       {/* Corner badge */}
       <div
-        className="absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-[11px] font-semibold"
-        style={{
-          background: f.is_correct ? '#1a3a1a' : '#3a1a1a',
-          color: f.is_correct ? '#4caf50' : '#ef5350',
-        }}
+        className={`absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-[11px] font-semibold ${
+          f.is_correct
+            ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+            : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
+        }`}
       >
         {f.is_correct ? '✓' : '✗'}
       </div>
@@ -89,7 +89,7 @@ function FightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
 
       {/* Actual result */}
       {f.actual_winner_name && (
-        <p style={{ color: '#e8a838' }} className="mt-0.5">
+        <p className="mt-0.5 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
           {f.actual_winner_name}{f.result_method ? ` · ${f.result_method}` : ''}
         </p>
       )}
@@ -110,24 +110,23 @@ function FightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
         {showPills && (
           <>
             <span
-              className="rounded px-1.5 py-0.5 text-[11px] font-semibold"
-              style={{
-                background: f.is_correct ? '#1a3a1a' : '#3a1a1a',
-                color: f.is_correct ? '#4caf50' : '#ef5350',
-              }}
+              className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+                f.is_correct
+                  ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+                  : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
+              }`}
             >
               {f.is_correct ? '✓ pick' : '✗ pick'} · {(f.pick_prob * 100).toFixed(0)}%
             </span>
-            <span style={{ color: '#4db6ac' }} className="font-mono">
+            <span className="font-mono text-[var(--color-accent)]">
               {f.conviction_pp.toFixed(0)}pp conv
             </span>
             <span
-              className="rounded px-1.5 py-0.5 text-[11px] font-mono"
-              style={{
-                background: inHotZone ? 'rgba(12,68,124,0.15)' : 'transparent',
-                color: inHotZone ? '#2a78d6' : 'var(--color-text-muted)',
-                border: inHotZone ? 'none' : '1px solid var(--color-border)',
-              }}
+              className={`rounded px-1.5 py-0.5 text-[11px] font-mono ${
+                inHotZone
+                  ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)]'
+                  : 'border border-[var(--color-border)] text-[var(--color-text-muted)]'
+              }`}
             >
               {f.edge_pp >= 0 ? '+' : ''}{f.edge_pp.toFixed(1)}pp vs Vegas
             </span>
@@ -274,7 +273,7 @@ export function OverviewTab() {
   }, [filtered, plSource])
 
   const finalPnl   = chartData.at(-1)?.cumPnl ?? 0
-  const lineColor  = finalPnl >= 0 ? '#2a78d6' : '#e34948'
+  const lineColor  = finalPnl >= 0 ? 'var(--color-success)' : 'var(--color-error)'
   const pnl100     = (stats.pnl * 100)
   const roi100     = stats.roi * 100
   const noData     = stats.bets < 10
@@ -316,7 +315,7 @@ export function OverviewTab() {
         <select
           value={strategy}
           onChange={(e) => handleStrategyChange(e.target.value)}
-          className="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+          className="w-full rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         >
           <optgroup label="Model strategies">
             <option value="model_pick">Model pick — no filter</option>
@@ -376,7 +375,7 @@ export function OverviewTab() {
           <select
             value={weightClass}
             onChange={(e) => { setWeightClass(e.target.value); setPage(1) }}
-            className="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+            className="w-full rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           >
             <option value="">All divisions</option>
             {WEIGHT_CLASSES_ORDERED.map(wc => <option key={wc} value={wc}>{wc}</option>)}
@@ -389,7 +388,7 @@ export function OverviewTab() {
           <select
             value={titleFilter}
             onChange={(e) => { setTitleFilter(e.target.value); setPage(1) }}
-            className="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+            className="w-full rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           >
             <option value="all">All fights</option>
             <option value="title">Title fights only</option>
@@ -429,7 +428,7 @@ export function OverviewTab() {
       ) : (
         <>
           {lowSample && (
-            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+            <p className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-3 py-2 text-xs text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
               Small sample (n={stats.bets}) — interpret with caution.
             </p>
           )}
@@ -445,8 +444,8 @@ export function OverviewTab() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="date_label" tick={{ fill: '#898781', fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                <YAxis tickFormatter={(v) => `$${v}`} tick={{ fill: '#898781', fontSize: 11 }} axisLine={false} tickLine={false} width={52} />
+                <XAxis dataKey="date_label" tick={{ fill: 'var(--color-chart-axis)', fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tickFormatter={(v) => `$${v}`} tick={{ fill: 'var(--color-chart-axis)', fontSize: 11 }} axisLine={false} tickLine={false} width={52} />
                 <Tooltip
                   formatter={(v) => [`$${Number(v).toFixed(2)}`, 'Cumulative P&L']}
                   labelFormatter={(label) => String(label)}
@@ -468,11 +467,13 @@ export function OverviewTab() {
               { label: 'Total P&L', value: `${pnl100 >= 0 ? '+' : ''}$${pnl100.toFixed(0)}`, colored: true, pos: pnl100 >= 0 },
               { label: 'ROI', value: `${roi100 >= 0 ? '+' : ''}${roi100.toFixed(1)}%`, colored: true, pos: roi100 >= 0 },
             ].map((s) => (
-              <div key={s.label} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5">
+              <div key={s.label} className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2.5">
                 <p className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>{s.label}</p>
                 <p className={`mt-0.5 font-mono text-[20px] font-medium tabular-nums leading-tight ${
                   s.colored
-                    ? s.pos ? 'text-[#3b6d11]' : 'text-[#a32d2d]'
+                    ? s.pos
+                      ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+                      : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'
                     : ''
                 }`}>
                   {s.value}
@@ -483,7 +484,7 @@ export function OverviewTab() {
 
           {/* Fight cards */}
           <div className="space-y-2">
-            {visible.map(f => <FightCard key={f.fight_id} f={f} mode={plSource} />)}
+            {visible.map(f => <BettingFightCard key={f.fight_id} f={f} mode={plSource} />)}
           </div>
           <Pagination
             page={page}

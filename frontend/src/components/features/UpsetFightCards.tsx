@@ -31,14 +31,11 @@ function oddsLabel(odds: number | null) {
   return odds > 0 ? `+${odds}` : String(odds)
 }
 
-function UpsetCard({ f }: { f: UpsetFightCard }) {
+function UpsetFightCard({ f }: { f: UpsetFightCard }) {
   return (
-    <div className="relative rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[13px]">
+    <div className="relative rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-[13px]">
       {/* Upset badge */}
-      <div
-        className="absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-[11px] font-semibold"
-        style={{ background: '#3a1a1a', color: '#ef5350' }}
-      >
+      <div className="absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-[11px] font-semibold bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]">
         Upset
       </div>
 
@@ -49,7 +46,7 @@ function UpsetCard({ f }: { f: UpsetFightCard }) {
 
       {/* Actual result */}
       {f.winner_name && (
-        <p style={{ color: '#e8a838' }} className="mt-0.5">
+        <p className="mt-0.5 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
           {f.winner_name} wins{f.method ? ` · ${f.method}` : ''}
         </p>
       )}
@@ -64,14 +61,11 @@ function UpsetCard({ f }: { f: UpsetFightCard }) {
       <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px]">
         <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>MODEL</span>
         {f.model_pick_name && (
-          <span
-            className="rounded px-1.5 py-0.5 text-[11px] font-semibold"
-            style={{ background: '#3a1a1a', color: '#ef5350' }}
-          >
+          <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]">
             ✗ {f.model_pick_name}
           </span>
         )}
-        <span style={{ color: '#4db6ac' }} className="font-mono">
+        <span className="font-mono text-[var(--color-accent)]">
           {(f.conviction * 100).toFixed(0)}pp conviction
         </span>
         {f.model_pick_odds != null && (
@@ -122,7 +116,7 @@ export function UpsetFightCards() {
         <select
           value={weightClass}
           onChange={(e) => setWeightClass(e.target.value)}
-          className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+          className="rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         >
           <option value="">All divisions</option>
           {WEIGHT_CLASSES_ORDERED.map((wc) => (
@@ -132,7 +126,7 @@ export function UpsetFightCards() {
         <select
           value={convictionMin}
           onChange={(e) => setConvictionMin(Number(e.target.value))}
-          className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+          className="rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         >
           {CONVICTION_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -151,7 +145,7 @@ export function UpsetFightCards() {
       ) : (
         <>
           <div className="space-y-2">
-            {visible.map((f) => <UpsetCard key={f.fight_id} f={f} />)}
+            {visible.map((f) => <UpsetFightCard key={f.fight_id} f={f} />)}
           </div>
           <Pagination
             page={page}

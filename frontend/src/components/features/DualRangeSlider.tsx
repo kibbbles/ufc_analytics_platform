@@ -125,7 +125,7 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
         >
           <div
             className="w-full h-1 rounded-full cursor-ew-resize"
-            style={{ background: 'var(--color-accent, #e63946)' }}
+            style={{ background: 'var(--color-accent)' }}
           />
         </div>
 
@@ -136,7 +136,7 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
           aria-valuemax={valueHi - step}
           aria-valuenow={valueLo}
           tabIndex={disabled ? -1 : 0}
-          className="absolute top-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-accent,#e63946)] bg-[var(--color-bg)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent,#e63946)] focus:ring-offset-1"
+          className="absolute top-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-1"
           style={{ left: `${loPercent}%`, width: thumbSize, height: thumbSize }}
           onPointerDown={(e) => { e.stopPropagation(); startDrag('lo', e) }}
           onKeyDown={handleKeyLo}
@@ -149,7 +149,7 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
           aria-valuemax={max}
           aria-valuenow={valueHi}
           tabIndex={disabled ? -1 : 0}
-          className="absolute top-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-accent,#e63946)] bg-[var(--color-bg)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent,#e63946)] focus:ring-offset-1"
+          className="absolute top-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-1"
           style={{ left: `${hiPercent}%`, width: thumbSize, height: thumbSize }}
           onPointerDown={(e) => { e.stopPropagation(); startDrag('hi', e) }}
           onKeyDown={handleKeyHi}

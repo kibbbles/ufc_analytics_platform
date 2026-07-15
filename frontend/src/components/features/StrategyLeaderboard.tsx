@@ -55,12 +55,16 @@ export function StrategyLeaderboard({ strategies }: Props) {
                 <td className="py-3 px-3 text-right font-mono tabular-nums">{row.bets}</td>
                 <td className="py-3 px-3 text-right font-mono tabular-nums">{row.wins}</td>
                 <td className="py-3 px-3 text-right font-mono tabular-nums font-medium">
-                  <span style={{ color: positive ? '#3b6d11' : '#a32d2d' }}>
+                  <span className={positive
+                    ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+                    : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'}>
                     {pnlLabel(row.pnl)}
                   </span>
                 </td>
                 <td className="py-3 pl-3 text-right font-mono tabular-nums font-semibold">
-                  <span style={{ color: positive ? '#3b6d11' : '#a32d2d', fontWeight: 500 }}>
+                  <span className={`font-medium ${positive
+                    ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+                    : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'}`}>
                     {roiLabel(row.roi)}
                   </span>
                 </td>

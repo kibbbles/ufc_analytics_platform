@@ -6,8 +6,8 @@ interface ToastProps {
 }
 
 const typeClasses: Record<AppNotification['type'], string> = {
-  success: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  error: 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300',
+  success: 'border-[var(--color-success)]/40 bg-[var(--color-success)]/10 text-[var(--color-success-light)] dark:text-[var(--color-success)]',
+  error: 'border-[var(--color-error)]/40 bg-[var(--color-error)]/10 text-[var(--color-error-light)] dark:text-[var(--color-error)]',
   info: 'border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 text-[var(--color-accent)]',
 }
 

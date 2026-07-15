@@ -42,7 +42,7 @@ export function StrategyTicker({ strategies }: Props) {
           <span key={i} className="flex items-center gap-2">
             <span className="text-[var(--color-text-muted)]">{item.name}</span>
             <span
-              className={`font-mono font-semibold tabular-nums ${item.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+              className={`font-mono font-semibold tabular-nums ${item.roi >= 0 ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'}`}
             >
               {item.roiLabel}
             </span>

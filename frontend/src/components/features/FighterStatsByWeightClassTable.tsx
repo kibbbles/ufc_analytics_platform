@@ -55,7 +55,8 @@ const COLUMNS: Column[] = [
 function cellColor(value: number, min: number, max: number): string {
   if (max === min) return 'transparent'
   const t = (value - min) / (max - min)
-  return `rgba(230, 57, 70, ${(0.05 + t * 0.55).toFixed(2)})`
+  const pct = Math.round((0.05 + t * 0.55) * 100)
+  return `color-mix(in srgb, var(--color-chart-1) ${pct}%, transparent)`
 }
 
 interface Props {

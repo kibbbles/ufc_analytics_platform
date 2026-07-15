@@ -21,13 +21,13 @@ export function BettingHero({ data }: Props) {
       </p>
       <div className="mt-1 flex flex-wrap items-baseline gap-3">
         <span
-          className={`text-[32px] font-medium tabular-nums leading-none ${positive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}
+          className={`text-[32px] font-medium tabular-nums leading-none ${positive ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'}`}
         >
           {positive ? '+' : ''}
           {roi}%
         </span>
         <span
-          className={`rounded px-2 py-0.5 text-xs font-medium ${positive ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400'}`}
+          className={`rounded px-2 py-0.5 text-xs font-medium ${positive ? 'bg-[var(--color-success)]/10 text-[var(--color-success-light)] dark:bg-[var(--color-success)]/10 dark:text-[var(--color-success)]' : 'bg-[var(--color-error)]/10 text-[var(--color-error-light)] dark:bg-[var(--color-error)]/10 dark:text-[var(--color-error)]'}`}
         >
           Best strategy ROI
         </span>

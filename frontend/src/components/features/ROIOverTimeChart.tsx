@@ -87,7 +87,7 @@ export function ROIOverTimeChart() {
   const { rows, fellBack } = buildChartData(events, range)
   const finalPnl = rows.at(-1)?.cumPnl ?? 0
   const positive = finalPnl >= 0
-  const lineColor = positive ? '#2a78d6' : '#e34948'
+  const lineColor = positive ? 'var(--color-success)' : 'var(--color-error)'
 
   return (
     <div className="space-y-4">
@@ -96,7 +96,7 @@ export function ROIOverTimeChart() {
         <select
           value={strategy}
           onChange={(e) => { setStrategy(e.target.value); setRange('ALL') }}
-          className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+          className="rounded border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         >
           {STRATEGIES.map((s) => (
             <option key={s.key} value={s.key}>{s.label}</option>
@@ -139,14 +139,14 @@ export function ROIOverTimeChart() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
             <XAxis
               dataKey="date_label"
-              tick={{ fill: '#898781', fontSize: 11 }}
+              tick={{ fill: 'var(--color-chart-axis)', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
               tickFormatter={(v) => `$${v}`}
-              tick={{ fill: '#898781', fontSize: 11 }}
+              tick={{ fill: 'var(--color-chart-axis)', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               width={52}

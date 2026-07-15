@@ -3,7 +3,7 @@ import { useApi } from '@hooks/useApi'
 import { fightersService } from '@services/fightersService'
 import { fightsService } from '@services/fightsService'
 import { LoadingSkeleton, DataCaveatNote, Card } from '@components/common'
-import { FighterProfileHeader, FightRow } from '@components/features'
+import { FighterProfileHeader, FightHistoryRow } from '@components/features'
 
 export default function FighterDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -30,7 +30,7 @@ export default function FighterDetailPage() {
       </Link>
 
       {fighterError && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-600 dark:text-red-400">
+        <div className="rounded-lg border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6 text-center text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">
           {fighterError}
         </div>
       )}
@@ -79,7 +79,7 @@ export default function FighterDetailPage() {
             {fights && !fightsLoading && fights.data.length > 0 && (
               <div className="-my-1">
                 {fights.data.map((fight) => (
-                  <FightRow key={fight.id} fight={fight} viewingFighterId={id} />
+                  <FightHistoryRow key={fight.id} fight={fight} viewingFighterId={id} />
                 ))}
               </div>
             )}

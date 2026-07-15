@@ -6,7 +6,7 @@
 /* ─── Design tokens ────────────────────────────────────────────────────────── */
 @theme {
   /* Breakpoints */
-  --breakpoint-sm: 320px;
+  --breakpoint-sm: 640px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1440px;
@@ -17,10 +17,27 @@
   --color-secondary:     #f77f00;   /* orange accent */
   --color-accent:        #4cc9f0;   /* cyan — data highlights */
 
-  /* Semantic colours */
-  --color-success: #2dc653;
-  --color-warning: #f77f00;
-  --color-error:   #e63946;
+  /* Semantic status colours.
+     These must never alias the brand colours. --color-error was previously
+     #e63946, byte-identical to --color-primary, which is how the UFC-red
+     accent and the error colour became conflated across the app.
+     Unsuffixed = dark mode, -light = light mode, matching the text scale. */
+  --color-success:       #4ade80;
+  --color-success-light: #16a34a;
+  --color-warning:       #fbbf24;
+  --color-warning-light: #d97706;
+  --color-error:         #f87171;
+  --color-error-light:   #dc2626;
+
+  /* Categorical chart palette. Charts draw series colours from these and
+     from nowhere else. Mid-tone values, legible on both surfaces. */
+  --color-chart-1: #e63946;   /* striking / KO-TKO / primary series */
+  --color-chart-2: #4361ee;   /* grappling / submission / secondary series */
+  --color-chart-3: #2a9d8f;   /* control time / tertiary series */
+  --color-chart-4: #e9c46a;   /* quaternary series */
+  --color-chart-5: #7209b7;   /* quinary series */
+  --color-chart-6: #8b9ab0;   /* neutral / "other" / late rounds */
+  --color-chart-axis: #898781;   /* tick labels */
 
   /* Dark-mode surface scale */
   --color-bg:           #0f1117;   /* page background */

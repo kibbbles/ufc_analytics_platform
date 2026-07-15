@@ -31,11 +31,11 @@ function methodColor(method: string | null): string {
   if (!method) return 'text-[var(--color-text-muted)]'
   const m = method.toUpperCase()
   if (m.includes('KO') || m.includes('TKO')) return 'text-[var(--color-primary)]'
-  if (m.includes('SUB')) return 'text-amber-500 dark:text-amber-400'
+  if (m.includes('SUB')) return 'text-[var(--color-warning-light)] dark:text-[var(--color-warning)]'
   return 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]'
 }
 
-function FightCard({ fight }: { fight: FightSearchItem }) {
+function FightSearchCard({ fight }: { fight: FightSearchItem }) {
   const hasPred = fight.win_prob_a !== null && fight.win_prob_b !== null
   const winnerIsA = fight.winner_id === fight.fighter_a_id
   const predWinnerIsA = fight.predicted_winner_id === fight.fighter_a_id
@@ -59,12 +59,12 @@ function FightCard({ fight }: { fight: FightSearchItem }) {
           </p>
         </div>
         {fight.is_title_fight && !fight.is_interim_title && (
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-600 dark:text-amber-400">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-warning)]/20 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
             Title
           </span>
         )}
         {fight.is_interim_title && (
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-600 dark:text-amber-400">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-warning)]/20 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
             Interim
           </span>
         )}
@@ -106,8 +106,8 @@ function FightCard({ fight }: { fight: FightSearchItem }) {
           </span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
             fight.predicted_winner_id === fight.winner_id
-              ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-              : 'bg-red-500/15 text-red-600 dark:text-red-400'
+              ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+              : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
           }`}>
             {fight.predicted_winner_id === fight.winner_id ? '✓' : '✗'}{' '}
             {predWinnerIsA ? fight.fighter_a_name?.split(' ').pop() : fight.fighter_b_name?.split(' ').pop()}
@@ -214,7 +214,7 @@ export default function FightSearchTab() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-600 dark:text-red-400">
+        <div className="rounded-lg border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6 text-center text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">
           {error}
         </div>
       )}
@@ -229,7 +229,7 @@ export default function FightSearchTab() {
           ) : (
             <div className="space-y-3">
               {data.data.map((fight) => (
-                <FightCard key={fight.fight_id} fight={fight} />
+                <FightSearchCard key={fight.fight_id} fight={fight} />
               ))}
             </div>
           )}

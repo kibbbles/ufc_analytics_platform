@@ -11,8 +11,8 @@ export default function DataCaveatNote({ children, className = '' }: DataCaveatN
       role="note"
       className={[
         'flex items-start gap-2.5 rounded-md px-4 py-3 text-sm',
-        'border border-amber-500/30 bg-amber-500/10',
-        'text-amber-700 dark:text-amber-300',
+        'border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10',
+        'text-[var(--color-warning-light)] dark:text-[var(--color-warning)]',
         className,
       ].join(' ')}
     >

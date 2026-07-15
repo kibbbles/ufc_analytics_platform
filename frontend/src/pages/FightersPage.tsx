@@ -52,7 +52,7 @@ export default function FightersPage() {
           ))}
 
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-600 dark:text-red-400">
+          <div className="rounded-lg border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6 text-center text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">
             {error}
           </div>
         )}

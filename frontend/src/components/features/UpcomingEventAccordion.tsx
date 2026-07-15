@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { upcomingService } from '@services/upcomingService'
 import type { UpcomingEventListItem, UpcomingEventWithFights } from '@t/api'
-import UpcomingFightRow from './UpcomingFightRow'
+import UpcomingFightCard from './UpcomingFightCard'
 import LoadingSpinner from '@components/common/LoadingSpinner'
 
 interface Props {
@@ -125,12 +125,12 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
             </div>
           )}
           {error && (
-            <p className="py-4 text-center text-sm text-red-500">{error}</p>
+            <p className="py-4 text-center text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">{error}</p>
           )}
           {fightCard && !loading && (
             fightCard.fights.length > 0 ? (
               fightCard.fights.map((fight) => (
-                <UpcomingFightRow key={fight.id} fight={fight} />
+                <UpcomingFightCard key={fight.id} fight={fight} />
               ))
             ) : (
               <p className="py-4 text-center text-sm text-[var(--color-text-muted)]">

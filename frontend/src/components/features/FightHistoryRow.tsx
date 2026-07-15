@@ -15,7 +15,7 @@ function ResultBadge({ fight, fighterId }: { fight: FightListItem; fighterId?: s
   return <Badge variant="default">—</Badge>
 }
 
-export default function FightRow({ fight, viewingFighterId }: FightRowProps) {
+export default function FightHistoryRow({ fight, viewingFighterId }: FightRowProps) {
   return (
     <Link
       to={`/past-predictions/fights/${fight.id}`}

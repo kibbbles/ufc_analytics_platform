@@ -30,7 +30,7 @@ function fmtOdds(o: number | null): string {
   return o > 0 ? `+${o}` : `${o}`
 }
 
-export default function UpcomingFightRow({ fight }: Props) {
+export default function UpcomingFightCard({ fight }: Props) {
   const navigate = useNavigate()
   const { fighter_a_name, fighter_b_name, weight_class, is_title_fight, is_interim_title,
           prediction, implied_prob_a, implied_prob_b, odds_a, odds_b } = fight

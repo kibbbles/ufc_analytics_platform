@@ -64,7 +64,8 @@ export default function WeightClassHeatmap({ data }: Props) {
   const cellColor = (rate: number | undefined): string => {
     if (rate === undefined) return 'transparent'
     const t = maxRate === minRate ? 0.5 : (rate - minRate) / (maxRate - minRate)
-    return `rgba(230, 57, 70, ${(0.08 + t * 0.82).toFixed(2)})`
+    const pct = Math.round((0.08 + t * 0.82) * 100)
+    return `color-mix(in srgb, var(--color-chart-1) ${pct}%, transparent)`
   }
 
   const showYearLabel = (y: number) => y % 5 === 0
@@ -150,7 +151,7 @@ export default function WeightClassHeatmap({ data }: Props) {
         <span className="text-[10px] text-[var(--color-text-muted)]">Lower finish rate</span>
         <div
           className="h-2.5 w-28 rounded"
-          style={{ background: 'linear-gradient(to right, rgba(230,57,70,0.08), rgba(230,57,70,0.9))' }}
+          style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--color-chart-1) 8%, transparent), color-mix(in srgb, var(--color-chart-1) 90%, transparent))' }}
         />
         <span className="text-[10px] text-[var(--color-text-muted)]">Higher finish rate</span>
       </div>

@@ -10,12 +10,16 @@ import {
 } from 'recharts'
 import type { RoundDistributionPoint } from '@t/api'
 
-// Round 1 = most urgent (red), later rounds fade to muted
+// Round number is ordinal: earlier rounds finish more urgently. Encode that as a
+// single-hue intensity ramp keyed to the primary chart colour, strongest for R1.
+// Mix toward white (opaque) rather than transparent so the faint rounds fade to
+// pale pink and stay legible on BOTH the light and dark backgrounds - mixing
+// toward transparent blends into the page and turns muddy on the dark theme.
 const ROUND_COLORS = {
-  r1:     '#e63946',
-  r2:     '#e07030',
-  r3:     '#c89a40',
-  r4plus: '#8b9ab0',
+  r1:     'color-mix(in srgb, var(--color-chart-1) 100%, white)',
+  r2:     'color-mix(in srgb, var(--color-chart-1) 75%, white)',
+  r3:     'color-mix(in srgb, var(--color-chart-1) 50%, white)',
+  r4plus: 'color-mix(in srgb, var(--color-chart-1) 30%, white)',
 }
 
 function ChartTooltip({ active, payload, label }: any) {

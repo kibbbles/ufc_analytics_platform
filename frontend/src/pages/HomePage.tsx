@@ -34,8 +34,8 @@ function FightSearchRow({ item }: { item: PastPredictionItem }) {
 
   let indicator: string
   let color: string
-  if (isUpset)        { indicator = '~'; color = 'text-amber-500' }
-  else if (isCorrect) { indicator = '✓'; color = 'text-green-500' }
+  if (isUpset)        { indicator = '~'; color = 'text-[var(--color-warning-light)] dark:text-[var(--color-warning)]' }
+  else if (isCorrect) { indicator = '✓'; color = 'text-[var(--color-success-light)] dark:text-[var(--color-success)]' }
   else                { indicator = '✗'; color = 'text-[var(--color-primary)]' }
 
   const predWinner   = winnerName(item, item.predicted_winner_id)
@@ -192,7 +192,7 @@ function ModelScorecard() {
       {summaryLoading ? (
         <LoadingSkeleton lines={2} />
       ) : summaryError ? (
-        <p className="text-sm text-red-500">Failed to load scorecard: {summaryError}</p>
+        <p className="text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">Failed to load scorecard: {summaryError}</p>
       ) : summary && summary.total_fights > 0 ? (
         <div className="mb-4">
           <div className="grid grid-cols-2 gap-3 mb-3">
@@ -377,7 +377,7 @@ function ModelScorecard() {
             ))}
           </div>
         ) : eventsError ? (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400">
+          <div className="rounded-lg border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-4 text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">
             Failed to load events: {eventsError}
           </div>
         ) : eventsData && eventsData.data.length > 0 ? (
@@ -434,7 +434,7 @@ function ModelScorecard() {
             ))}
           </div>
         ) : fightsError ? (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400">
+          <div className="rounded-lg border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-4 text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">
             Failed to search: {fightsError}
           </div>
         ) : fightsData && fightsData.data.length > 0 ? (

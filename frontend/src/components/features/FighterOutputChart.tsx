@@ -19,8 +19,8 @@ export interface FighterOutputChartConfig {
 }
 
 const DEFAULT_CONFIG: Required<FighterOutputChartConfig> = {
-  color: '#4361ee',
-  colorPartial: '#4361ee80',
+  color: 'var(--color-chart-2)',
+  colorPartial: 'color-mix(in srgb, var(--color-chart-2) 50%, transparent)',
 }
 
 // ---------------------------------------------------------------------------

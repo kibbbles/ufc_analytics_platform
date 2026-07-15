@@ -33,10 +33,10 @@ const DEFAULT_CONFIG: Required<FinishRateChartConfig> = {
   showSubmission: false,
   showDecision: false,
   showFinishRate: true,
-  colorKoTko: '#e63946',
-  colorSubmission: '#4361ee',
+  colorKoTko: 'var(--color-chart-1)',
+  colorSubmission: 'var(--color-chart-2)',
   colorDecision: 'var(--color-text-muted)',
-  colorFinishRate: '#e63946',
+  colorFinishRate: 'var(--color-chart-1)',
   showEraAnnotations: true,
 }
 

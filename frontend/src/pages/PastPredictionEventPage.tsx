@@ -27,7 +27,7 @@ function winnerName(item: PastPredictionItem, id: string | null | undefined): st
 // Note: outer container uses div+onClick to avoid nested <a> tags
 // ---------------------------------------------------------------------------
 
-function FightRow({ item }: { item: PastPredictionItem }) {
+function PastPredictionEventRow({ item }: { item: PastPredictionItem }) {
   const isUpset      = item.is_upset
   const isCorrect    = item.is_correct
   const hasPred      = item.predicted_winner_id != null
@@ -37,16 +37,16 @@ function FightRow({ item }: { item: PastPredictionItem }) {
   const resultBadge = !hasPred
     ? { label: '·', cls: 'bg-[var(--color-border)]/40 text-[var(--color-text-muted)]' }
     : isUpset
-    ? { label: '~ Upset', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' }
+    ? { label: '~ Upset', cls: 'bg-[var(--color-warning)]/15 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]' }
     : isCorrect
-    ? { label: '✓', cls: 'bg-green-500/15 text-green-600 dark:text-green-400' }
-    : { label: '✗', cls: 'bg-red-500/15 text-red-600 dark:text-red-400' }
+    ? { label: '✓', cls: 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]' }
+    : { label: '✗', cls: 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]' }
 
   const methodClr = (m: string | null | undefined) => {
     if (!m) return 'text-[var(--color-text-muted)]'
     const u = m.toUpperCase()
     if (u.includes('KO') || u.includes('TKO')) return 'text-[var(--color-primary)]'
-    if (u.includes('SUB')) return 'text-amber-500 dark:text-amber-400'
+    if (u.includes('SUB')) return 'text-[var(--color-warning-light)] dark:text-[var(--color-warning)]'
     return 'text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]'
   }
 
@@ -110,8 +110,8 @@ function FightRow({ item }: { item: PastPredictionItem }) {
           </span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
             isCorrect
-              ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-              : 'bg-red-500/15 text-red-600 dark:text-red-400'
+              ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+              : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
           }`}>
             {isCorrect ? '✓' : '✗'}{' '}
             {predWinnerIsA ? item.fighter_a_name?.split(' ').pop() : item.fighter_b_name?.split(' ').pop()}
@@ -151,7 +151,7 @@ export default function PastPredictionEventPage() {
       {loading && <LoadingSkeleton lines={8} />}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-600 dark:text-red-400">
+        <div className="rounded-lg border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6 text-center text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">
           {error}
         </div>
       )}
@@ -181,7 +181,7 @@ export default function PastPredictionEventPage() {
           {/* Fight list */}
           <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4">
             {data.fights.map((fight) => (
-              <FightRow key={fight.fight_id} item={fight} />
+              <PastPredictionEventRow key={fight.fight_id} item={fight} />
             ))}
           </div>
         </>

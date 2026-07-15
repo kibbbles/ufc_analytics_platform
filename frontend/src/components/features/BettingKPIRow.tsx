@@ -31,7 +31,7 @@ export function BettingKPIRow({ data }: Props) {
       {kpis.map((k) => (
         <div
           key={k.label}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
+          className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3"
         >
           <p
             className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]"

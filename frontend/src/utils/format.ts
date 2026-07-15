@@ -1,3 +1,26 @@
+/** The single sanctioned empty-value glyph. Render this, never omit a field or use '?'. */
+export const EMPTY = '—'
+
+/** Format a 0–1 probability as a one-decimal percentage (e.g. 0.573 → "57.3%"). */
+export function formatPct(value: number | null | undefined): string {
+  if (value == null) return EMPTY
+  return `${(value * 100).toFixed(1)}%`
+}
+
+/** Format American betting odds with an explicit sign (e.g. 150 → "+150", -200 → "-200"). */
+export function formatOdds(odds: number | null | undefined): string {
+  if (odds == null) return EMPTY
+  return odds > 0 ? `+${odds}` : `${odds}`
+}
+
+/** Format a duration in seconds as "M:SS" (e.g. 95 → "1:35"). */
+export function formatFightTime(seconds: number | null | undefined): string {
+  if (seconds == null) return EMPTY
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 /** Format an ISO date string "YYYY-MM-DD" into a readable date (e.g. "Mar 8, 2026"). */
 export function formatDate(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00') // force local midnight parse

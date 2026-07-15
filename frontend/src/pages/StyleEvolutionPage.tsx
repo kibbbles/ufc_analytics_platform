@@ -60,7 +60,7 @@ export default function StyleEvolutionPage() {
       )}
 
       {error && !data && (
-        <p className="text-sm text-red-500">Failed to load data. Try refreshing.</p>
+        <p className="text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">Failed to load data. Try refreshing.</p>
       )}
 
       {data && (

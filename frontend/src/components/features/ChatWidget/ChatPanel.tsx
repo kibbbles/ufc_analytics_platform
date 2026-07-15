@@ -227,7 +227,7 @@ export default function ChatPanel({ onClose }: Props) {
       {/* Input area */}
       <div className="px-3 pb-3 pt-2 shrink-0 border-t border-[var(--color-border-light)] dark:border-[var(--color-border)]">
         {cooldownSecs > 0 && (
-          <p className="text-[11px] text-amber-500 mb-1.5">
+          <p className="text-[11px] text-[var(--color-warning-light)] dark:text-[var(--color-warning)] mb-1.5">
             Too many requests — retry in {cooldownSecs}s
           </p>
         )}

@@ -102,7 +102,7 @@ function TimeSeriesView({ data, weightClass }: { data: AgeByWeightClassPoint[]; 
               return (
                 <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
                   <p className="font-bold mb-1">{d.year}</p>
-                  <p style={{ color: '#e63946' }}>Avg age: {Math.round(d.avg_age)}</p>
+                  <p style={{ color: 'var(--color-chart-1)' }}>Avg age: {Math.round(d.avg_age)}</p>
                   <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                     {d.fighter_count} fighters
                   </p>
@@ -113,9 +113,9 @@ function TimeSeriesView({ data, weightClass }: { data: AgeByWeightClassPoint[]; 
           <Line
             dataKey="avg_age"
             name="Avg age"
-            stroke="#e63946"
+            stroke="var(--color-chart-1)"
             strokeWidth={2}
-            dot={partialDot('#e63946')}
+            dot={partialDot('var(--color-chart-1)')}
             connectNulls
           />
         </LineChart>
@@ -190,7 +190,7 @@ function SnapshotView({ data }: { data: AgeByWeightClassPoint[] }) {
             return (
               <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
                 <p className="font-bold mb-1">{d.full_name}</p>
-                <p style={{ color: '#e63946' }}>Avg age: {d.avg_age.toFixed(1)}</p>
+                <p style={{ color: 'var(--color-chart-1)' }}>Avg age: {d.avg_age.toFixed(1)}</p>
                 <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
                   {d.fighter_count} fighters · latest data: {d.year}
                 </p>
@@ -206,7 +206,7 @@ function SnapshotView({ data }: { data: AgeByWeightClassPoint[] }) {
             </span>
           )}
         />
-        <Bar dataKey="avg_age" name="Avg age" fill="#e63946" radius={[0, 2, 2, 0]} isAnimationActive={false} />
+        <Bar dataKey="avg_age" name="Avg age" fill="var(--color-chart-1)" radius={[0, 2, 2, 0]} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   )
