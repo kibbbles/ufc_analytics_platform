@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { formatDate } from '@utils/format'
+import { formatDate, EMPTY } from '@utils/format'
 import type { FightSearchItem } from '@t/api'
 
 function methodColor(method: string | null): string {
@@ -45,21 +45,19 @@ export default function FightSearchCard({ fight }: { fight: FightSearchItem }) {
         )}
       </div>
 
-      {/* Winner badge */}
-      {fight.winner_name && (
-        <p className="text-xs">
-          <span className="text-[var(--color-text-muted)]">Winner: </span>
-          <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-            {fight.winner_name}
+      {/* Winner + method */}
+      <p className="text-xs">
+        <span className="text-[var(--color-text-muted)]">Winner: </span>
+        <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+          {fight.winner_name ?? EMPTY}
+        </span>
+        {fight.method && (
+          <span className={`ml-1.5 font-medium ${methodColor(fight.method)}`}>
+            · {fight.method}
+            {fight.round != null ? ` (R${fight.round})` : ''}
           </span>
-          {fight.method && (
-            <span className={`ml-1.5 font-medium ${methodColor(fight.method)}`}>
-              · {fight.method}
-              {fight.round != null ? ` (R${fight.round})` : ''}
-            </span>
-          )}
-        </p>
-      )}
+        )}
+      </p>
 
       {/* Event + date */}
       <p className="text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
@@ -68,27 +66,31 @@ export default function FightSearchCard({ fight }: { fight: FightSearchItem }) {
         {fight.weight_class ? ` · ${fight.weight_class}` : ''}
       </p>
 
-      {/* Prediction badge */}
-      {hasPred && (
-        <div className="flex items-center gap-2 pt-0.5 lg:justify-center">
-          <span className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
-            Model
-          </span>
-          <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-            {fight.fighter_a_name?.split(' ').pop()} {(fight.win_prob_a! * 100).toFixed(0)}%
-            <span className="mx-1 text-[var(--color-text-muted)]">/</span>
-            {fight.fighter_b_name?.split(' ').pop()} {(fight.win_prob_b! * 100).toFixed(0)}%
-          </span>
-          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-            fight.predicted_winner_id === fight.winner_id
-              ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
-              : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
-          }`}>
-            {fight.predicted_winner_id === fight.winner_id ? '✓' : '✗'}{' '}
-            {predWinnerIsA ? fight.fighter_a_name?.split(' ').pop() : fight.fighter_b_name?.split(' ').pop()}
-          </span>
-        </div>
-      )}
+      {/* Model row */}
+      <div className="flex items-center gap-2 pt-0.5 lg:justify-center">
+        <span className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
+          Model
+        </span>
+        {hasPred ? (
+          <>
+            <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+              {fight.fighter_a_name?.split(' ').pop()} {(fight.win_prob_a! * 100).toFixed(0)}%
+              <span className="mx-1 text-[var(--color-text-muted)]">/</span>
+              {fight.fighter_b_name?.split(' ').pop()} {(fight.win_prob_b! * 100).toFixed(0)}%
+            </span>
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+              fight.predicted_winner_id === fight.winner_id
+                ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+                : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
+            }`}>
+              {fight.predicted_winner_id === fight.winner_id ? '✓' : '✗'}{' '}
+              {predWinnerIsA ? fight.fighter_a_name?.split(' ').pop() : fight.fighter_b_name?.split(' ').pop()}
+            </span>
+          </>
+        ) : (
+          <span className="text-xs text-[var(--color-text-muted)]">{EMPTY} no prediction</span>
+        )}
+      </div>
     </Link>
   )
 }

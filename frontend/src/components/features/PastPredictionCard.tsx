@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Badge } from '@components/common'
-import { formatDate, formatPct } from '@utils/format'
+import { formatDate, formatPct, EMPTY } from '@utils/format'
 import type { PastPredictionItem } from '@t/api'
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ function SearchLayout({ item }: { item: PastPredictionItem }) {
         <span className={`font-mono font-bold text-sm mt-0.5 w-4 shrink-0 ${color}`}>{indicator}</span>
         <div className="min-w-0 flex-1 lg:flex-none">
           <p className="text-sm font-semibold leading-tight truncate">
-            {item.fighter_a_name ?? '?'} vs {item.fighter_b_name ?? '?'}
+            {item.fighter_a_name ?? EMPTY} vs {item.fighter_b_name ?? EMPTY}
           </p>
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] truncate">
             {item.event_name ?? '—'}
@@ -83,12 +83,10 @@ function SearchLayout({ item }: { item: PastPredictionItem }) {
           </span>
           {item.actual_method && <span> via {item.actual_method}</span>}
         </p>
-        {item.confidence != null && (
-          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            <span className="w-16 inline-block">Conviction</span>
-            <span className="font-mono font-semibold tabular-nums">{formatPct(item.confidence)}</span>
-          </p>
-        )}
+        <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
+          <span className="w-16 inline-block">Conviction</span>
+          <span className="font-mono font-semibold tabular-nums">{formatPct(item.confidence)}</span>
+        </p>
       </div>
     </Link>
   )
@@ -120,11 +118,11 @@ function EventLayout({ item }: { item: PastPredictionItem }) {
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold leading-snug text-sm">
           <span className={winnerIsA ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}>
-            {item.fighter_a_name ?? '?'}
+            {item.fighter_a_name ?? EMPTY}
           </span>
           <span className="mx-1.5 font-normal text-[var(--color-text-muted)]">vs</span>
           <span className={!winnerIsA && item.actual_winner_id ? 'text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]' : !item.actual_winner_id ? '' : 'text-[var(--color-text-muted)]'}>
-            {item.fighter_b_name ?? '?'}
+            {item.fighter_b_name ?? EMPTY}
           </span>
         </p>
         <span className={`shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded ${resultBadge.cls}`}>
@@ -133,19 +131,17 @@ function EventLayout({ item }: { item: PastPredictionItem }) {
       </div>
 
       {/* Actual result */}
-      {item.actual_winner_id && (
-        <p className="text-xs">
-          <span className="text-[var(--color-text-muted)]">Actual: </span>
-          <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-            {winnerName(item, item.actual_winner_id)}
+      <p className="text-xs">
+        <span className="text-[var(--color-text-muted)]">Actual: </span>
+        <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
+          {item.actual_winner_id ? winnerName(item, item.actual_winner_id) : EMPTY}
+        </span>
+        {item.actual_method && (
+          <span className={`ml-1.5 font-medium ${methodColor(item.actual_method)}`}>
+            · {item.actual_method}
           </span>
-          {item.actual_method && (
-            <span className={`ml-1.5 font-medium ${methodColor(item.actual_method)}`}>
-              · {item.actual_method}
-            </span>
-          )}
-        </p>
-      )}
+        )}
+      </p>
 
       {/* Event + date + weight class + title badge */}
       <div className="flex items-center gap-1.5 flex-wrap">
@@ -158,32 +154,34 @@ function EventLayout({ item }: { item: PastPredictionItem }) {
         </p>
       </div>
 
-      {/* Prediction row */}
-      {hasPred && item.win_prob_a != null && item.win_prob_b != null && (
-        <div className="flex items-center gap-2 pt-0.5">
-          <span className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
-            Model
-          </span>
-          <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-            {item.fighter_a_name?.split(' ').pop()} {formatPct(item.win_prob_a)}
-            <span className="mx-1 text-[var(--color-text-muted)]">/</span>
-            {item.fighter_b_name?.split(' ').pop()} {formatPct(item.win_prob_b)}
-          </span>
-          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-            isCorrect
-              ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
-              : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
-          }`}>
-            {isCorrect ? '✓' : '✗'}{' '}
-            {predWinnerIsA ? item.fighter_a_name?.split(' ').pop() : item.fighter_b_name?.split(' ').pop()}
-          </span>
-          {item.confidence != null && (
+      {/* Model row */}
+      <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+        <span className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
+          Model
+        </span>
+        {hasPred && item.win_prob_a != null && item.win_prob_b != null ? (
+          <>
+            <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
+              {item.fighter_a_name?.split(' ').pop()} {formatPct(item.win_prob_a)}
+              <span className="mx-1 text-[var(--color-text-muted)]">/</span>
+              {item.fighter_b_name?.split(' ').pop()} {formatPct(item.win_prob_b)}
+            </span>
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+              isCorrect
+                ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+                : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
+            }`}>
+              {isCorrect ? '✓' : '✗'}{' '}
+              {predWinnerIsA ? item.fighter_a_name?.split(' ').pop() : item.fighter_b_name?.split(' ').pop()}
+            </span>
             <span className="text-xs text-[var(--color-text-muted)] font-mono tabular-nums">
               · {formatPct(item.confidence)} conviction
             </span>
-          )}
-        </div>
-      )}
+          </>
+        ) : (
+          <span className="text-xs text-[var(--color-text-muted)]">{EMPTY} no prediction</span>
+        )}
+      </div>
     </Link>
   )
 }

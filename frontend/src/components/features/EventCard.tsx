@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { EventResponse } from '@t/api'
-import { formatDate } from '@utils/format'
+import { formatDate, EMPTY } from '@utils/format'
 
 interface EventCardProps {
   event: EventResponse
@@ -15,24 +15,20 @@ export default function EventCard({ event }: EventCardProps) {
       {/* Left: name + date */}
       <div className="min-w-0">
         <p className="font-semibold leading-snug truncate group-hover:text-[var(--color-primary)] transition-colors">
-          {event.name ?? 'Untitled Event'}
+          {event.name ?? EMPTY}
         </p>
-        {event.event_date && (
-          <time
-            dateTime={event.event_date}
-            className="text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]"
-          >
-            {formatDate(event.event_date)}
-          </time>
-        )}
+        <time
+          dateTime={event.event_date ?? undefined}
+          className="text-xs text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]"
+        >
+          {event.event_date ? formatDate(event.event_date) : EMPTY}
+        </time>
       </div>
 
       {/* Right: location */}
-      {event.location && (
-        <p className="shrink-0 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] text-right max-w-[40%] truncate">
-          {event.location}
-        </p>
-      )}
+      <p className="shrink-0 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] text-right max-w-[40%] truncate">
+        {event.location ?? EMPTY}
+      </p>
     </Link>
   )
 }

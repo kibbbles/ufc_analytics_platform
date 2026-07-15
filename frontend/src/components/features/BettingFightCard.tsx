@@ -1,6 +1,6 @@
 import type { BettingFightRow } from '@t/api'
 import InfoTooltip from '@components/common/InfoTooltip'
-import { formatEventDate } from '@utils/format'
+import { formatEventDate, EMPTY } from '@utils/format'
 
 type PlSource = 'model' | 'fav' | 'dog'
 
@@ -23,22 +23,22 @@ export default function BettingFightCard({ f, mode }: { f: BettingFightRow; mode
 
       {/* Matchup */}
       <p className="font-semibold pr-12">
-        <span>{f.pick ?? '?'}</span>
+        <span>{f.pick ?? EMPTY}</span>
         <span className="text-[var(--color-text-muted)] font-normal"> vs </span>
-        <span className="text-[var(--color-text-muted)] font-normal">{f.opponent ?? '?'}</span>
+        <span className="text-[var(--color-text-muted)] font-normal">{f.opponent ?? EMPTY}</span>
       </p>
 
       {/* Actual result */}
-      {f.actual_winner_name && (
-        <p className="mt-0.5 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
-          {f.actual_winner_name}{f.result_method ? ` · ${f.result_method}` : ''}
-        </p>
-      )}
+      <p className="mt-0.5 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
+        {f.actual_winner_name
+          ? `${f.actual_winner_name}${f.result_method ? ` · ${f.result_method}` : ''}`
+          : EMPTY}
+      </p>
 
       {/* Meta */}
       <p className="mt-0.5 text-xs uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>
         {[f.event_name, formatEventDate(f.event_date), f.weight_class, f.is_title ? 'Title fight' : null]
-          .filter(Boolean).join(' · ')}
+          .filter(Boolean).join(' · ') || EMPTY}
       </p>
 
       {/* Model row */}
