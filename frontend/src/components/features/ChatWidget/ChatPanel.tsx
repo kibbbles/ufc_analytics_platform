@@ -60,13 +60,13 @@ export default function ChatPanel({ onClose }: Props) {
   function startCooldown(secs: number) {
     if (cooldownTimer.current) clearInterval(cooldownTimer.current)
     const until = Date.now() + secs * 1000
-    try { localStorage.setItem(COOLDOWN_KEY, String(until)) } catch {}
+    try { localStorage.setItem(COOLDOWN_KEY, String(until)) } catch { /* localStorage unavailable (e.g. private mode) */ }
     setCooldownSecs(secs)
     cooldownTimer.current = setInterval(() => {
       setCooldownSecs((s) => {
         if (s <= 1) {
           clearInterval(cooldownTimer.current!)
-          try { localStorage.removeItem(COOLDOWN_KEY) } catch {}
+          try { localStorage.removeItem(COOLDOWN_KEY) } catch { /* localStorage unavailable (e.g. private mode) */ }
           return 0
         }
         return s - 1

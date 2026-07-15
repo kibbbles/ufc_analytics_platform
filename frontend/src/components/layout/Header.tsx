@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { useTheme } from './ThemeProvider'
+import { useTheme } from '@hooks/useTheme'
 
 // Plain nav links (no dropdown)
 const navLinks = [

@@ -1,12 +1,6 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useDarkMode } from '@hooks/useDarkMode'
-
-interface ThemeContextValue {
-  isDark: boolean
-  toggle: () => void
-}
-
-const ThemeContext = createContext<ThemeContextValue | null>(null)
+import { ThemeContext } from './themeContext'
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { isDark, toggle } = useDarkMode()
@@ -16,10 +10,4 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       {children}
     </ThemeContext.Provider>
   )
-}
-
-export function useTheme(): ThemeContextValue {
-  const ctx = useContext(ThemeContext)
-  if (!ctx) throw new Error('useTheme must be used inside ThemeProvider')
-  return ctx
 }

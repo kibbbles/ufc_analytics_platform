@@ -1,3 +1,4 @@
+import type { ChartTooltipProps } from '@t/chart'
 import {
   LineChart,
   Line,
@@ -54,7 +55,7 @@ const COVID_RANGE = { x1: 2020, x2: 2021, label: 'COVID era' }
 // Tooltip
 // ---------------------------------------------------------------------------
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   const d = payload[0]?.payload as StyleEvolutionPoint | undefined
   if (!d) return null
@@ -62,9 +63,9 @@ function ChartTooltip({ active, payload, label }: any) {
   return (
     <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
       <p className="font-bold mb-1">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.dataKey} style={{ color: p.color }}>
-          {p.name}: {(p.value * 100).toFixed(1)}%
+          {p.name}: {(Number(p.value) * 100).toFixed(1)}%
         </p>
       ))}
       <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">

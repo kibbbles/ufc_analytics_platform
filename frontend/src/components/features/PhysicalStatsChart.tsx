@@ -1,3 +1,4 @@
+import type { ChartTooltipProps } from '@t/chart'
 import {
   BarChart,
   Bar,
@@ -47,26 +48,27 @@ const WC_SHORT: Record<string, string> = {
 
 // ── Shared tooltip ────────────────────────────────────────────────────────────
 
-function PhysicalTooltip({ active, payload, label, isTimeSeries }: any) {
+function PhysicalTooltip({ active, payload, label, isTimeSeries }: ChartTooltipProps & { isTimeSeries: boolean }) {
   if (!active || !payload?.length) return null
+  const row = (payload[0]?.payload ?? {}) as { full_name?: string; fighter_count?: number; year?: number | string }
   return (
     <div className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-xs shadow-lg">
       <p className="font-bold mb-1">
-        {isTimeSeries ? label : payload[0]?.payload?.full_name ?? label}
+        {isTimeSeries ? label : row.full_name ?? label}
       </p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.dataKey} style={{ color: p.color ?? p.fill }}>
           {p.name}: {typeof p.value === 'number' ? `${p.value.toFixed(1)}"` : p.value}
         </p>
       ))}
-      {!isTimeSeries && payload[0]?.payload?.fighter_count != null && (
+      {!isTimeSeries && row.fighter_count != null && (
         <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          {payload[0].payload.fighter_count} fighters · latest data: {payload[0].payload.year}
+          {row.fighter_count} fighters · latest data: {row.year}
         </p>
       )}
-      {isTimeSeries && payload[0]?.payload?.fighter_count != null && (
+      {isTimeSeries && row.fighter_count != null && (
         <p className="mt-1 text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          {payload[0].payload.fighter_count} fighters
+          {row.fighter_count} fighters
         </p>
       )}
     </div>

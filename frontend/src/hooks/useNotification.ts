@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useAppContext } from '@store/AppContext'
+import { useAppContext } from '@hooks/useAppContext'
 import type { AppNotification } from '@t/store'
 
 export function useNotification() {
