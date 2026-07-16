@@ -9,24 +9,24 @@ export default function BettingFightCard({ f, mode }: { f: BettingFightRow; mode
   const showPills = mode !== 'fav' && mode !== 'dog'
 
   return (
-    <div className="relative rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-sm">
-      {/* Corner badge */}
-      <div
-        className={`absolute top-0 right-0 rounded-bl-lg rounded-tr-lg px-2 py-0.5 text-xs font-semibold ${
-          f.is_correct
-            ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
-            : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
-        }`}
-      >
-        {f.is_correct ? '✓' : '✗'}
+    <div className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-sm">
+      {/* Matchup + result badge */}
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-semibold">
+          <span>{f.pick ?? EMPTY}</span>
+          <span className="text-[var(--color-text-muted)] font-normal"> vs </span>
+          <span className="text-[var(--color-text-muted)] font-normal">{f.opponent ?? EMPTY}</span>
+        </p>
+        <span
+          className={`shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded ${
+            f.is_correct
+              ? 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+              : 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]'
+          }`}
+        >
+          {f.is_correct ? '✓' : '✗'}
+        </span>
       </div>
-
-      {/* Matchup */}
-      <p className="font-semibold pr-12">
-        <span>{f.pick ?? EMPTY}</span>
-        <span className="text-[var(--color-text-muted)] font-normal"> vs </span>
-        <span className="text-[var(--color-text-muted)] font-normal">{f.opponent ?? EMPTY}</span>
-      </p>
 
       {/* Actual result */}
       <p className="mt-0.5 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
