@@ -345,10 +345,7 @@ export function OverviewTab() {
       {/* Results (chart + stats + cards). Reserve the last populated height
           while empty so a slider drag that crosses into "no matches" does not
           shrink the page and scroll-clamp the slider away from the cursor. */}
-      <div
-        ref={wrapRef}
-        className={noData ? 'flex flex-col justify-center' : undefined}
-      >
+      <div ref={wrapRef}>
       {noData ? (
         <div className="rounded-lg border border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-muted)]">
           Not enough fights match — try widening the filters.
