@@ -348,7 +348,9 @@ export function OverviewTab() {
       <div ref={wrapRef}>
       {noData ? (
         <div className="rounded-lg border border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-muted)]">
-          Not enough fights match — try widening the filters.
+          {titleFilter === 'title'
+            ? `Only ${stats.bets} title fight${stats.bets === 1 ? '' : 's'} in this selection - too few to chart. Title bouts are rare in the betting data, so widening the other filters won't add more.`
+            : 'Not enough fights match - try widening the filters.'}
         </div>
       ) : (
         <div ref={resultsRef} className="space-y-5">
