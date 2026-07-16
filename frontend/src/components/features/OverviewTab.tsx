@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react'
 import {
-  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import { analyticsService } from '@services/analyticsService'
@@ -377,8 +377,10 @@ export function OverviewTab() {
                   contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 12 }}
                 />
                 <ReferenceLine y={0} stroke="var(--color-border)" strokeWidth={1.5} />
-                <Area type="monotone" dataKey="cumPnl" stroke="none" fill="url(#ov-fill)" isAnimationActive={false} />
-                <Line type="monotone" dataKey="cumPnl" stroke={lineColor} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: lineColor }} isAnimationActive={false} />
+                {/* One Area carries both the gradient fill and the colored line,
+                    so the tooltip shows a single Cumulative P&L row (a separate
+                    Line on the same dataKey used to duplicate it). */}
+                <Area type="monotone" dataKey="cumPnl" name="Cumulative P&L" stroke={lineColor} strokeWidth={2} fill="url(#ov-fill)" dot={false} activeDot={{ r: 4, fill: lineColor }} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">{footnotes[strategy] ?? footnotes.custom}</p>
