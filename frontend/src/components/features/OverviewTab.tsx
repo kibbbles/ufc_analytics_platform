@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react'
 import {
   ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ReferenceLine, ResponsiveContainer,
@@ -184,6 +184,23 @@ export function OverviewTab() {
   const noData     = stats.bets < 10
   const lowSample  = stats.bets >= 10 && stats.bets < 30
 
+  // Keep the results region from collapsing mid-drag. When a slider crosses
+  // into the empty state the chart/cards unmount; without a reserved height
+  // the page shrinks, the browser clamps the scroll position, and the slider
+  // shifts out from under the cursor. Remember the last populated height and
+  // hold it while the region is empty.
+  const wrapRef          = useRef<HTMLDivElement>(null)
+  const resultsRef       = useRef<HTMLDivElement>(null)
+  const lastResultsHeight = useRef<number>(0)
+  useLayoutEffect(() => {
+    if (!noData && resultsRef.current) {
+      lastResultsHeight.current = resultsRef.current.offsetHeight
+    }
+    if (wrapRef.current) {
+      wrapRef.current.style.minHeight = noData ? `${lastResultsHeight.current}px` : ''
+    }
+  })
+
   // Paginated fight cards (newest first)
   const sortedForCards = useMemo(() =>
     [...filtered].sort((a, b) => (b.event_date ?? '').localeCompare(a.event_date ?? '')),
@@ -325,13 +342,19 @@ export function OverviewTab() {
         </p>
       )}
 
-      {/* No data guard */}
+      {/* Results (chart + stats + cards). Reserve the last populated height
+          while empty so a slider drag that crosses into "no matches" does not
+          shrink the page and scroll-clamp the slider away from the cursor. */}
+      <div
+        ref={wrapRef}
+        className={noData ? 'flex flex-col justify-center' : undefined}
+      >
       {noData ? (
         <div className="rounded-lg border border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-muted)]">
           Not enough fights match — try widening the filters.
         </div>
       ) : (
-        <>
+        <div ref={resultsRef} className="space-y-5">
           {lowSample && (
             <p className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-3 py-2 text-xs text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
               Small sample (n={stats.bets}) — interpret with caution.
@@ -399,8 +422,9 @@ export function OverviewTab() {
             total={sortedForCards.length}
             pageSize={PAGE_SIZE}
           />
-        </>
+        </div>
       )}
+      </div>
     </div>
   )
 }

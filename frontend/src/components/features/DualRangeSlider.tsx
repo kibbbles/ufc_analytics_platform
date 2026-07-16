@@ -110,33 +110,29 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
 
   return (
     <div className={`select-none ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+      {/* Rail: the usable track, inset by half a thumb on each side so the
+          extreme thumbs stay in bounds. Thumb centers and the fill are all
+          positioned as percentages of THIS element, so they share one basis
+          and always line up. The drag math also measures this element, so
+          pointer travel maps 1:1 to value across the full range. */}
       <div
         ref={trackRef}
         className="relative h-5 cursor-pointer"
-        style={{ paddingInline: thumbSize / 2 }}
+        style={{ marginInline: thumbSize / 2 }}
         onClick={handleTrackClick}
       >
         {/* Track */}
-        <div
-          className="absolute inset-y-0 left-0 right-0 flex items-center"
-          style={{ paddingInline: thumbSize / 2 }}
-        >
+        <div className="absolute inset-y-0 left-0 right-0 flex items-center">
           <div className="w-full h-1 rounded-full bg-[var(--color-border)]" />
         </div>
 
-        {/* Fill bar (draggable) */}
+        {/* Fill bar (draggable) - full-height hit area, thin visible line */}
         <div
-          className="absolute inset-y-0 flex items-center"
-          style={{
-            left: `calc(${loPercent}% + ${thumbSize / 2}px)`,
-            right: `calc(${100 - hiPercent}% + ${thumbSize / 2}px)`,
-          }}
+          className="absolute inset-y-0 flex items-center cursor-ew-resize"
+          style={{ left: `${loPercent}%`, right: `${100 - hiPercent}%` }}
           onPointerDown={(e) => { e.stopPropagation(); startDrag('fill', e) }}
         >
-          <div
-            className="w-full h-1 rounded-full cursor-ew-resize"
-            style={{ background: 'var(--color-accent)' }}
-          />
+          <div className="w-full h-1 rounded-full" style={{ background: 'var(--color-accent)' }} />
         </div>
 
         {/* Lo thumb */}
@@ -146,7 +142,7 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
           aria-valuemax={valueHi - step}
           aria-valuenow={valueLo}
           tabIndex={disabled ? -1 : 0}
-          className="absolute top-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-1"
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-1"
           style={{ left: `${loPercent}%`, width: thumbSize, height: thumbSize }}
           onPointerDown={(e) => { e.stopPropagation(); startDrag('lo', e) }}
           onKeyDown={handleKeyLo}
@@ -159,7 +155,7 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
           aria-valuemax={max}
           aria-valuenow={valueHi}
           tabIndex={disabled ? -1 : 0}
-          className="absolute top-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-1"
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-1"
           style={{ left: `${hiPercent}%`, width: thumbSize, height: thumbSize }}
           onPointerDown={(e) => { e.stopPropagation(); startDrag('hi', e) }}
           onKeyDown={handleKeyHi}
