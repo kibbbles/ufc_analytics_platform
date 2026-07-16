@@ -15,6 +15,18 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
   const trackRef = useRef<HTMLDivElement>(null)
   const dragRef  = useRef<{ type: 'lo' | 'hi' | 'fill'; startX: number; startLo: number; startHi: number } | null>(null)
 
+  // Latest controlled values / callback held in refs so the pointer handlers
+  // below can keep a STABLE identity across renders. If they were recreated
+  // mid-drag (valueLo/valueHi/onChange all change on the first move), the
+  // unmount cleanup effect would detach the live window listeners and the drag
+  // would die after a single step - the "takes several drags to move it" bug.
+  const valueLoRef  = useRef(valueLo)
+  const valueHiRef  = useRef(valueHi)
+  const onChangeRef = useRef(onChange)
+  valueLoRef.current  = valueLo
+  valueHiRef.current  = valueHi
+  onChangeRef.current = onChange
+
   const toPercent = (v: number) => ((v - min) / (max - min)) * 100
   const fromPercent = (pct: number) => {
     const raw = min + (pct / 100) * (max - min)
@@ -22,17 +34,15 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
   }
   const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
-  const getDelta = useCallback((clientX: number): number => {
-    const track = trackRef.current
-    if (!track) return 0
-    const rect = track.getBoundingClientRect()
-    return ((clientX - dragRef.current!.startX) / rect.width) * (max - min)
-  }, [max, min])
-
   const handlePointerMove = useCallback((e: PointerEvent) => {
-    if (!dragRef.current) return
-    const delta = getDelta(e.clientX)
-    const { type, startLo, startHi } = dragRef.current
+    const drag  = dragRef.current
+    const track = trackRef.current
+    if (!drag || !track) return
+    const delta = ((e.clientX - drag.startX) / track.getBoundingClientRect().width) * (max - min)
+    const { type, startLo, startHi } = drag
+    const vLo = valueLoRef.current
+    const vHi = valueHiRef.current
+    const snap = (v: number) => Math.round(v / step) * step
 
     if (type === 'fill') {
       const gap  = startHi - startLo
@@ -40,17 +50,17 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
       let hi = startHi + delta
       if (lo < min) { lo = min; hi = min + gap }
       if (hi > max) { hi = max; lo = max - gap }
-      lo = clamp(Math.round(lo / step) * step, min, max - step)
-      hi = clamp(Math.round(hi / step) * step, min + step, max)
-      if (lo !== valueLo || hi !== valueHi) onChange(lo, hi)
+      lo = clamp(snap(lo), min, max - step)
+      hi = clamp(snap(hi), min + step, max)
+      if (lo !== vLo || hi !== vHi) onChangeRef.current(lo, hi)
     } else if (type === 'lo') {
-      const lo = clamp(Math.round((startLo + delta) / step) * step, min, valueHi - step)
-      if (lo !== valueLo) onChange(lo, valueHi)
+      const lo = clamp(snap(startLo + delta), min, vHi - step)
+      if (lo !== vLo) onChangeRef.current(lo, vHi)
     } else {
-      const hi = clamp(Math.round((startHi + delta) / step) * step, valueLo + step, max)
-      if (hi !== valueHi) onChange(valueLo, hi)
+      const hi = clamp(snap(startHi + delta), vLo + step, max)
+      if (hi !== vHi) onChangeRef.current(vLo, hi)
     }
-  }, [getDelta, min, max, step, valueLo, valueHi, onChange])
+  }, [min, max, step])
 
   const handlePointerUp = useCallback(() => {
     dragRef.current = null
@@ -61,10 +71,10 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
   const startDrag = useCallback((type: 'lo' | 'hi' | 'fill', e: React.PointerEvent) => {
     if (disabled) return
     e.preventDefault()
-    dragRef.current = { type, startX: e.clientX, startLo: valueLo, startHi: valueHi }
+    dragRef.current = { type, startX: e.clientX, startLo: valueLoRef.current, startHi: valueHiRef.current }
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
-  }, [disabled, valueLo, valueHi, handlePointerMove, handlePointerUp])
+  }, [disabled, handlePointerMove, handlePointerUp])
 
   // Keyboard for thumbs
   const handleKeyLo = (e: React.KeyboardEvent) => {
