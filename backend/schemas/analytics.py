@@ -293,6 +293,9 @@ class BettingFightRow(BaseModel):
     pl_model: float                     # net P&L per $1 bet — model pick strategy
     pl_fav: float                       # net P&L per $1 bet — always bet favorite
     pl_dog: float                       # net P&L per $1 bet — always bet underdog
+    pl_younger: Optional[float] = None  # net P&L per $1 bet — always bet younger fighter (None if age unknown)
+    age_diff: Optional[float] = None    # |age_a − age_b| in years at fight time (None if either DOB unknown)
+    younger_name: Optional[str] = None  # younger fighter's name (None if age unknown / equal)
 
 
 class BettingFightsResponse(BaseModel):

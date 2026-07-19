@@ -448,9 +448,13 @@ def betting_insights_fights(db: Session = Depends(get_db)) -> BettingFightsRespo
             pp.confidence,
             pp.actual_winner_id,
             pp.actual_method,
-            COALESCE(fr.is_title_fight, FALSE) AS is_title
+            COALESCE(fr.is_title_fight, FALSE) AS is_title,
+            ta.dob_date AS dob_a,
+            tb.dob_date AS dob_b
         FROM past_predictions pp
         LEFT JOIN fight_results fr ON fr.fight_id = pp.fight_id
+        LEFT JOIN fighter_tott ta ON ta.fighter_id = pp.fighter_a_id
+        LEFT JOIN fighter_tott tb ON tb.fighter_id = pp.fighter_b_id
         WHERE pp.implied_prob_a IS NOT NULL
           AND pp.actual_winner_id IS NOT NULL
           AND pp.odds_a IS NOT NULL
@@ -493,6 +497,18 @@ def betting_insights_fights(db: Session = Depends(get_db)) -> BettingFightsRespo
         dog_won      = not fav_won
         winner_name  = r["fighter_a_name"] if winner_is_a else r["fighter_b_name"]
 
+        # Younger-fighter baseline: later DOB = younger. Undefined when either
+        # DOB is missing or the two fighters share a birthdate (no younger one).
+        dob_a, dob_b = r["dob_a"], r["dob_b"]
+        pl_younger = age_diff = younger_name = None
+        if dob_a is not None and dob_b is not None and dob_a != dob_b:
+            age_diff      = round(abs((dob_a - dob_b).days) / 365.25, 1)
+            younger_is_a  = dob_a > dob_b
+            younger_odds  = oa if younger_is_a else ob
+            younger_won   = winner_is_a == younger_is_a
+            younger_name  = r["fighter_a_name"] if younger_is_a else r["fighter_b_name"]
+            pl_younger    = _pl(younger_won, _payout_f(younger_odds))
+
         fights.append(BettingFightRow(
             fight_id=r["fight_id"],
             event_id=r["event_id"],
@@ -518,6 +534,9 @@ def betting_insights_fights(db: Session = Depends(get_db)) -> BettingFightsRespo
             pl_model=_pl(model_won,  _payout_f(model_odds)),
             pl_fav  =_pl(fav_won,   _payout_f(fav_odds)),
             pl_dog  =_pl(dog_won,   _payout_f(dog_odds)),
+            pl_younger=pl_younger,
+            age_diff=age_diff,
+            younger_name=younger_name,
         ))
 
     return BettingFightsResponse(fights=fights, total=len(fights))

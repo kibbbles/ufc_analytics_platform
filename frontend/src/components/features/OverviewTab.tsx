@@ -12,7 +12,7 @@ import { formatEventDate } from '@utils/format'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type PlSource = 'model' | 'fav' | 'dog'
+type PlSource = 'model' | 'fav' | 'dog' | 'younger'
 type Range    = '1M' | '3M' | '6M' | 'YTD' | 'ALL'
 
 interface Preset {
@@ -20,6 +20,16 @@ interface Preset {
   edge: [number, number]
   plSource: PlSource
   desc: string
+  ageDiffMin?: number   // younger-fighter strategies: minimum age gap in years
+}
+
+// Per-fight P&L for the active bet source. Younger fights without a defined
+// age gap carry no younger P&L and are filtered out before this runs.
+function plFor(f: BettingFightRow, src: PlSource): number {
+  return src === 'fav' ? f.pl_fav
+       : src === 'dog' ? f.pl_dog
+       : src === 'younger' ? (f.pl_younger ?? 0)
+       : f.pl_model
 }
 
 const PRESETS: Record<string, Preset> = {
@@ -30,6 +40,9 @@ const PRESETS: Record<string, Preset> = {
   custom:          { conv: [0, 45], edge: [0, 30], plSource: 'model', desc: 'Custom — adjust sliders below.' },
   vegas_fav:       { conv: [0, 45], edge: [0, 30], plSource: 'fav', desc: 'Bet the Vegas favorite every fight. Negative expected — sportsbook vig.' },
   vegas_dog:       { conv: [0, 45], edge: [0, 30], plSource: 'dog', desc: 'Bet the Vegas underdog every fight. Negative expected — sportsbook vig.' },
+  younger_all:     { conv: [0, 45], edge: [0, 30], plSource: 'younger', desc: 'Bet the younger fighter every fight, at any age gap.' },
+  younger_3:       { conv: [0, 45], edge: [0, 30], plSource: 'younger', ageDiffMin: 3, desc: 'Bet the younger fighter only when the age gap is more than 3 years.' },
+  younger_5:       { conv: [0, 45], edge: [0, 30], plSource: 'younger', ageDiffMin: 5, desc: 'Bet the younger fighter only when the age gap is more than 5 years.' },
 }
 
 const RANGES: Range[] = ['1M', '3M', '6M', 'YTD', 'ALL']
@@ -68,6 +81,7 @@ export function OverviewTab() {
 
   const preset  = PRESETS[strategy] ?? PRESETS.custom
   const plSource = preset.plSource
+  const ageDiffMin = preset.ageDiffMin ?? 0
   const slidersDisabled = plSource !== 'model'
 
   // Fetch all fights once on mount
@@ -113,6 +127,11 @@ export function OverviewTab() {
       if (weightClass && f.weight_class !== weightClass) return false
       if (titleFilter === 'title' && !f.is_title) return false
       if (titleFilter === 'non_title' && f.is_title) return false
+      // Younger-fighter strategies: need a defined age gap above the threshold
+      if (plSource === 'younger') {
+        if (f.pl_younger == null || f.age_diff == null) return false
+        return f.age_diff > ageDiffMin
+      }
       // Vegas strategies: no model filters
       if (plSource !== 'model') return true
       // Model strategies: apply conviction and edge filters
@@ -126,7 +145,7 @@ export function OverviewTab() {
       return { filtered: fights.filter(f => matches(f, false)), fellBack: true }
     }
     return { filtered: withDate, fellBack: false }
-  }, [fights, startDate, timeRange, weightClass, titleFilter, plSource, convRange, edgeRange])
+  }, [fights, startDate, timeRange, weightClass, titleFilter, plSource, ageDiffMin, convRange, edgeRange])
 
   // Reset page on filter change
   const [prevFiltered, setPrevFiltered] = useState(filtered)
@@ -147,7 +166,7 @@ export function OverviewTab() {
         eventMap.set(eid, { date: f.event_date, name: f.event_name, pnl: 0 })
       }
       const e = eventMap.get(eid)!
-      e.pnl += plSource === 'fav' ? f.pl_fav : plSource === 'dog' ? f.pl_dog : f.pl_model
+      e.pnl += plFor(f, plSource)
     }
 
     const sortedEvents = Array.from(eventMap.values())
@@ -167,12 +186,9 @@ export function OverviewTab() {
   const stats = useMemo(() => {
     const bets = filtered.length
     const wins = filtered.filter(f =>
-      plSource === 'fav' ? f.pl_fav > 0 :
-      plSource === 'dog' ? f.pl_dog > 0 :
-      f.is_correct
+      plSource === 'model' ? f.is_correct : plFor(f, plSource) > 0
     ).length
-    const pnl = filtered.reduce((s, f) =>
-      s + (plSource === 'fav' ? f.pl_fav : plSource === 'dog' ? f.pl_dog : f.pl_model), 0)
+    const pnl = filtered.reduce((s, f) => s + plFor(f, plSource), 0)
     const roi = bets > 0 ? pnl / bets : 0
     return { bets, wins, pnl, roi }
   }, [filtered, plSource])
@@ -217,6 +233,9 @@ export function OverviewTab() {
     custom:          `Flat $100/bet · ${stats.bets} bets · custom filter`,
     vegas_fav:       `Flat $100/bet · ${stats.bets} bets · Vegas favorite · negative expected due to sportsbook vig`,
     vegas_dog:       `Flat $100/bet · ${stats.bets} bets · Vegas underdog · negative expected due to sportsbook vig`,
+    younger_all:     `Flat $100/bet · ${stats.bets} bets · younger fighter every fight`,
+    younger_3:       `Flat $100/bet · ${stats.bets} bets · younger fighter · age gap over 3y`,
+    younger_5:       `Flat $100/bet · ${stats.bets} bets · younger fighter · age gap over 5y`,
   }
 
   if (loadingFights) {
@@ -249,6 +268,11 @@ export function OverviewTab() {
           <optgroup label="Vegas baselines">
             <option value="vegas_fav">Always Vegas favorite</option>
             <option value="vegas_dog">Always Vegas underdog</option>
+          </optgroup>
+          <optgroup label="Age baselines">
+            <option value="younger_all">Always the younger fighter</option>
+            <option value="younger_3">Younger fighter, age gap 3y+</option>
+            <option value="younger_5">Younger fighter, age gap 5y+</option>
           </optgroup>
         </select>
         <p className="text-xs text-[var(--color-text-muted)]">{PRESETS[strategy]?.desc}</p>

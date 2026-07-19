@@ -399,6 +399,9 @@ export interface BettingFightRow {
   pl_model: number
   pl_fav: number
   pl_dog: number
+  pl_younger: number | null
+  age_diff: number | null
+  younger_name: string | null
 }
 
 export interface BettingFightsResponse {

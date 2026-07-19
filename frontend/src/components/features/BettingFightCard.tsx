@@ -2,11 +2,11 @@ import type { BettingFightRow } from '@t/api'
 import InfoTooltip from '@components/common/InfoTooltip'
 import { formatEventDate, EMPTY } from '@utils/format'
 
-type PlSource = 'model' | 'fav' | 'dog'
+type PlSource = 'model' | 'fav' | 'dog' | 'younger'
 
 export default function BettingFightCard({ f, mode }: { f: BettingFightRow; mode: PlSource }) {
   const inHotZone = f.edge_pp >= 5 && f.edge_pp <= 15
-  const showPills = mode !== 'fav' && mode !== 'dog'
+  const showPills = mode === 'model'
 
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-sm">
@@ -83,7 +83,11 @@ export default function BettingFightCard({ f, mode }: { f: BettingFightRow; mode
         )}
         {!showPills && (
           <span className="text-[var(--color-text-muted)] text-xs">
-            {mode === 'fav' ? 'Vegas favorite' : 'Vegas underdog'} strategy active
+            {mode === 'fav'
+              ? 'Vegas favorite strategy active'
+              : mode === 'dog'
+              ? 'Vegas underdog strategy active'
+              : `Younger fighter: ${f.younger_name ?? EMPTY}${f.age_diff != null ? ` · ${f.age_diff}y gap` : ''}`}
           </span>
         )}
       </div>
