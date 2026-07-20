@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { upcomingService } from '@services/upcomingService'
 import type { UpcomingEventListItem, UpcomingEventWithFights } from '@t/api'
 import UpcomingFightCard from './UpcomingFightCard'
@@ -29,24 +29,41 @@ function isHighlighted(name: string | null): boolean {
 
 export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle }: Props) {
   const [fightCard, setFightCard] = useState<UpcomingEventWithFights | null>(null)
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const requestedRef = useRef(false)
 
-  // Lazy-fetch: only load fight card on first open
+  // Lazy-fetch: only load fight card on first open. The ref guard dedupes
+  // rather than a state flag, so nothing is set synchronously in the effect
+  // body. The cancelled flag drops a resolved response if the accordion
+  // unmounts mid-flight instead of setting state on a dead component.
   useEffect(() => {
-    if (!isOpen || fightCard !== null) return
-    setLoading(true)
+    if (!isOpen || requestedRef.current) return
+    requestedRef.current = true
+    let cancelled = false
     upcomingService
       .getEventWithFights(event.id)
       .then((data) => {
-        setFightCard(data)
-        setLoading(false)
+        if (!cancelled) setFightCard(data)
       })
       .catch((err: Error) => {
-        setError(err.message)
-        setLoading(false)
+        if (!cancelled) setError(err.message)
       })
-  }, [isOpen, event.id, fightCard])
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, event.id, attempt])
+
+  // Clearing the guard alone would not refire the effect, since isOpen and
+  // event.id are unchanged - bumping attempt is what re-triggers the fetch.
+  function retry() {
+    requestedRef.current = false
+    setError(null)
+    setAttempt((a) => a + 1)
+  }
+
+  // Derived, not stored: in flight is exactly "opened, with neither result yet".
+  const loading = isOpen && fightCard === null && error === null
 
   const highlighted = isHighlighted(event.event_name)
 
@@ -125,7 +142,15 @@ export default function UpcomingEventAccordion({ event, isOpen, isNext, onToggle
             </div>
           )}
           {error && (
-            <p className="py-4 text-center text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">{error}</p>
+            <div className="py-4 text-center">
+              <p className="text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">{error}</p>
+              <button
+                onClick={retry}
+                className="mt-2 rounded border border-[var(--color-border)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary-light)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] dark:text-[var(--color-text-secondary)]"
+              >
+                Try again
+              </button>
+            </div>
           )}
           {fightCard && !loading && (
             fightCard.fights.length > 0 ? (
