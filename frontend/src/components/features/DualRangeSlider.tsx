@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 
 interface Props {
   min: number
@@ -15,17 +15,23 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
   const trackRef = useRef<HTMLDivElement>(null)
   const dragRef  = useRef<{ type: 'lo' | 'hi' | 'fill'; startX: number; startLo: number; startHi: number } | null>(null)
 
-  // Latest controlled values / callback held in refs so the pointer handlers
-  // below can keep a STABLE identity across renders. If they were recreated
-  // mid-drag (valueLo/valueHi/onChange all change on the first move), the
-  // unmount cleanup effect would detach the live window listeners and the drag
-  // would die after a single step - the "takes several drags to move it" bug.
+  // Latest controlled values / callback held in refs. handlePointerMove is
+  // attached once at drag start and closes over that render's scope, so it must
+  // read valueLo/valueHi/onChange through refs to see values updated during the
+  // drag. Reading them directly would freeze the drag at its starting values.
   const valueLoRef  = useRef(valueLo)
   const valueHiRef  = useRef(valueHi)
   const onChangeRef = useRef(onChange)
-  valueLoRef.current  = valueLo
-  valueHiRef.current  = valueHi
-  onChangeRef.current = onChange
+
+  // Written in a layout effect rather than during render: render must stay pure
+  // for StrictMode's double-invoke and concurrent rendering. Layout timing is
+  // deliberate - it commits synchronously, so the refs are current before the
+  // next pointermove can be dispatched mid-drag.
+  useLayoutEffect(() => {
+    valueLoRef.current  = valueLo
+    valueHiRef.current  = valueHi
+    onChangeRef.current = onChange
+  })
 
   const toPercent = (v: number) => ((v - min) / (max - min)) * 100
   const fromPercent = (pct: number) => {
@@ -62,19 +68,28 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
     }
   }, [min, max, step])
 
-  const handlePointerUp = useCallback(() => {
+  // Listeners are torn down by aborting the controller they were attached with,
+  // never by passing the same function reference back to removeEventListener.
+  // Teardown therefore does not depend on handler identity staying stable, so a
+  // mid-drag change to min/max/step can no longer strand a live listener.
+  const dragAbortRef = useRef<AbortController | null>(null)
+
+  const endDrag = useCallback(() => {
     dragRef.current = null
-    window.removeEventListener('pointermove', handlePointerMove)
-    window.removeEventListener('pointerup', handlePointerUp)
-  }, [handlePointerMove])
+    dragAbortRef.current?.abort()
+    dragAbortRef.current = null
+  }, [])
 
   const startDrag = useCallback((type: 'lo' | 'hi' | 'fill', e: React.PointerEvent) => {
     if (disabled) return
     e.preventDefault()
     dragRef.current = { type, startX: e.clientX, startLo: valueLoRef.current, startHi: valueHiRef.current }
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
-  }, [disabled, handlePointerMove, handlePointerUp])
+    dragAbortRef.current?.abort()
+    const controller = new AbortController()
+    dragAbortRef.current = controller
+    window.addEventListener('pointermove', handlePointerMove, { signal: controller.signal })
+    window.addEventListener('pointerup', endDrag, { signal: controller.signal })
+  }, [disabled, handlePointerMove, endDrag])
 
   // Keyboard for thumbs
   const handleKeyLo = (e: React.KeyboardEvent) => {
@@ -99,10 +114,9 @@ export function DualRangeSlider({ min, max, step = 1, valueLo, valueHi, onChange
     else               onChange(valueLo, clamp(v, valueLo + step, max))
   }
 
-  useEffect(() => () => {
-    window.removeEventListener('pointermove', handlePointerMove)
-    window.removeEventListener('pointerup', handlePointerUp)
-  }, [handlePointerMove, handlePointerUp])
+  // Unmount-only: empty deps mean this never re-runs mid-drag to detach the
+  // listeners out from under an in-progress drag.
+  useEffect(() => () => dragAbortRef.current?.abort(), [])
 
   const loPercent = toPercent(valueLo)
   const hiPercent = toPercent(valueHi)
