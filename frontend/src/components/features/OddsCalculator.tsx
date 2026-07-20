@@ -26,7 +26,10 @@ function ev(modelProb: number, odds: number, stake: number): number {
 }
 
 // iOS renders no minus key on the numeric keypad, so the sign is a tap target
-// rather than something the user has to type.
+// rather than something the user has to type. State stays a signed string so
+// parseOdds and the DB prefill are unaffected, but the sign is owned solely by
+// the toggle button - the text field renders the magnitude only. Showing it in
+// both places read as a double negative.
 function toggleSign(raw: string): string {
   const trimmed = raw.trim()
   if (trimmed.startsWith('-')) return trimmed.slice(1)
@@ -36,6 +39,21 @@ function toggleSign(raw: string): string {
 
 function isNegative(raw: string): boolean {
   return raw.trim().startsWith('-')
+}
+
+function magnitude(raw: string): string {
+  return raw.trim().replace(/^[-+]/, '')
+}
+
+// Absorbs a typed or pasted sign into the toggle instead of the field, so
+// typing "-150" on a desktop keyboard still lands on -150. Anything that is not
+// a digit or a sign is discarded rather than left to fail in parseOdds.
+function applyTypedOdds(raw: string, current: string): string {
+  const digits = raw.replace(/[^0-9]/g, '')
+  let negative = isNegative(current)
+  if (raw.includes('-')) negative = true
+  else if (raw.includes('+')) negative = false
+  return negative ? `-${digits}` : digits
 }
 
 function parseOdds(raw: string): number | null {
@@ -177,19 +195,15 @@ export default function OddsCalculator({
                     onClick={() => setOdds(toggleSign(oddsStr))}
                     aria-label={`Toggle ${label} odds sign - currently ${isNegative(oddsStr) ? 'negative' : 'positive'}`}
                     aria-pressed={isNegative(oddsStr)}
-                    className={`h-11 w-11 shrink-0 rounded border font-mono text-base leading-none transition-colors focus:outline-none focus:border-[var(--color-primary)] ${
-                      isNegative(oddsStr)
-                        ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                        : 'border-[var(--color-border)] text-[var(--color-text-muted)]'
-                    }`}
+                    className="h-11 w-11 shrink-0 rounded border border-[var(--color-border)] font-mono text-base leading-none text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none"
                   >
                     {isNegative(oddsStr) ? '−' : '+'}
                   </button>
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={oddsStr}
-                    onChange={e => setOdds(e.target.value)}
+                    value={magnitude(oddsStr)}
+                    onChange={e => setOdds(applyTypedOdds(e.target.value, oddsStr))}
                     className="h-11 w-full min-w-0 rounded border border-[var(--color-border)] bg-transparent px-2 text-center text-sm font-mono tabular-nums text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
                     placeholder="150"
                   />
