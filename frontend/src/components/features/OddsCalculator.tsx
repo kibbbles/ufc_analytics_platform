@@ -25,6 +25,19 @@ function ev(modelProb: number, odds: number, stake: number): number {
   return modelProb * americanToPayout(odds, stake) - (1 - modelProb) * stake
 }
 
+// iOS renders no minus key on the numeric keypad, so the sign is a tap target
+// rather than something the user has to type.
+function toggleSign(raw: string): string {
+  const trimmed = raw.trim()
+  if (trimmed.startsWith('-')) return trimmed.slice(1)
+  if (trimmed.startsWith('+')) return `-${trimmed.slice(1)}`
+  return `-${trimmed}`
+}
+
+function isNegative(raw: string): boolean {
+  return raw.trim().startsWith('-')
+}
+
 function parseOdds(raw: string): number | null {
   const n = Number(raw.replace(/\s/g, ''))
   if (!Number.isFinite(n) || n === 0) return null
@@ -159,13 +172,26 @@ export default function OddsCalculator({
                   <span className="w-16 shrink-0 truncate text-xs font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
                     {label}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setOdds(toggleSign(oddsStr))}
+                    aria-label={`Toggle ${label} odds sign - currently ${isNegative(oddsStr) ? 'negative' : 'positive'}`}
+                    aria-pressed={isNegative(oddsStr)}
+                    className={`h-11 w-11 shrink-0 rounded border font-mono text-base leading-none transition-colors focus:outline-none focus:border-[var(--color-primary)] ${
+                      isNegative(oddsStr)
+                        ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                        : 'border-[var(--color-border)] text-[var(--color-text-muted)]'
+                    }`}
+                  >
+                    {isNegative(oddsStr) ? '−' : '+'}
+                  </button>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={oddsStr}
                     onChange={e => setOdds(e.target.value)}
-                    className="w-full rounded border border-[var(--color-border)] bg-transparent px-2 py-1 text-center text-sm font-mono tabular-nums text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
-                    placeholder="-150 or +130"
+                    className="h-11 w-full min-w-0 rounded border border-[var(--color-border)] bg-transparent px-2 text-center text-sm font-mono tabular-nums text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
+                    placeholder="150"
                   />
                 </div>
 
