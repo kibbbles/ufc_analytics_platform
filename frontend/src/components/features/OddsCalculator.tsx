@@ -1,4 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
+import {
+  EDGE_THRESHOLD,
+  americanToImplied,
+  americanToPayout,
+  applyTypedOdds,
+  ev,
+  isNegative,
+  magnitude,
+  parseOdds,
+  toggleSign,
+} from '@utils/odds'
 
 interface Props {
   nameA: string
@@ -8,63 +19,6 @@ interface Props {
   initialOddsA?: number | null
   initialOddsB?: number | null
 }
-
-// ── Math helpers ──────────────────────────────────────────────────────────────
-
-function americanToImplied(odds: number): number {
-  if (odds > 0) return 100 / (odds + 100)
-  return (-odds) / (-odds + 100)
-}
-
-function americanToPayout(odds: number, stake: number): number {
-  if (odds > 0) return (stake * odds) / 100
-  return (stake * 100) / -odds
-}
-
-function ev(modelProb: number, odds: number, stake: number): number {
-  return modelProb * americanToPayout(odds, stake) - (1 - modelProb) * stake
-}
-
-// iOS renders no minus key on the numeric keypad, so the sign is a tap target
-// rather than something the user has to type. State stays a signed string so
-// parseOdds and the DB prefill are unaffected, but the sign is owned solely by
-// the toggle button - the text field renders the magnitude only. Showing it in
-// both places read as a double negative.
-function toggleSign(raw: string): string {
-  const trimmed = raw.trim()
-  if (trimmed.startsWith('-')) return trimmed.slice(1)
-  if (trimmed.startsWith('+')) return `-${trimmed.slice(1)}`
-  return `-${trimmed}`
-}
-
-function isNegative(raw: string): boolean {
-  return raw.trim().startsWith('-')
-}
-
-function magnitude(raw: string): string {
-  return raw.trim().replace(/^[-+]/, '')
-}
-
-// Absorbs a typed or pasted sign into the toggle instead of the field, so
-// typing "-150" on a desktop keyboard still lands on -150. Anything that is not
-// a digit or a sign is discarded rather than left to fail in parseOdds.
-function applyTypedOdds(raw: string, current: string): string {
-  const digits = raw.replace(/[^0-9]/g, '')
-  let negative = isNegative(current)
-  if (raw.includes('-')) negative = true
-  else if (raw.includes('+')) negative = false
-  return negative ? `-${digits}` : digits
-}
-
-function parseOdds(raw: string): number | null {
-  const n = Number(raw.replace(/\s/g, ''))
-  if (!Number.isFinite(n) || n === 0) return null
-  if (n > 0 && n < 100) return null
-  if (n < 0 && n > -100) return null
-  return n
-}
-
-const EDGE_THRESHOLD = 0.05
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -190,12 +144,18 @@ export default function OddsCalculator({
                   <span className="w-16 shrink-0 truncate text-xs font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
                     {label}
                   </span>
+                  {/* touch-manipulation opts out of any residual double-tap delay.
+                      The active: styles are the only feedback a touch device gets,
+                      since Tailwind v4 gates hover behind (hover: hover), and they
+                      paint on touchdown ahead of the re-render so the tap is
+                      acknowledged immediately. Scale sits outside transition-colors
+                      so the press reads as instant rather than easing in. */}
                   <button
                     type="button"
                     onClick={() => setOdds(toggleSign(oddsStr))}
                     aria-label={`Toggle ${label} odds sign - currently ${isNegative(oddsStr) ? 'negative' : 'positive'}`}
                     aria-pressed={isNegative(oddsStr)}
-                    className="h-11 w-11 shrink-0 rounded border border-[var(--color-border)] font-mono text-base leading-none text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+                    className="h-11 w-11 shrink-0 touch-manipulation rounded border border-[var(--color-border)] font-mono text-lg font-bold leading-none text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 active:border-[var(--color-primary)] active:bg-[var(--color-primary)]/10 active:text-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none"
                   >
                     {isNegative(oddsStr) ? '−' : '+'}
                   </button>
