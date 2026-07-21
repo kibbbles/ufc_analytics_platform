@@ -8,15 +8,12 @@ import type { BettingFightRow } from '@t/api'
 import { DualRangeSlider } from './DualRangeSlider'
 import Pagination from '@components/common/Pagination'
 import BettingFightCard from './BettingFightCard'
-import StrategyResult from './StrategyResult'
 import { formatEventDate } from '@utils/format'
-import { plOf, N_CONCLUSIVE, type PlSource } from '@utils/strategyStats'
-import { useComparisonCounter } from '@hooks/useComparisonCounter'
-import { useDebounce } from '@hooks/useDebounce'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Range = '1M' | '3M' | '6M' | 'YTD' | 'ALL'
+type PlSource = 'model' | 'fav' | 'dog' | 'younger'
+type Range    = '1M' | '3M' | '6M' | 'YTD' | 'ALL'
 
 interface Preset {
   conv: [number, number]
@@ -24,6 +21,15 @@ interface Preset {
   plSource: PlSource
   desc: string
   ageDiffMin?: number   // younger-fighter strategies: minimum age gap in years
+}
+
+// Per-fight P&L for the active bet source. Younger fights without a defined
+// age gap carry no younger P&L and are filtered out before this runs.
+function plFor(f: BettingFightRow, src: PlSource): number {
+  return src === 'fav' ? f.pl_fav
+       : src === 'dog' ? f.pl_dog
+       : src === 'younger' ? (f.pl_younger ?? 0)
+       : f.pl_model
 }
 
 const PRESETS: Record<string, Preset> = {
@@ -160,7 +166,7 @@ export function OverviewTab() {
         eventMap.set(eid, { date: f.event_date, name: f.event_name, pnl: 0 })
       }
       const e = eventMap.get(eid)!
-      e.pnl += plOf(f, plSource) ?? 0
+      e.pnl += plFor(f, plSource)
     }
 
     const sortedEvents = Array.from(eventMap.values())
@@ -176,28 +182,23 @@ export function OverviewTab() {
     }))
   }, [filtered, plSource])
 
-  // Bet count for the active source (younger fights without a known age gap are
-  // already excluded by the filter, so filtered.length is the usable count).
-  const bets = filtered.length
+  // Stat totals
+  const stats = useMemo(() => {
+    const bets = filtered.length
+    const wins = filtered.filter(f =>
+      plSource === 'model' ? f.is_correct : plFor(f, plSource) > 0
+    ).length
+    const pnl = filtered.reduce((s, f) => s + plFor(f, plSource), 0)
+    const roi = bets > 0 ? pnl / bets : 0
+    return { bets, wins, pnl, roi }
+  }, [filtered, plSource])
 
-  // n-guard: below the 50-fight bar the chart is muted (not hidden) along with
-  // the rest of the result treatment in StrategyResult.
-  const isEmpty = bets === 0
-  const muted   = bets < N_CONCLUSIVE
-  const finalPnl  = chartData.at(-1)?.cumPnl ?? 0
-  const lineColor = isEmpty ? 'var(--color-border)'
-                  : muted   ? 'var(--color-text-muted)'
-                  : finalPnl >= 0 ? 'var(--color-success)' : 'var(--color-error)'
-
-  // Multiple-comparisons counter. Debounced so dragging a slider through many
-  // values records one settled combination, not fifty.
-  const { count, record, reset } = useComparisonCounter()
-  const comboKey = useMemo(
-    () => JSON.stringify({ strategy, weightClass, titleFilter, timeRange, convRange, edgeRange }),
-    [strategy, weightClass, titleFilter, timeRange, convRange, edgeRange],
-  )
-  const settledCombo = useDebounce(comboKey, 600)
-  useEffect(() => { if (!loadingFights) record(settledCombo) }, [settledCombo, loadingFights, record])
+  const finalPnl   = chartData.at(-1)?.cumPnl ?? 0
+  const lineColor  = finalPnl >= 0 ? 'var(--color-success)' : 'var(--color-error)'
+  const pnl100     = (stats.pnl * 100)
+  const roi100     = stats.roi * 100
+  const noData     = stats.bets < 10
+  const lowSample  = stats.bets >= 10 && stats.bets < 30
 
   // Keep the results region from collapsing mid-drag. When a slider crosses
   // into the empty state the chart/cards unmount; without a reserved height
@@ -208,11 +209,11 @@ export function OverviewTab() {
   const resultsRef       = useRef<HTMLDivElement>(null)
   const lastResultsHeight = useRef<number>(0)
   useLayoutEffect(() => {
-    if (!isEmpty && resultsRef.current) {
+    if (!noData && resultsRef.current) {
       lastResultsHeight.current = resultsRef.current.offsetHeight
     }
     if (wrapRef.current) {
-      wrapRef.current.style.minHeight = isEmpty ? `${lastResultsHeight.current}px` : ''
+      wrapRef.current.style.minHeight = noData ? `${lastResultsHeight.current}px` : ''
     }
   })
 
@@ -223,18 +224,18 @@ export function OverviewTab() {
   const totalPages = Math.ceil(sortedForCards.length / PAGE_SIZE)
   const visible    = sortedForCards.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  // Chart footnote
+  // Footnote
   const footnotes: Record<string, string> = {
-    model_pick:      `Cumulative P&L · flat $100/bet · ${bets} bets · all model picks`,
-    model_edge_5_15: `Cumulative P&L · flat $100/bet · ${bets} bets · flat segments = no qualifying fights that event`,
-    high_conv_20:    `Cumulative P&L · flat $100/bet · ${bets} bets · model win prob ≥70%`,
-    edge_conv:       `Cumulative P&L · flat $100/bet · ${bets} bets · strictest filter`,
-    custom:          `Cumulative P&L · flat $100/bet · ${bets} bets · custom filter`,
-    vegas_fav:       `Cumulative P&L · flat $100/bet · ${bets} bets · Vegas favorite`,
-    vegas_dog:       `Cumulative P&L · flat $100/bet · ${bets} bets · Vegas underdog`,
-    younger_all:     `Cumulative P&L · flat $100/bet · ${bets} bets · younger fighter every fight`,
-    younger_3:       `Cumulative P&L · flat $100/bet · ${bets} bets · younger fighter · age gap over 3y`,
-    younger_5:       `Cumulative P&L · flat $100/bet · ${bets} bets · younger fighter · age gap over 5y`,
+    model_pick:      `Flat $100/bet · ${stats.bets} bets · all model picks`,
+    model_edge_5_15: `Flat segments = no qualifying fights that event. $100/bet · ${stats.bets} bets.`,
+    high_conv_20:    `Flat $100/bet · ${stats.bets} bets · model win prob ≥70%`,
+    edge_conv:       `Flat $100/bet · ${stats.bets} bets · strictest filter`,
+    custom:          `Flat $100/bet · ${stats.bets} bets · custom filter`,
+    vegas_fav:       `Flat $100/bet · ${stats.bets} bets · Vegas favorite · negative expected due to sportsbook vig`,
+    vegas_dog:       `Flat $100/bet · ${stats.bets} bets · Vegas underdog · negative expected due to sportsbook vig`,
+    younger_all:     `Flat $100/bet · ${stats.bets} bets · younger fighter every fight`,
+    younger_3:       `Flat $100/bet · ${stats.bets} bets · younger fighter · age gap over 3y`,
+    younger_5:       `Flat $100/bet · ${stats.bets} bets · younger fighter · age gap over 5y`,
   }
 
   if (loadingFights) {
@@ -275,26 +276,6 @@ export function OverviewTab() {
           </optgroup>
         </select>
         <p className="text-xs text-[var(--color-text-muted)]">{PRESETS[strategy]?.desc}</p>
-      </div>
-
-      {/* Multiple-comparisons counter — persistent, resets only on explicit action */}
-      <div className="flex items-start gap-2 rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 px-3 py-2.5">
-        <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">⟳</span>
-        <p className="min-w-0 flex-1 text-xs">
-          <span className="font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-            You&apos;ve compared {count} {count === 1 ? 'strategy' : 'strategies'} this session.
-          </span>{' '}
-          <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
-            The more combinations you try, the more likely one looks good by chance, not skill.
-          </span>
-        </p>
-        <button
-          type="button"
-          onClick={reset}
-          className="shrink-0 rounded px-1.5 py-0.5 text-[0.7rem] font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-border)]/40 hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)]"
-        >
-          Reset
-        </button>
       </div>
 
       {/* Sliders */}
@@ -389,19 +370,21 @@ export function OverviewTab() {
           while empty so a slider drag that crosses into "no matches" does not
           shrink the page and scroll-clamp the slider away from the cursor. */}
       <div ref={wrapRef}>
-      {isEmpty ? (
+      {noData ? (
         <div className="rounded-lg border border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-muted)]">
           {titleFilter === 'title'
-            ? 'No title fights match this selection. Title bouts are rare in the betting data.'
-            : 'No fights match this filter.'}
+            ? `Only ${stats.bets} title fight${stats.bets === 1 ? '' : 's'} in this selection - too few to chart. Title bouts are rare in the betting data, so widening the other filters won't add more.`
+            : 'Not enough fights match - try widening the filters.'}
         </div>
       ) : (
         <div ref={resultsRef} className="space-y-5">
-          {/* Strategy result: baseline comparison, n-guard, CI-gated verdict,
-              and the held-out confirmation panel */}
-          <StrategyResult fights={filtered} src={plSource} />
+          {lowSample && (
+            <p className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-3 py-2 text-xs text-[var(--color-warning-light)] dark:text-[var(--color-warning)]">
+              Small sample (n={stats.bets}) — interpret with caution.
+            </p>
+          )}
 
-          {/* Cumulative P&L — muted (grey line, no colour) below the n-guard */}
+          {/* Chart */}
           <div>
             <ResponsiveContainer width="100%" height={200}>
               <ComposedChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
@@ -429,13 +412,27 @@ export function OverviewTab() {
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">{footnotes[strategy] ?? footnotes.custom}</p>
           </div>
 
-          {/* Standing pre-registration note — sits with every result */}
-          <div className="flex items-start gap-2 rounded-lg border border-[var(--color-border)] border-l-[3px] border-l-[var(--color-primary)] bg-white px-3 py-2.5 dark:bg-[var(--color-surface)]">
-            <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--color-primary)]">◆</span>
-            <p className="text-xs text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-              <span className="font-semibold">Before you trust a strategy, ask: did you expect it to work before you ran it?</span>{' '}
-              <span className="text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">A winner pulled out of a filter hunt is usually luck.</span>
-            </p>
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              { label: 'Bets', value: String(stats.bets), colored: false },
+              { label: 'Win rate', value: stats.bets > 0 ? `${((stats.wins / stats.bets) * 100).toFixed(0)}%` : '—', colored: false },
+              { label: 'Total P&L', value: `${pnl100 >= 0 ? '+' : ''}$${pnl100.toFixed(0)}`, colored: true, pos: pnl100 >= 0 },
+              { label: 'ROI', value: `${roi100 >= 0 ? '+' : ''}${roi100.toFixed(1)}%`, colored: true, pos: roi100 >= 0 },
+            ].map((s) => (
+              <div key={s.label} className="rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2.5">
+                <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)]" style={{ letterSpacing: '0.04em' }}>{s.label}</p>
+                <p className={`mt-0.5 font-mono text-xl font-medium tabular-nums leading-tight ${
+                  s.colored
+                    ? s.pos
+                      ? 'text-[var(--color-success-light)] dark:text-[var(--color-success)]'
+                      : 'text-[var(--color-error-light)] dark:text-[var(--color-error)]'
+                    : ''
+                }`}>
+                  {s.value}
+                </p>
+              </div>
+            ))}
           </div>
 
           {/* Fight cards */}
