@@ -1114,5 +1114,50 @@
     "brier_leader": "logistic_regression",
     "brier_margin": 0.0,
     "method_accuracy": 0.4854
+  },
+  {
+    "timestamp": "2026-07-26T15:03:46.953180+00:00",
+    "feature_hash": "abaee951",
+    "n_features": 29,
+    "train_rows": 4485,
+    "val_rows": 961,
+    "test_rows": 962,
+    "models": {
+      "logistic_regression": {
+        "train_accuracy": 0.6187,
+        "val_accuracy": 0.6015,
+        "val_auc": 0.6456,
+        "val_brier": 0.232,
+        "val_logloss": 0.6544,
+        "test_accuracy": 0.6279,
+        "test_auc": 0.6646,
+        "val_test_gap": -0.0264
+      },
+      "xgboost": {
+        "train_accuracy": 0.6827,
+        "val_accuracy": 0.5838,
+        "val_auc": 0.6374,
+        "val_brier": 0.2348,
+        "val_logloss": 0.6616,
+        "test_accuracy": 0.6403,
+        "test_auc": 0.6836,
+        "val_test_gap": -0.0566
+      },
+      "random_forest": {
+        "train_accuracy": 0.6912,
+        "val_accuracy": 0.5942,
+        "val_auc": 0.6446,
+        "val_brier": 0.2352,
+        "val_logloss": 0.6628,
+        "test_accuracy": 0.6372,
+        "test_auc": 0.6867,
+        "val_test_gap": -0.043
+      }
+    },
+    "best_model": "logistic_regression",
+    "deployed_model": "logistic_regression",
+    "brier_leader": "logistic_regression",
+    "brier_margin": 0.0,
+    "method_accuracy": 0.486
   }
 ]
