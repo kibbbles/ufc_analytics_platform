@@ -201,20 +201,26 @@ function ModelScorecard() {
                 </span>
               </div>
               <p className="text-xs text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-                On the {summary.baseline_sample} live fights with betting odds, the model did not beat
-                always picking the Vegas favorite. Its only potential edge is where it{' '}
-                <span className="font-semibold">disagrees</span> with the market —{' '}
+                On the {summary.baseline_sample} live fights with betting odds, the model as it ran
+                live did not beat always picking the Vegas favorite. Its only potential edge is where
+                it <span className="font-semibold">disagrees</span> with the market —{' '}
                 {summary.baseline_disagree_count} fights — and there it was right just{' '}
                 <span className="font-semibold text-[var(--color-primary)]">
                   {summary.baseline_disagree_accuracy != null ? formatPct(summary.baseline_disagree_accuracy) : '—'}
                 </span>{' '}
-                of the time. When this model departs from Vegas, it has mostly been wrong.
+                of the time. When this model departs from Vegas, it has mostly been wrong.{' '}
+                <Link
+                  to="/analytics/betting-insights"
+                  className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-primary)]"
+                >
+                  Same fights, priced as bets
+                </Link>.
               </p>
             </div>
           )}
           {summary.pre_fight_total > 0 && (
             <p className="mb-3 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-4 py-3 text-xs font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-              The live record, made with the now-fixed feature bug, was overconfident above 60%. The corrected model is well-calibrated on held-out test data (ECE 3.65%), but has no live track record yet.{' '}
+              That live record ran overconfident in the 60-70% band, and has too few picks above 70% to judge either way. The corrected model was selected on Brier score, the calibration-aware metric, at 0.233 on validation against 0.250 for a coin flip.{' '}
               <button
                 onClick={() => setModal('pre_fight')}
                 className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-primary)]"
@@ -225,9 +231,9 @@ function ModelScorecard() {
           )}
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
             {summary.model_name ? `${summary.model_name} model` : 'A model'} using 30 features including physical differentials, career striking and grappling metrics, and recent fight history. It is pinned, chosen for best calibration from logistic regression, random forest, and gradient boosting rather than re-selected each retrain, which only added noise among three statistically tied models.{' '}
-            <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Live track record</span> is the model's real predictions, frozen the Saturday before each event and never rewritten: the honest number, with no look-ahead.{' '}
+            <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Live track record</span> is the model's real predictions, frozen the Saturday before each event and never rewritten.{' '}
             <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Backtested</span> is the current model reconstructed over past fights; it benefits from hindsight in the code (features rebuilt after the fact), so it is not a live record.{' '}
-            Every one of these {summary.pre_fight_total} live predictions was made with a corrupted win/loss streak feature and with win_rate_diff silently imputed to the population mean; both were fixed in July 2026. The corrected model has no live track record yet and cannot be claimed to be better until it accumulates one.
+            Most of these {summary.pre_fight_total} live predictions were made with a corrupted win/loss streak feature and with win_rate_diff silently imputed to the population mean; both were fixed on 2026-07-13. Only the most recent events run on the corrected pipeline, and that sample is far too small to compare the two. Treat the live accuracy above as a record of the old pipeline until the corrected one accumulates a meaningful number of fights.
           </p>
           <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
             UFC 329 (2026-07-11) has no live pre-fight prediction. The archive workflow was down due to a credential failure, and a subsequent recompute overwrote the snapshot before it could be frozen. The event's results are included; its prediction is not.

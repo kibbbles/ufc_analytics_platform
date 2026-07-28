@@ -486,7 +486,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                     </table>
                   </div>
                   <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                    Each row bins live predictions by the probability shown for the model's pick and reports how often that pick actually won. If the two columns diverge, the displayed percentage is not honest — on this record the model is overconfident in the 60-80% range (says ~65-75%, wins ~50-55%), and rarely ventures above 80%.
+                    Each row bins live predictions by the probability shown for the model's pick and reports how often that pick actually won. If the two columns diverge, the displayed percentage is not honest. On this record the 60-70% bin is the clearest miss: it wins several points below what it claims. The bins above 70% hold only a handful of fights each and should not be read as evidence in either direction.
                   </p>
                 </div>
               )}
