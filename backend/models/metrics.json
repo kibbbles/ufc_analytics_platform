@@ -1,28 +1,28 @@
 {
-  "win_accuracy": 0.6282,
-  "win_roc_auc": 0.6657,
+  "win_accuracy": 0.6307,
+  "win_roc_auc": 0.6669,
   "best_model": "logistic_regression",
-  "method_accuracy": 0.4927,
-  "train_rows": 4490,
-  "test_rows": 963,
+  "method_accuracy": 0.4891,
+  "train_rows": 4496,
+  "test_rows": 964,
   "train_date_range": [
     "1998-10-16",
     "2021-12-11"
   ],
   "test_date_range": [
-    "2024-04-27",
-    "2026-08-01"
+    "2024-05-04",
+    "2026-08-08"
   ],
   "shap_top10": {
-    "diff_age_at_fight": 0.23224458471516,
-    "diff_career_avg_total_str_attempted": 0.17927457229148003,
-    "diff_roll3_sig_str_landed": 0.15182154889216315,
-    "diff_sapm": 0.15103096573242267,
-    "diff_career_avg_td_attempted": 0.13581483221909196,
-    "diff_roll7_sig_str_att": 0.129122552392126,
-    "win_streak_diff": 0.11732841781527568,
-    "reach_diff_inches": 0.08670522802940502,
-    "diff_roll7_td_landed": 0.08495807309684483,
-    "diff_defense_score": 0.07278711714892568
+    "diff_age_at_fight": 0.2296245578132687,
+    "diff_career_avg_total_str_attempted": 0.16948172400362593,
+    "diff_roll3_sig_str_landed": 0.15618464696247997,
+    "diff_sapm": 0.14850858854426383,
+    "diff_career_avg_td_attempted": 0.13490289911016,
+    "win_streak_diff": 0.12844994126169523,
+    "diff_roll7_sig_str_att": 0.11873608276323327,
+    "reach_diff_inches": 0.08658461824831319,
+    "diff_roll7_td_landed": 0.08455510050090326,
+    "diff_roll3_total_str_landed": 0.07346842240756297
   }
 }
