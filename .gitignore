@@ -75,4 +75,6 @@ docs/*.md
 docs/*.pdf
 docs/*.txt
 docs/*.py
+docs/*.xlsx
+docs/*.csv
 docs/.ipynb_checkpoints/
