@@ -468,7 +468,7 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
  Fighter           UFC Record  Ht     Reach  Stance    DOB
  ----------------  ----------  -----  -----  --------  ----------
  Max Holloway        23-8      71"    69"    Orthodox  1991-12-04
- Charles Oliveira    24-12     70"    74"    Orthodox  1989-10-17
+ Charles Oliveira    24-12     70"    74"    Orthodox  1989-10-17 
 
  Recent form (last 5):
    Holloway:  W W W L W  (1-win streak; beat Gaethje UFC 300 Apr 2024 (KO Rd 5),
@@ -554,4 +554,696 @@ fight_ids don't appear in fight_stats due to limited 2015+ stats coverage).
 ================================================================================
  Generated 2026-03-07 | UFC 326 preview | Model: Random Forest win_loss_v1.joblib
  Features computed as-of 2026-03-07 from full career history in DB
+================================================================================
+
+================================================================================
+ UFC 330: MAKHACHEV vs. MACHADO GARRY - BET-DECISION REPORT (2026-08-15)
+ Philadelphia, Pennsylvania, USA  |  11 bouts  |  2 title fights
+ Logistic Regression (win_loss_v1.joblib), retrained 2026-08-09
+ Odds: upcoming_fights.odds_a/odds_b, scraped 2026-08-08 15:44 UTC
+================================================================================
+
+BOTTOM LINE
+-----------
+ NO BETS ON THIS CARD. Zero of eleven bouts clear the thresholds.
+
+ This is not "we lack the data to say." The data exists, it was analysed, and
+ it says the model's disagreements with the market lose money.
+
+--------------------------------------------------------------------------------
+ THE HEADLINE FINDING: THE MODEL LOSES TO THE MARKET
+--------------------------------------------------------------------------------
+
+ Over every tracked prediction that has both odds and a result:
+
+   n = 173 fights, 2026-03-21 to 2026-08-08
+
+   Model accuracy                      60.12%
+   Market-favourite baseline           69.36%
+   Difference                          -9.25 pp
+
+   McNemar (exact binomial on discordant pairs):
+     model right / market wrong   b = 15
+     market right / model wrong   c = 31
+     p = 0.0259
+
+ The model is significantly worse than blindly backing the favourite. Blindly
+ backing the favourite requires no model, no feature pipeline, and no retrain.
+
+ Flat-betting every model pick over the same 173 fights:
+
+   ROI  -8.02%   P/L -13.87 units   95% bootstrap CI [-20.20%, +4.16%]
+
+ The ROI confidence interval spans zero, so ROI alone is inconclusive. The
+ accuracy comparison is not. Both point the same way.
+
+--------------------------------------------------------------------------------
+ ROOT CAUSE: THE MODEL SYSTEMATICALLY UNDER-RATES FAVOURITES
+--------------------------------------------------------------------------------
+
+ For each tracked fight, take the market favourite and compare the model's
+ probability for that fighter against the no-vig fair probability:
+
+   n = 173
+   mean (model% - no-vig fair%) on the market favourite = -11.59 pp
+   median                                                = -11.45 pp
+   95% CI                                     [-13.25 pp, -9.93 pp]
+   model under-rates the favourite in 85.5% of fights
+
+ The CI excludes zero by a wide margin. This is a real, systematic bias, not
+ noise.
+
+ It is corroborated independently by the calibration table: the model's
+ 0.551-0.598 confidence band (n=64) wins 67.2% of the time. A model that says
+ 57% and wins 67% is under-confident, not miscalibrated at random.
+
+ Actual favourite win rate over the 173: 69.4%, against a mean no-vig fair
+ favourite probability of 66.7%. The market is, if anything, slightly under-
+ pricing favourites. The model is 11.6 points below the market.
+
+ WHY THIS MATTERS MORE THAN ANY SINGLE PICK:
+ Probabilities compressed toward 0.5 mechanically manufacture a large phantom
+ "edge" on every underdog. Every big edge this model reports is an artifact of
+ the compression, not a discovered mispricing. The historical record confirms
+ the consequence:
+
+   Edge bucket        n     hit%      ROI
+   ---------------  ----  -------  --------
+   edge >= 10pp       42    40.5%    -9.35%
+   edge 4-10pp        15    60.0%    +2.01%
+   edge 0-4pp         14    35.7%   -47.70%
+   negative edge     102    71.6%    -3.50%
+
+ Where the model most disagrees with the market, it is least accurate. Per the
+ n>=50 rule none of these buckets is individually a finding, but they are
+ consistent with the significant n=173 result above.
+
+ LIKELY MECHANISM (hypothesis, not verified): the classifier is
+ LogisticRegression(C=0.1, class_weight='balanced'). C=0.1 is heavy L2
+ regularisation, which shrinks coefficients and pulls predictions toward the
+ base rate. Combined with balanced class weights on an already-balanced target,
+ this is a textbook recipe for compressed probabilities.
+
+ LIKELY FIX: fit a probability calibrator (isotonic or Platt) on a held-out
+ validation slice and apply it downstream of the classifier. That would leave
+ ranking ability untouched (AUC 0.6669 is unaffected by monotone recalibration)
+ while removing most of the phantom edge. Ranking and pricing are different
+ jobs and this model is currently only trusted to do the first.
+
+--------------------------------------------------------------------------------
+ MODEL PROVENANCE
+--------------------------------------------------------------------------------
+
+ Artifact:        backend/models/win_loss_v1.joblib (origin/main, commit 4cdf56a)
+ Retrained:       2026-08-09 (6 days before the card)
+ Selected model:  logistic_regression (best of LR / RF / XGBoost)
+ Train window:    1998-10-16 to 2021-12-11, n=4,496
+ Test window:     2024-05-04 to 2026-08-08, n=964
+
+ NOTE: win_loss_v1.joblib is NO LONGER the Random Forest analysed earlier in
+ this file. The 63.85% / AUC 0.679 / 61.9%-on-title-fights figures above
+ describe a model that is no longer deployed. One upside of the switch: because
+ the model is linear, the driver tables below are exact attributions
+ (coefficient x scaled value, in log-odds), not the approximation used for the RF.
+
+ Metric                        Model      Baseline                    n
+ ----------------------------  ---------  --------------------------  -----
+ Holdout win accuracy           63.07%     50.0% (coin flip)            964
+ Holdout ROC AUC                 0.6669    0.500                        964
+ Tracked accuracy w/ odds       60.12%     69.36% (market favourite)    173
+ Method accuracy (3-class)      48.91%     50.4% (always "Decision")    964
+
+ The method model does not beat its own majority-class baseline (599/1189
+ decisions, 2024-05-04 to 2026-08-08). Method probabilities are reproduced below
+ for completeness and should not be used for anything.
+
+ FORWARD RECORD
+ --------------
+ past_predictions rows with prediction_source='pre_fight_archive' are genuine
+ pre-fight snapshots, frozen before each event and never recomputed:
+
+   n = 192, 118 correct = 61.46%, events 2026-03-14 to 2026-08-08
+
+ The 'backfill' rows (n=2,872, 63.44%) are retroactive recomputations carrying
+ model-level optimism, and are weaker evidence.
+
+ CALIBRATION BY CONFIDENCE BUCKET (pre_fight_archive)
+  Stated confidence   n     Actual   Read
+  ------------------  ----  -------  --------------------------------------
+  0.501 - 0.550        69    53.6%   Calibrated
+  0.551 - 0.598        64    67.2%   Under-confident (see root cause above)
+  0.601 - 0.649        32    53.1%   n<50, indistinguishable from noise
+  0.651 - 0.691        19    73.7%   n<50, indistinguishable from noise
+  0.707 - 0.746         5   100.0%   Meaningless at this n
+  0.754 - 0.775         2    50.0%   Meaningless at this n
+  0.838                 1   100.0%   Meaningless at this n
+
+ The two highest-confidence picks on this card (72.3%, 70.1%) land in buckets
+ holding a combined n of 24. There is no usable evidence about the model's
+ reliability at that confidence level.
+
+--------------------------------------------------------------------------------
+ PRE-FLIGHT DATA-QUALITY GATES
+--------------------------------------------------------------------------------
+
+ Bout / scope                      Gate result
+ --------------------------------  ------------------------------------------
+ ALL BOUTS - odds freshness        FAIL. odds_scraped_at = 2026-08-08 15:44 UTC,
+                                   roughly 4 days before this report and well
+                                   past the 12h threshold. Re-pull before acting
+                                   on any number in the market section.
+ ALL BOUTS - calibration           FAIL. The favourite under-rating bias above
+                                   invalidates every edge computation on this
+                                   card. This alone is sufficient for NO BET.
+ Tobias vs Lucas Fernando          BLOCKED. Lucas Fernando has 0 UFC fights in
+                                   the DB; Tobias has 1. 18 of 30 features are
+                                   NULL and median-imputed. Not a prediction.
+ Donte Johnson vs McConico         THIN. Johnson n=2 UFC fights (gate: <3).
+                                   McConico n=4.
+ Abdul-Malik vs Stoltzfus          FLAG. Abdul-Malik's UFC record reads 4-1 but
+                                   includes a 2025-06-14 bout vs Brundage with
+                                   METHOD='Overturned' counted as a win. True
+                                   record 3-1 with 1 NC.
+ Kaue Fernandes, Orolbai, Gore,    THIN. All 4 to 7 UFC fights. Rolling 7-fight
+ Ribovics, Wells, Abdul-Malik      features are partly priors.
+ Njokuani/Alvarez, Wells/Orolbai,  FLAG. weight_diff_lbs is +/-15 to +20 lbs
+ Luque/Gore, Tobias/Fernando       inside a single division, sourced from
+                                   fighter_tott listed weight rather than bout
+                                   weight. Second-largest driver in
+                                   Njokuani vs Alvarez.
+ No-vig method agreement           FLAG on 5 bouts. Multiplicative and power
+                                   methods disagree by up to 2.0 pp on the
+                                   longest prices (Wells +446, Stoltzfus +415).
+                                   Treat those edges as uncertain.
+ Layoff (>18 months)               PASS, all 22 fighters. Longest is Wells at
+                                   9.5 months.
+ Feature staleness                 PASS. Predictions computed 2026-08-01 and
+                                   2026-08-08 against a DB current to 2026-08-08.
+ Train/serve skew                  PASS. All 11 vectors score cleanly through
+                                   the current pipeline.
+ Short-notice replacement          UNKNOWN. Not tracked in the DB.
+
+ ANALYSABLE: 10 of 11 bouts. BETTABLE: 0 of 11.
+
+ REPRODUCIBILITY CHECK
+ Every stored prediction was re-scored through the current 2026-08-09 artifact
+ from its own stored features_json. Stored values came from the 2026-07-26 and
+ 2026-08-02 weekly models, so exact agreement is not expected.
+   10 of 11 agree within 0.8 pp. Dern vs Robertson differs by 1.7 pp.
+ No skew, no schema drift, no scoring failures.
+
+--------------------------------------------------------------------------------
+ CARD SUMMARY - MODEL vs MARKET
+--------------------------------------------------------------------------------
+
+ Bout order is not stored in upcoming_fights. Sorted by edge on the model's pick.
+ Hold is 3.1% to 4.8% across the card, a normal two-way market.
+ "Edge" = model probability minus no-vig fair probability (multiplicative).
+
+  Model Pick          Odds   Fair%  Model%   Edge   Mkt?  Verdict
+  ------------------  -----  -----  ------  ------  ----  --------------------
+  Kaue Fernandes      +145   39.6%   66.6%  +27.0   DOG   NO BET - phantom edge
+  Chidi Njokuani      +219   30.2%   55.0%  +24.9   DOG   NO BET - phantom edge
+  Gillian Robertson   +207   31.3%   56.1%  +24.8   DOG   NO BET - phantom edge
+  Vicente Luque       +115   44.7%   50.0%   +5.3   DOG   NO BET - below 7pp
+  Donte Johnson       -225   66.7%   71.8%   +5.2   FAV   NO BET - below 4pp*
+  Ramiz Brahimaj      -110   50.0%   51.2%   +1.2   PK    NO BET - no edge
+  Islam Makhachev     -380   76.1%   69.5%   -6.6   FAV   NO BET - negative
+  Lucas Fernando      -230   67.1%   55.0%  -12.0   FAV   BLOCKED
+  Myktybek Orolbai    -600   82.4%   70.3%  -12.1   FAV   NO BET - negative
+  Mansur Abdul-Malik  -550   81.3%   59.2%  -22.1   FAV   NO BET - negative
+  Esteban Ribovics    -400   76.9%   53.9%  -23.0   FAV   NO BET - negative
+
+  * Johnson clears 4pp but fails the sample-size gate at n=2 UFC fights.
+
+ THE PATTERN IS THE WHOLE STORY. Every positive edge above 5pp is on a market
+ underdog. Every fight where the model agrees with the market on the favourite
+ shows a large negative edge, because the model prices that favourite 12 to 27
+ points below the market. That is the -11.59pp bias, visible fight by fight.
+
+ On this card the model under-rates the market favourite in 9 of 11 bouts, mean
+ -13.77 pp. The only two exceptions are Donte Johnson (+5.2) and the pick'em
+ Magny/Brahimaj (+1.2).
+
+ If the ¼ Kelly stakes were taken at face value, this card would call for 10.9
+ units on Kaue Fernandes, 8.7 on Robertson and 8.6 on Njokuani, against a 2-unit
+ cap. A staking formula demanding five times the cap is the formula reporting
+ that its probability input is wrong.
+
+--------------------------------------------------------------------------------
+ FIGHT-BY-FIGHT
+--------------------------------------------------------------------------------
+
+ Driver tables are exact log-odds attributions (coefficient x scaled value).
+ Positive favours Fighter A. Method probabilities are printed but unusable.
+
+--------------------------------------------------------------------------------
+ ISLAM MAKHACHEV vs IAN MACHADO GARRY   [MAIN EVENT / TITLE]  Welterweight, 5rd
+--------------------------------------------------------------------------------
+ Makhachev  17-1, age 34, 70"/70" reach, southpaw, last fought 2025-11-15
+ Garry      10-1, age 28, 75"/74" reach, orthodox, last fought 2025-11-22
+
+ Market: Makhachev -380 (76.1% no-vig) | Garry +303 (23.9%)
+ Model:  Makhachev 69.5% (current artifact 70.1%)   Edge on Makhachev: -6.6 pp
+ Method: Dec 36.6% | Sub 35.9% | KO 27.6%  [unusable]
+
+ Drivers (+ favours Makhachev):
+   win_streak_diff              +14        +1.1111   MAKHACHEV
+   diff_age_at_fight        +2213 days     -0.3104   Garry
+   diff_roll3_sig_str_landed   -38.67      -0.2475   Garry
+   diff_career_avg_total_str_att -61.51    +0.2245   MAKHACHEV
+   diff_roll7_sig_str_att      -58.29      -0.1483   Garry
+   diff_sapm                    -1.411     +0.1424   MAKHACHEV
+   reach_diff_inches            -4"        -0.1364   Garry
+   diff_roll7_td_landed         +1.143     +0.0937   MAKHACHEV
+
+ This prediction is one feature wearing a trenchcoat. win_streak_diff = 14
+ contributes +1.111 log-odds; the other 29 features net to -0.263. Strip win
+ streak and the model favours Machado Garry.
+
+ The value is correct. Verified against fight history: Makhachev is on a
+ 16-fight UFC win streak, only loss to Adriano Martins on 2015-10-03; Garry is
+ on 2 since losing to Rakhmonov on 2024-12-07. 16 - 2 = 14. But it is a raw
+ unbounded count fed to a standardised linear model, so a decade-long streak
+ lands far out in the tail and dominates everything else.
+
+ MARKET READ: this is the one fight on the card where the model's shortfall
+ against the market (-6.6 pp) is smaller than the model's average bias
+ (-11.6 pp). Given the model under-rates favourites almost everywhere, its
+ relative restraint here is the least distorted signal it produces all night.
+ That is a statement about the model, not a betting case: the market still
+ prices Makhachev 6.6 points higher, and there is no edge on either side.
+
+ What the model cannot see: that this is Makhachev's second fight at
+ welterweight, that Garry has never faced a grappler of this class, or that the
+ Della Maddalena win was wrestling-first.
+
+--------------------------------------------------------------------------------
+ MACKENZIE DERN vs GILLIAN ROBERTSON   [TITLE]  Women's Strawweight, 5rd
+--------------------------------------------------------------------------------
+ Dern (C)   11-5, age 33, 64"/63" reach, orthodox, last fought 2025-10-25
+ Robertson  14-6, age 31, 65"/63" reach, last fought 2026-03-14
+
+ Market: Dern -250 (68.7% no-vig) | Robertson +207 (31.3%)
+ Model:  Robertson 56.1% (current artifact 57.8%)   Edge on Robertson: +24.8 pp
+ Method: Dec 49.6% | Sub 27.0% | KO 23.5%  [unusable]
+
+ Drivers (+ favours Dern):
+   diff_roll3_sig_str_landed   +47.33      +0.3070   DERN
+   diff_career_avg_total_str_att +79.50    -0.2911   Robertson
+   diff_roll3_total_str_landed +76.00      -0.1824   Robertson
+   diff_roll7_total_str_landed +72.00      +0.1693   DERN
+   diff_roll7_sig_str_att      +63.86      +0.1646   DERN
+   win_streak_diff              -2         -0.1586   Robertson
+   diff_sapm                    +1.197     -0.1220   Robertson
+   diff_age_at_fight         +784 days     -0.1046   Robertson
+
+ The model picks the challenger over the reigning champion, and it is the most
+ genuinely interesting call on the card. Note the sign conflict in the top four
+ drivers: the model is receiving contradictory volume signals and resolving them
+ to a thin margin. That is an honest representation of the fight.
+
+ MARKET READ: +24.8 pp is the third-largest edge on the card and sits squarely
+ in the pattern that lost 9.35% over n=42. The market has Dern at 68.7%; the
+ model has her at 43.9%, a 24.8-point gap on a reigning champion. A gap that
+ size between a model and a liquid two-way market is far more likely to be the
+ model's compression bias than a discovered mispricing.
+
+ Worth noting honestly in the other direction: this pick sits in the 0.551-0.598
+ calibration band, the only well-sampled band the model has (n=64, 67.2%
+ actual). If any pick on the card were going to survive, it would be this one.
+ It still does not, because the favourite-bias correction applies to the edge
+ computation regardless of which band the raw probability lands in.
+
+ What the model cannot see, and it is decisive: this is a grappler-vs-grappler
+ title fight. Robertson has the most submission wins in UFC women's history;
+ Dern is a BJJ world champion. There is no grappling interaction term in the
+ feature set at all.
+
+--------------------------------------------------------------------------------
+ JALIN TURNER vs KAUE FERNANDES   Lightweight, 3rd
+--------------------------------------------------------------------------------
+ Turner     8-6, age 31, 75"/77" reach, southpaw, last fought 2025-12-06
+ Fernandes  3-1, age 31, 69"/73" reach, orthodox, last fought 2025-09-06
+
+ Market: Turner -165 (60.4% no-vig) | Fernandes +145 (39.6%)
+ Model:  Fernandes 66.6%                            Edge on Fernandes: +27.0 pp
+ Method: Sub 36.2% | Dec 34.6% | KO 29.2%  [unusable]
+
+ Drivers (+ favours Turner):
+   diff_sapm                    +2.931     -0.2978   FERNANDES
+   diff_defense_score           -0.246     -0.2164   FERNANDES
+   diff_roll3_sig_str_landed   -26.00      -0.1658   FERNANDES
+   win_streak_diff              -2         -0.1586   FERNANDES
+   reach_diff_inches            +4"        +0.1341   Turner
+   diff_decision_rate           -0.25      +0.0718   Turner
+   diff_roll3_total_str_landed -23.33      +0.0561   Turner
+
+ The durability case against Turner is coherent: he absorbs 2.9 more significant
+ strikes per minute, scores 0.26 lower on defense, and has been finished in 3 of
+ his last 5.
+
+ MARKET READ: the largest edge on the card at +27.0 pp, and the clearest example
+ of the phantom-edge mechanism. The model has Turner at 33.4%; the market has
+ him at 60.4%. A 27-point disagreement on a lightweight with 14 UFC fights is
+ not an insight, it is the compression bias at full stretch. Fernandes has 4 UFC
+ fights against Hardwick, Kutateladze, Yahya and Diakiese, a materially softer
+ set than Turner has faced, and the model has no strength-of-schedule term among
+ its drivers here.
+
+ ¼ Kelly on this "edge" would be 10.9 units against a 2-unit cap.
+
+--------------------------------------------------------------------------------
+ CHIDI NJOKUANI vs JOEL ALVAREZ   Welterweight, 3rd
+--------------------------------------------------------------------------------
+ Njokuani  5-5, age 37, 75"/80" reach, orthodox, last fought 2026-02-21
+ Alvarez   8-3, age 33, 75"/77" reach, last fought 2026-05-09
+
+ Market: Alvarez -265 (69.8% no-vig) | Njokuani +219 (30.2%)
+ Model:  Njokuani 55.0%                             Edge on Njokuani: +24.9 pp
+ Method: KO 35.6% | Dec 35.0% | Sub 29.4%  [unusable]
+
+ Drivers (+ favours Njokuani):
+   diff_age_at_fight        +1522 days     -0.2109   Alvarez
+   weight_diff_lbs             +15 lbs     +0.1396   NJOKUANI
+   reach_diff_inches            +3"        +0.1003   NJOKUANI
+   diff_roll3_total_str_landed -37.67      +0.0906   NJOKUANI
+   weight_class (Welterweight)             +0.0713   NJOKUANI
+   loss_streak_diff             +1         +0.0629   NJOKUANI
+   diff_roll7_sig_str_att      +21.00      +0.0548   NJOKUANI
+   win_rate_diff               -0.227      -0.0474   Alvarez
+
+ The weakest-founded pick on the card even before the market is consulted. The
+ second-largest driver is weight_diff_lbs = +15 in a same-division bout, a
+ tale-of-the-tape artifact rather than a real advantage. Remove it and this
+ leans Alvarez.
+
+ The model is picking a 37-year-old on a 2-fight losing streak over the man who
+ beat Luque in Oct 2025, and the market disagrees by 24.9 points.
+
+ NOTE on loss_streak_diff: it contributes +0.063 toward Njokuani despite
+ Njokuani owning the losing streak. This is a collinearity artifact, not a
+ builder bug. win_streak and loss_streak are mutually exclusive by construction
+ (differentials.py:67-72) and their diffs correlate at -0.42, so under L2 at
+ C=0.1 loss_streak_diff acts as a suppressor correcting win_streak_diff. The
+ feature computation is correct; the coefficient sign is not interpretable in
+ isolation.
+
+--------------------------------------------------------------------------------
+ JEREMIAH WELLS vs MYKTYBEK OROLBAI   Welterweight, 3rd
+--------------------------------------------------------------------------------
+ Wells    5-2, age 39, 69"/74" reach, switch, last fought 2025-11-01
+ Orolbai  5-1, age 28, 70"/74" reach, last fought 2026-03-14
+
+ Market: Orolbai -600 (82.4% no-vig) | Wells +446 (17.6%)
+ Model:  Orolbai 70.3%                              Edge on Orolbai: -12.1 pp
+ Method: Sub 38.8% | KO 30.8% | Dec 30.4%  [unusable]
+
+ Drivers (+ favours Wells):
+   diff_age_at_fight        +4121 days     -0.5853   OROLBAI
+   diff_career_avg_td_attempted -4.548     -0.2717   OROLBAI
+   diff_roll7_td_landed         -2.833     -0.2444   OROLBAI
+   win_streak_diff              -2         -0.1586   OROLBAI
+   weight_diff_lbs             +15 lbs     +0.1396   Wells
+   diff_sapm                    -1.380     +0.1393   Wells
+   diff_roll3_sig_str_landed   +20.33      +0.1329   Wells
+   diff_grappling_ratio         -0.078     +0.0877   Wells
+
+ Model-internally the cleanest pick on the card: every driver agrees, the age
+ gap is 11.3 years, and the form gap is real. The one term pulling toward Wells
+ (weight_diff_lbs = +15) is the same listed-weight artifact flagged above.
+
+ MARKET READ: the model and market agree on the winner and the market is 12.1
+ points more confident. No edge on Orolbai. The +446 on Wells shows a +12.1 pp
+ "edge" purely because of the compression bias, on a 39-year-old who has fought
+ once since Feb 2024. Both sides are unbettable.
+
+ FLAG: Orolbai's last three DB opponents (Curtis, Hermansson, Musayev) are
+ middleweight-listed bouts, so his rolling features may be drawn from fights
+ above this weight class.
+
+--------------------------------------------------------------------------------
+ DONTE JOHNSON vs ERIC McCONICO   Middleweight, 3rd
+--------------------------------------------------------------------------------
+ Johnson   2-0, age 27, 68"/74" reach, southpaw, last fought 2026-03-07
+ McConico  2-2, age 36, 72"/77" reach, last fought 2026-04-25
+
+ Market: Johnson -225 (66.7% no-vig) | McConico +189 (33.3%)
+ Model:  Johnson 71.8% (current artifact 72.3%)     Edge on Johnson: +5.2 pp
+ Method: KO 36.5% | Sub 33.1% | Dec 30.4%  [unusable]
+
+ Drivers (+ favours Johnson):
+   diff_age_at_fight        -3183 days     +0.4670   JOHNSON
+   diff_defense_score          +0.158      +0.1415   JOHNSON
+   diff_sapm                   -1.393      +0.1405   JOHNSON
+   diff_roll7_td_landed         +1.5       +0.1241   JOHNSON
+   diff_roll3_sig_str_landed  -18.17       -0.1153   McConico
+   win_rate_diff               +0.5        +0.1051   JOHNSON
+   reach_diff_inches            -3"        -0.1026   McConico
+   diff_career_avg_total_str_att -27.75    +0.1010   JOHNSON
+   NULL and median-imputed: diff_roll5_td_pct
+
+ The highest confidence on the card, on the two fighters the model knows least
+ about. Johnson has 2 UFC fights, McConico 4. Age alone contributes +0.467
+ log-odds, roughly 60% of the net signal. win_rate_diff = 0.5 is 100% minus 50%,
+ which is 2 fights minus 4 fights: noise wearing a confident-looking value.
+
+ MARKET READ: this is one of only two bouts where the model is MORE confident
+ than the market on the favourite, and the +5.2 pp edge clears the 4pp threshold.
+ It still fails, on the sample-size gate: n=2 UFC fights. An apparent edge built
+ on two fights of data is exactly the case the gates exist to reject.
+
+--------------------------------------------------------------------------------
+ MANSUR ABDUL-MALIK vs DUSTIN STOLTZFUS   Middleweight, 3rd
+--------------------------------------------------------------------------------
+ Abdul-Malik  4-1* (true 3-1, 1 NC), age 28, 74"/80" reach, last fought 2026-03-28
+ Stoltzfus    3-7, age 34, 72"/75" reach, orthodox, last fought 2025-09-13
+ * 2025-06-14 vs Brundage is METHOD='Overturned' but counted as a win.
+
+ Market: Abdul-Malik -550 (81.3% no-vig) | Stoltzfus +415 (18.7%)
+ Model:  Abdul-Malik 59.2%                      Edge on Abdul-Malik: -22.1 pp
+ Method: KO 41.3% | Dec 29.5% | Sub 29.1%  [unusable]
+
+ Drivers (+ favours Abdul-Malik):
+   diff_age_at_fight        -2153 days     +0.3186   ABDUL-MALIK
+   diff_career_avg_total_str_att -56.30    +0.2054   ABDUL-MALIK
+   reach_diff_inches            +5"        +0.1680   ABDUL-MALIK
+   diff_roll3_sig_str_landed  -20.67       -0.1314   Stoltzfus
+   win_rate_diff               +0.5        +0.1051   ABDUL-MALIK
+   diff_career_avg_td_attempted -1.5       -0.0936   Stoltzfus
+   weight_class (Middleweight)             +0.0802   ABDUL-MALIK
+   diff_roll3_total_str_landed -32.33      +0.0778   ABDUL-MALIK
+
+ Age (5.9 years) and reach (5 inches) carry this against a 3-7 opponent. The
+ overturned Brundage result inflates win_rate_diff; correcting it moves
+ Abdul-Malik from 80% to 75% career win rate and shaves a little off the
+ prediction without changing the pick.
+
+ MARKET READ: the second-largest negative edge on the card. The market prices
+ Abdul-Malik at 81.3%, the model at 59.2%, a 22.1-point shortfall. The resulting
+ +22.1 pp "edge" on a 3-7 fighter at +415 is the compression bias producing its
+ most obviously absurd output of the night.
+
+ The model has no post-knockout recovery feature. Abdul-Malik is coming off a
+ third-round KO loss to Belgaroui in Mar 2026, his first UFC defeat.
+
+--------------------------------------------------------------------------------
+ EDSON BARBOZA vs ESTEBAN RIBOVICS   Lightweight, 3rd
+--------------------------------------------------------------------------------
+ Barboza   18-14, age 40, 71"/75" reach, orthodox, last fought 2025-12-06
+ Ribovics   4-3, age 30, 70"/69" reach, last fought 2026-04-11
+
+ Market: Ribovics -400 (76.9% no-vig) | Barboza +316 (23.1%)
+ Model:  Ribovics 53.9%                           Edge on Ribovics: -23.0 pp
+ Method: Dec 34.7% | Sub 32.8% | KO 32.5%  [unusable]
+
+ Drivers (+ favours Barboza):
+   diff_age_at_fight        +3749 days     -0.5317   RIBOVICS
+   diff_career_avg_total_str_att -97.53    +0.3562   BARBOZA
+   diff_roll3_sig_str_landed  -37.33       -0.2389   Ribovics
+   reach_diff_inches            +6"        +0.2018   BARBOZA
+   diff_roll7_sig_str_att     -77.14       -0.1966   Ribovics
+   loss_streak_diff             +2         +0.1265   BARBOZA
+   diff_roll3_total_str_landed -41.00      +0.0986   BARBOZA
+   diff_sapm                   -0.963      +0.0970   BARBOZA
+   NULL and median-imputed: diff_roll5_td_pct
+
+ Drivers in near-perfect opposition: age is -0.532 against Barboza, career
+ striking volume +0.356 for him, plus 6 inches of reach. The model nets to 53.9%,
+ which is it correctly reporting that it does not know.
+
+ MARKET READ: the market has no such doubt, pricing Ribovics at 76.9% against a
+ 40-year-old on a 3-fight losing streak who was knocked out in round 1 last time
+ out. The model is 23.0 points below the market. As with the other favourites,
+ the +23.0 pp "edge" on Barboza at +316 is manufactured, not found.
+
+ The loss_streak_diff = +2 contributing +0.127 toward the fighter who owns the
+ losing streak is the same collinearity artifact described under Njokuani above.
+
+--------------------------------------------------------------------------------
+ VICENTE LUQUE vs TRESEAN GORE   Middleweight, 3rd
+--------------------------------------------------------------------------------
+ Luque  17-8, age 34, 71"/75" reach, last fought 2026-04-11
+ Gore    3-4, age 32, 72"/75" reach, last fought 2026-04-04
+
+ Market: Gore -135 (55.3% no-vig) | Luque +115 (44.7%)
+ Model:  Luque 50.0% (current artifact 50.5%)        Edge on Luque: +5.3 pp
+ Method: KO 41.0% | Dec 32.1% | Sub 26.9%  [unusable]
+
+ Drivers (+ favours Luque):
+   weight_diff_lbs            -15 lbs      -0.1457   Gore
+   diff_roll7_sig_str_att     +51.14       +0.1321   LUQUE
+   diff_career_avg_total_str_att +35.32    -0.1296   Gore
+   diff_age_at_fight         +937 days     -0.1266   Gore
+   diff_sapm                   -1.140      +0.1149   LUQUE
+   diff_roll3_sig_str_landed  -15.67       -0.0992   Gore
+   weight_class (Middleweight)             +0.0802   LUQUE
+   diff_defense_score          +0.073      +0.0667   LUQUE
+
+ A literal coin flip. Every driver is under 0.15 log-odds and they cancel almost
+ exactly. The largest single term is the weight_diff_lbs listing artifact.
+
+ MARKET READ: the closest model-market agreement on the card. Market has Luque
+ at 44.7%, model at 50.0%, a 5.3 pp gap that is inside the model's own
+ calibration error and below the 7 pp threshold that coin-flip fights require.
+ The model has no opinion and neither does this report.
+
+--------------------------------------------------------------------------------
+ NEIL MAGNY vs RAMIZ BRAHIMAJ   Welterweight, 3rd
+--------------------------------------------------------------------------------
+ Magny     24-13, age 39, 75"/80" reach, orthodox, last fought 2025-12-13
+ Brahimaj   5-4, age 33, 70"/72" reach, orthodox, last fought 2026-02-21
+
+ Market: -110 / -110, a true pick'em (50.0% / 50.0% no-vig, 4.8% hold)
+ Model:  Brahimaj 51.2% (current artifact 50.4%)   Edge on Brahimaj: +1.2 pp
+ Method: Dec 34.6% | Sub 34.5% | KO 30.9%  [unusable]
+
+ Drivers (+ favours Magny):
+   diff_career_avg_total_str_att +86.31    -0.3160   Brahimaj
+   diff_age_at_fight        +1933 days     -0.2701   Brahimaj
+   reach_diff_inches            +8"        +0.2694   MAGNY
+   diff_roll3_sig_str_landed  +18.00       +0.1179   MAGNY
+   diff_decision_rate          +0.378      -0.1078   Brahimaj
+   diff_roll7_total_str_landed +44.14      +0.1039   MAGNY
+   diff_roll3_total_str_landed +36.33      -0.0872   Brahimaj
+   diff_roll7_sig_str_att     +30.86       +0.0801   MAGNY
+
+ The only fight where the current model and the stored site prediction disagree
+ on the winner: the 2026-08-09 retrain puts Brahimaj at 50.4%, the stored
+ 2026-08-01 value puts Magny at 51.2%. A 0.8-point weekly drift flipped the pick,
+ which is the correct way to read a 50/50.
+
+ Magny's 8-inch reach advantage is the largest physical edge on the card. Against
+ it, his enormous career striking volume counts against him, and he has been
+ finished in 3 of his last 5.
+
+ MARKET READ: model and market agree it is a coin flip. +1.2 pp is noise. This is
+ the one bout where model and market are in genuine, unforced agreement, which
+ is worth more than any of the 25-point disagreements above.
+
+--------------------------------------------------------------------------------
+ RAFAEL TOBIAS vs LUCAS FERNANDO   [BLOCKED - DO NOT USE]  Light Heavyweight, 3rd
+--------------------------------------------------------------------------------
+ Tobias   0-1, age 23, 74"/74" reach, orthodox, last fought 2026-03-07
+ Fernando 0-0, age 29, 75"/80" reach, no UFC fights in DB
+
+ Market: Fernando -230 (67.1% no-vig) | Tobias +192 (32.9%)
+ Model:  Fernando 55.0% (current artifact 54.3%)
+
+ THIS OUTPUT IS NOT A PREDICTION. 18 of 30 features are NULL and filled with the
+ training-set median:
+
+   diff_sapm, diff_ko_rate, win_rate_diff, diff_roll3_ctrl_s, diff_roll5_td_pct,
+   diff_career_avg_kd, diff_decision_rate, diff_grappling_ratio,
+   diff_roll7_td_landed, diff_aggression_score, diff_career_avg_ctrl_s,
+   diff_roll7_sig_str_att, diff_roll7_sig_str_pct, diff_roll3_sig_str_landed,
+   diff_roll3_total_str_landed, diff_roll7_total_str_landed,
+   diff_career_avg_td_attempted, diff_career_avg_total_str_attempted
+
+ What actually produced 55.0%: defense_score (itself imputed), age, reach,
+ weight_diff_lbs and weight_class. Every performance feature is a population
+ average.
+
+ The imputation is detected. features/pipeline.py:546-555 computes the null list
+ and logs a warning. It is simply never propagated to the API or the UI, so the
+ endpoint returns this alongside the Makhachev prediction with no indication that
+ four fifths of its inputs are fabricated. Since features_json is already
+ persisted, the API can count nulls on read with no schema change.
+
+ RECOMMENDATION: suppress this fight from the site.
+
+--------------------------------------------------------------------------------
+ BETTING INSIGHTS RECONCILIATION
+--------------------------------------------------------------------------------
+
+ Every proposed positive-edge bet on this card falls in the >=10pp historical
+ bucket, except Luque (+5.3) and Johnson (+5.2).
+
+  Proposed side       Edge    Nearest bucket   n     Hit%    ROI      Adjustment
+  ------------------  ------  ---------------  ---  ------  -------  ------------
+  Kaue Fernandes      +27.0   edge >=10pp       42   40.5%   -9.35%   Downgrade
+  Chidi Njokuani      +24.9   edge >=10pp       42   40.5%   -9.35%   Downgrade
+  Gillian Robertson   +24.8   edge >=10pp       42   40.5%   -9.35%   Downgrade
+  Vicente Luque        +5.3   edge 4-10pp       15   60.0%   +2.01%   N<20, noise
+  Donte Johnson        +5.2   edge 4-10pp       15   60.0%   +2.01%   N<20, noise
+
+ The >=10pp bucket has n=42, below the n>=50 threshold, so its -9.35% ROI is not
+ a finding on its own. The 4-10pp bucket has n=15, far below the n>=20 rule, so
+ its +2.01% is noise and cannot be treated as confirmation of anything.
+
+ The binding constraint is not any individual bucket. It is the n=173 result at
+ the top of this report: overall tracked ROI is -8.02% and the model is
+ significantly worse than the market favourite (p=0.026). Per the standing rule,
+ that negative overall ROI is stated in this report's header.
+
+--------------------------------------------------------------------------------
+ RISK REGISTER - WHAT WOULD MAKE THIS REPORT WRONG
+--------------------------------------------------------------------------------
+
+ 1. n=173 is small for ROI inference. The bootstrap CI spans [-20.2%, +4.16%].
+    A genuinely break-even model could produce this record. The accuracy
+    comparison (p=0.026) is the stronger evidence, not the ROI.
+ 2. Odds are a single unnamed source, 4 days stale. No line shopping was
+    possible, no opening line is stored, and no closing line is captured, so
+    line movement and CLV cannot be computed at all.
+ 3. No CLV tracking anywhere in the platform. CLV is the only leading indicator
+    that an edge is real. Its absence means this report can establish that the
+    model is losing, but could never establish that it was winning.
+ 4. The favourite-under-rating bias is measured on 173 fights from a five-month
+    window (2026-03-21 to 2026-08-08) spanning several weekly retrains. It is
+    treated here as a property of the model family, which is an assumption.
+ 5. If the bias were corrected by recalibration, most edges on this card would
+    shrink toward zero rather than reverse. The correct expectation after a fix
+    is fewer and smaller edges, not better bets.
+
+--------------------------------------------------------------------------------
+ BET LOG BLOCK
+--------------------------------------------------------------------------------
+
+ date        event     bout   side   book  odds  stake  model%  novig%  edge  ver
+ ----------  --------  -----  -----  ----  ----  -----  ------  ------  ----  ---
+ (no entries - no bets placed on this card)
+
+--------------------------------------------------------------------------------
+ KNOWN LIMITATIONS
+--------------------------------------------------------------------------------
+
+ - The model is significantly worse than the market favourite baseline
+   (60.12% vs 69.36%, n=173, p=0.026). The market is the strongest model in
+   the room and this one does not beat it.
+ - Probabilities are compressed toward 0.5 by roughly 11.6 pp on favourites.
+   Until that is calibrated, every edge this model reports is suspect.
+ - Method prediction is below its majority-class baseline and unusable.
+ - Features are historical aggregates. No camp quality, injury, weight-cut
+   severity, short-notice conditioning, or style-matchup interaction.
+ - Judging variance on decisions is unmodelled.
+ - Single-fight MMA outcomes are near-irreducibly noisy regardless of model.
+
+================================================================================
+ Generated 2026-08-12 | UFC 330 bet-decision report
+ Model: LogisticRegression win_loss_v1.joblib (origin/main 4cdf56a, 2026-08-09)
+ Odds: upcoming_fights, scraped 2026-08-08 15:44 UTC (STALE, re-pull before use)
+ Predictions stored 2026-08-01 / 2026-08-08, re-scored against 2026-08-09 model
+ Tracked record: 60.12% vs 69.36% market favourite, ROI -8.02%, n=173
+ VERDICT: NO BETS
 ================================================================================
