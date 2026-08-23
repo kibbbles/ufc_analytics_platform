@@ -54,13 +54,17 @@ jobs:
             --set-env-vars GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
             --quiet
 
-      - name: Prune old images
-        run: |
-          gcloud artifacts docker images list \
-            us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api \
-            --filter="tags!~latest" \
-            --format="get(digest)" \
-            --project=kabes-maybes | \
-          xargs -I {} gcloud artifacts docker images delete \
-            "us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api@{}" \
-            --project=kabes-maybes --quiet --delete-tags || true
+      # Image retention is handled by an Artifact Registry cleanup policy on the
+      # repository itself, not by a step here. A previous prune step filtered on
+      # `tags!~latest`, which silently matched zero images on every run (the
+      # `tags` field is not available to --filter on `images list`), and its
+      # trailing `|| true` hid the no-op. The repository grew to 94 versions /
+      # 67 GiB before anyone noticed.
+      #
+      # The policy keeps the 5 most recent versions and deletes anything else
+      # older than 7 days. Inspect or re-apply it with:
+      #   gcloud artifacts repositories describe kabes-maybes \
+      #     --location=us-central1 --format='yaml(cleanupPolicies)'
+      #
+      # `docs/gcp_cost_breakdown.py` reports whether the policy is still present
+      # and flags the repository if it is not.
