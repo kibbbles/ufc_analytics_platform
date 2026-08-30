@@ -755,27 +755,95 @@ class LiveUFCScraper:
     # 3.9.3 — fighter_details + fighter_tott: create profiles for new fighters
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _split_fighter_name(fighter_name):
+        """Split a display name into (FIRST, LAST) the way this table stores it.
+
+        Mononyms ("Aoriqileng", "Sumudaerji") are stored as LAST with a NULL
+        FIRST, which is the convention the original import used. Writing them
+        the other way round produces a second row for a fighter who already
+        exists, and the FK resolver then cannot link either copy.
+        """
+        parts = fighter_name.strip().split()
+        if len(parts) <= 1:
+            return None, fighter_name.strip()
+        return parts[0], ' '.join(parts[1:])
+
+    @staticmethod
+    def _id_from_url(fighter_url):
+        """Derive this table's id from a UFCStats fighter URL.
+
+        Existing ids are the first 8 hex characters of the URL slug, so deriving
+        rather than randomising means a fighter gets the same id the historical
+        import would have given them.
+        """
+        if not fighter_url:
+            return None
+        slug = fighter_url.rstrip('/').rsplit('/', 1)[-1]
+        candidate = slug[:8].lower()
+        return candidate if len(candidate) == 8 and all(
+            c in '0123456789abcdef' for c in candidate) else None
+
     def get_or_create_fighter(self, fighter_name, fighter_url=None):
-        """Return existing fighter_details.id or insert a new row."""
+        """Return existing fighter_details.id or insert a new row.
+
+        Matches on URL first. The URL is the only stable identity UFCStats
+        gives us: names are not unique (two UFC Bruno Silvas, two Mike Davises),
+        and matching on name alone both merges distinct people and creates
+        duplicate rows for the same person when a name is stored in a different
+        shape. A URL match is exact or it is nothing.
+        """
         try:
-            name_parts = fighter_name.strip().split()
-            first = name_parts[0] if name_parts else fighter_name
-            last  = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+            first, last = self._split_fighter_name(fighter_name)
 
             with engine.connect() as conn:
+                # 1. Identity: exact URL match.
+                if fighter_url:
+                    row = conn.execute(text("""
+                        SELECT id FROM fighter_details WHERE "URL" = :url
+                    """), {'url': fighter_url}).fetchone()
+                    if row:
+                        return row[0]
+
+                # 2. No URL match. A name match is only safe against a row that
+                #    has no URL yet — otherwise the name belongs to a different
+                #    fighter who already has an identity, and reusing their row
+                #    is exactly the merge bug.
                 row = conn.execute(text("""
-                    SELECT id FROM fighter_details
-                    WHERE "FIRST" = :first AND "LAST" = :last
-                """), {'first': first, 'last': last}).fetchone()
+                    SELECT id, "URL" FROM fighter_details
+                    WHERE coalesce("FIRST", '') = coalesce(:first, '')
+                      AND coalesce("LAST",  '') = coalesce(:last,  '')
+                """), {'first': first, 'last': last}).fetchall()
 
-                if row:
-                    return row[0]
+                unclaimed = [r[0] for r in row if not r[1]]
+                if len(unclaimed) == 1 and fighter_url:
+                    # Adopt the pre-URL row and give it its identity.
+                    conn.execute(text("""
+                        UPDATE fighter_details SET "URL" = :url WHERE id = :id
+                    """), {'url': fighter_url, 'id': unclaimed[0]})
+                    conn.commit()
+                    logging.info(
+                        f"Backfilled URL for existing fighter: {fighter_name} "
+                        f"({unclaimed[0]})"
+                    )
+                    return unclaimed[0]
+                if len(unclaimed) == 1 and not fighter_url:
+                    return unclaimed[0]
+                if row and not unclaimed:
+                    logging.warning(
+                        f"Name '{fighter_name}' already belongs to "
+                        f"{', '.join(r[0] for r in row)} with a different URL — "
+                        f"creating a separate fighter, not reusing theirs"
+                    )
 
-                fighter_id = self.get_unique_id()
+                # 3. Genuinely new fighter.
+                fighter_id = self._id_from_url(fighter_url) or self.get_unique_id()
                 conn.execute(text("""
                     INSERT INTO fighter_details (id, "FIRST", "LAST", "URL")
                     VALUES (:id, :first, :last, :url)
-                """), {'id': fighter_id, 'first': first, 'last': last, 'url': fighter_url})
+                    ON CONFLICT (id) DO NOTHING
+                """), {'id': fighter_id, 'first': first, 'last': last,
+                       'url': fighter_url})
                 conn.commit()
                 logging.info(f"New fighter created: {fighter_name} ({fighter_id})")
                 return fighter_id
