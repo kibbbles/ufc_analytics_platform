@@ -395,6 +395,63 @@ def check_row_counts(conn):
     return results
 
 
+def check_stat_ingestion(conn):
+    """Did recent events actually get round-by-round stats?
+
+    Every other stats check here measures the quality of fight_stats rows that
+    exist. None of them can see rows that were never written. When UFCStats
+    moved per-round data into extra tbody elements in May 2026, the parser
+    silently returned nothing, and 13 consecutive events were ingested with
+    zero round stats while every check passed and every workflow went green.
+
+    MIN_ROW_COUNTS could not catch it either: fight_stats sat above its 39,000
+    floor the whole time, because the floor tests the total, not the increment.
+
+    This asks the only question that would have caught it: does a completed
+    event that has fights also have stats for them?
+    """
+    results = []
+    log.info("\n  [Stat Ingestion]")
+
+    rows = conn.execute(text("""
+        SELECT e.id, e."EVENT", e.date_proper,
+               (SELECT COUNT(*) FROM fight_results fr WHERE fr.event_id = e.id) AS fights
+        FROM event_details e
+        WHERE e.date_proper >= CURRENT_DATE - INTERVAL '180 days'
+          AND (SELECT COUNT(*) FROM fight_results fr WHERE fr.event_id = e.id) > 0
+          AND (SELECT COUNT(*) FROM fight_stats  fs WHERE fs.event_id = e.id) = 0
+        ORDER BY e.date_proper DESC
+    """)).fetchall()
+    detail = ", ".join(f"{d} {name[:28]}" for _, name, d, _ in rows[:4]) or \
+             "every recent event has round stats"
+    r = CheckResult(
+        "fight_stats - recent events with fights but no stats",
+        len(rows), 0, "max_count", detail
+    )
+    r.log(); results.append(r)
+
+    # Round stats should keep arriving. A stall shows up here long before the
+    # absolute row count drifts far enough to trip any floor.
+    latest = conn.execute(text("""
+        SELECT MAX(e.date_proper)
+        FROM event_details e
+        WHERE EXISTS (SELECT 1 FROM fight_stats fs WHERE fs.event_id = e.id)
+    """)).scalar()
+    stale_days = conn.execute(text("""
+        SELECT COALESCE(CURRENT_DATE - MAX(e.date_proper), 9999)
+        FROM event_details e
+        WHERE EXISTS (SELECT 1 FROM fight_stats fs WHERE fs.event_id = e.id)
+    """)).scalar()
+    r = CheckResult(
+        "fight_stats - days since the newest event with stats",
+        int(stale_days), 45, "max_count",
+        f"newest event carrying round stats: {latest}"
+    )
+    r.log(); results.append(r)
+
+    return results
+
+
 def check_identity_integrity(conn):
     """Correctness checks on fighter identity.
 
@@ -586,6 +643,7 @@ def run_validation():
         all_results += check_type_parsing(conn)
         all_results += check_row_counts(conn)
         all_results += check_identity_integrity(conn)
+        all_results += check_stat_ingestion(conn)
 
     passed  = sum(1 for r in all_results if r.status == "PASS")
     failed  = sum(1 for r in all_results if r.status == "FAIL")

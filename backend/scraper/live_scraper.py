@@ -586,39 +586,59 @@ class LiveUFCScraper:
         Returns (fighter_a_rounds, fighter_b_rounds) — lists of dicts.
         """
         results_a, results_b = [], []
-        tbody = table.find('tbody')
-        if not tbody:
+
+        # UFCStats serves two shapes for this table and we have to read both.
+        #
+        # Current shape (since roughly May 2026): the <tbody class=
+        # "b-fight-details__table-body"> is an empty shell, and the per-round
+        # data sits in one ADDITIONAL unclassed <tbody> per round, appended
+        # after it. Number of non-empty bodies equals rounds fought.
+        #
+        # Legacy shape: a single <tbody> holding an "All Rounds" summary row
+        # followed by one row per round. The historical data was parsed this
+        # way, so it is still the shape to expect from anything cached.
+        #
+        # Reading only the first <tbody>, as this did before, finds the empty
+        # shell under the current shape and silently returns nothing. That is
+        # how 13 events were ingested with zero round stats.
+        bodies = [tb for tb in table.find_all('tbody') if tb.find_all('tr')]
+        if not bodies:
             return results_a, results_b
 
+        if len(bodies) == 1 and len(bodies[0].find_all('tr')) > 1:
+            # Legacy: drop the leading "All Rounds" summary, one round per row.
+            round_rows = [[row] for row in bodies[0].find_all('tr')[1:]]
+        else:
+            # Current: one body per round.
+            round_rows = [tb.find_all('tr') for tb in bodies]
+
         round_num = 0
-        for i, row in enumerate(tbody.find_all('tr')):
-            if i == 0:
-                continue  # "All Rounds" summary row — skip
+        for rows in round_rows:
             round_num += 1
+            for row in rows:
+                cells = row.find_all('td', class_='b-fight-details__table-col')
+                if not cells:
+                    cells = row.find_all('td')
+                if not cells:
+                    continue
 
-            cells = row.find_all('td', class_='b-fight-details__table-col')
-            if not cells:
-                cells = row.find_all('td')
-            if not cells:
-                continue
+                vals_a = {'round': str(round_num)}
+                vals_b = {'round': str(round_num)}
 
-            vals_a = {'round': str(round_num)}
-            vals_b = {'round': str(round_num)}
+                for j, cell in enumerate(cells):
+                    p_tags = cell.find_all('p')
+                    val_a = p_tags[0].text.strip() if p_tags else cell.text.strip()
+                    val_b = p_tags[1].text.strip() if len(p_tags) > 1 else val_a
 
-            for j, cell in enumerate(cells):
-                p_tags = cell.find_all('p')
-                val_a = p_tags[0].text.strip() if p_tags else cell.text.strip()
-                val_b = p_tags[1].text.strip() if len(p_tags) > 1 else val_a
+                    if j == 0:
+                        vals_a['fighter'] = val_a
+                        vals_b['fighter'] = val_b
+                    elif j - 1 < len(col_names):
+                        vals_a[col_names[j - 1]] = val_a
+                        vals_b[col_names[j - 1]] = val_b
 
-                if j == 0:
-                    vals_a['fighter'] = val_a
-                    vals_b['fighter'] = val_b
-                elif j - 1 < len(col_names):
-                    vals_a[col_names[j - 1]] = val_a
-                    vals_b[col_names[j - 1]] = val_b
-
-            results_a.append(vals_a)
-            results_b.append(vals_b)
+                results_a.append(vals_a)
+                results_b.append(vals_b)
 
         return results_a, results_b
 
@@ -692,7 +712,20 @@ class LiveUFCScraper:
             # Fight metadata from this same page (Greco's parse_fight_results selectors)
             result['fight_meta'] = self._parse_fight_meta(soup)
 
-            logging.info(f"Parsed {len(result['round_stats'])} round-stat rows from {fight_url}")
+            if result['round_stats']:
+                logging.info(
+                    f"Parsed {len(result['round_stats'])} round-stat rows "
+                    f"from {fight_url}"
+                )
+            else:
+                # Either the fight genuinely has no recorded stats (very old
+                # events) or the page structure moved again. Either way this
+                # must be visible: silence here cost three months of data.
+                logging.warning(
+                    f"NO round-stat rows parsed from {fight_url} — if this "
+                    f"fires for a recent event the stat tables have changed "
+                    f"shape again"
+                )
             return result
 
         except Exception as e:
