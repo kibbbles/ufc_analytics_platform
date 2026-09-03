@@ -54,13 +54,72 @@ jobs:
             --set-env-vars GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
             --quiet
 
+      # Every deploy pushes :latest, which leaves the previous image in the
+      # registry untagged. Keep the live image plus KEEP_PREVIOUS older ones and
+      # delete the rest.
+      #
+      # Retention is a rollback decision, not just storage. Cloud Run revisions
+      # pin an image digest, so deleting an image makes every revision built
+      # from it impossible to roll back to. KEEP_PREVIOUS=1 means exactly one
+      # deploy back.
+      #
+      # The previous version of this step deleted nothing at all. It filtered on
+      # `tags!~latest`, but untagged images carry `tags: []` and `!~` does not
+      # match an empty list, so the selection was always empty; it also read
+      # `digest`, while the field is `version`. Five images had accumulated.
       - name: Prune old images
+        env:
+          REPO: us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api
+          KEEP_PREVIOUS: "1"
         run: |
-          gcloud artifacts docker images list \
-            us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api \
-            --filter="tags!~latest" \
-            --format="get(digest)" \
-            --project=kabes-maybes | \
-          xargs -I {} gcloud artifacts docker images delete \
-            "us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api@{}" \
-            --project=kabes-maybes --quiet --delete-tags || true
+          set -euo pipefail
+
+          # Untagged only, so the live :latest image can never be selected even
+          # if a future change makes it not the newest.
+          stale=$(gcloud artifacts docker images list "$REPO" \
+            --project=kabes-maybes \
+            --include-tags \
+            --filter='-tags:*' \
+            --sort-by="~CREATE_TIME" \
+            --format="value(version)" \
+            | tail -n "+$((KEEP_PREVIOUS + 1))")
+
+          if [ -z "$stale" ]; then
+            echo "Nothing to prune."
+            exit 0
+          fi
+
+          # Deletes fired back to back get throttled, and the failure surfaces
+          # as PERMISSION_DENIED on the long-running operation rather than as
+          # anything resembling a rate limit. Retry before giving up: three of
+          # four deletions failed this way on the first pass and all three
+          # succeeded when retried one at a time.
+          leftover=0
+          for digest in $stale; do
+            deleted=0
+            for attempt in 1 2 3; do
+              if gcloud artifacts docker images delete "$REPO@$digest" \
+                   --project=kabes-maybes --quiet; then
+                echo "Deleted $digest"
+                deleted=1
+                break
+              fi
+              echo "Attempt $attempt failed for $digest"
+            done
+            if [ "$deleted" = 0 ]; then
+              echo "::warning::Could not delete $digest after 3 attempts"
+              leftover=1
+            fi
+          done
+
+          # Pruning is housekeeping and the deploy has already succeeded, so a
+          # leftover image warns rather than failing the run. The next deploy
+          # picks it up again: it is still untagged, so it stays selected.
+          if [ "$leftover" = 1 ]; then
+            echo "::warning::Some images remain; the next deploy will retry them"
+          fi
+
+          echo "Remaining images:"
+          gcloud artifacts docker images list "$REPO" \
+            --project=kabes-maybes --include-tags \
+            --format="table(version.slice(7:19),tags,createTime.date('%Y-%m-%d %H:%M'))"
