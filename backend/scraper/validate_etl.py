@@ -18,7 +18,7 @@ import os
 import json
 import logging
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 
 _HERE    = os.path.dirname(os.path.abspath(__file__))
 _BACKEND = os.path.dirname(_HERE)
@@ -53,6 +53,44 @@ DASH_CHECK_COLS = {
     "fighter_tott": ["HEIGHT", "WEIGHT", "REACH", "STANCE", "DOB"],
     "fight_stats":  ["SIG.STR. %", "TD %", "CTRL"],
 }
+
+# Division ladder, low to high. Used by the identity-integrity oscillation
+# check: a fighter moving up or down the ladder is normal, a fighter who drops
+# several rungs and then climbs back is two people merged into one row.
+DIVISION_LADDER = {
+    "Strawweight": 0, "Flyweight": 1, "Bantamweight": 2, "Featherweight": 3,
+    "Lightweight": 4, "Welterweight": 5, "Middleweight": 6,
+    "Light Heavyweight": 7, "Heavyweight": 8,
+    "Women's Strawweight": 0, "Women's Flyweight": 1,
+    "Women's Bantamweight": 2, "Women's Featherweight": 3,
+}
+
+# A drop of this many divisions followed by a return upward is treated as a
+# merged identity. Tuned against the real data: at 3 it isolates the known
+# Bruno Silva merge with no false positives, while 2 also flags legitimate
+# journeymen (Diego Sanchez, Jeff Monson, Kevin Jackson).
+OSCILLATION_DIVISIONS = 3
+
+# Whether identity-integrity failures fail the pipeline.
+#
+# These checks currently find 65 real violations (16 shared names, 13 duplicate
+# URLs, 4 unreachable rows, 20 duplicate tott rows, 12 orphaned fighters, 1
+# weight-class oscillation). Making them blocking before that data is repaired
+# would fail post_scrape_clean.py every Sunday, which skips archive-predictions
+# and stops feature-engineering, retrain and deploy from running at all.
+#
+# So they report as INFO until the identity repair lands. Flip this to True as
+# the last step of that repair - it then becomes the regression guard that stops
+# the merge bug from ever coming back.
+IDENTITY_CHECKS_BLOCKING = False
+
+
+def _identity_threshold_type():
+    return "max_count" if IDENTITY_CHECKS_BLOCKING else "info"
+
+# One-night tournaments ran through 1999, so a fighter legitimately appears
+# twice on those cards. Anything after this date is a duplicate-identity bug.
+TOURNAMENT_ERA_END = "2000-01-01"
 
 # Minimum row counts — catching accidental truncation
 MIN_ROW_COUNTS = {
@@ -357,6 +395,235 @@ def check_row_counts(conn):
     return results
 
 
+def check_stat_ingestion(conn):
+    """Did recent events actually get round-by-round stats?
+
+    Every other stats check here measures the quality of fight_stats rows that
+    exist. None of them can see rows that were never written. When UFCStats
+    moved per-round data into extra tbody elements in May 2026, the parser
+    silently returned nothing, and 13 consecutive events were ingested with
+    zero round stats while every check passed and every workflow went green.
+
+    MIN_ROW_COUNTS could not catch it either: fight_stats sat above its 39,000
+    floor the whole time, because the floor tests the total, not the increment.
+
+    This asks the only question that would have caught it: does a completed
+    event that has fights also have stats for them?
+    """
+    results = []
+    log.info("\n  [Stat Ingestion]")
+
+    rows = conn.execute(text("""
+        SELECT e.id, e."EVENT", e.date_proper,
+               (SELECT COUNT(*) FROM fight_results fr WHERE fr.event_id = e.id) AS fights
+        FROM event_details e
+        WHERE e.date_proper >= CURRENT_DATE - INTERVAL '180 days'
+          AND (SELECT COUNT(*) FROM fight_results fr WHERE fr.event_id = e.id) > 0
+          AND (SELECT COUNT(*) FROM fight_stats  fs WHERE fs.event_id = e.id) = 0
+        ORDER BY e.date_proper DESC
+    """)).fetchall()
+    detail = ", ".join(f"{d} {name[:28]}" for _, name, d, _ in rows[:4]) or \
+             "every recent event has round stats"
+    r = CheckResult(
+        "fight_stats - recent events with fights but no stats",
+        len(rows), 0, "max_count", detail
+    )
+    r.log(); results.append(r)
+
+    # Round stats should keep arriving. A stall shows up here long before the
+    # absolute row count drifts far enough to trip any floor.
+    latest = conn.execute(text("""
+        SELECT MAX(e.date_proper)
+        FROM event_details e
+        WHERE EXISTS (SELECT 1 FROM fight_stats fs WHERE fs.event_id = e.id)
+    """)).scalar()
+    stale_days = conn.execute(text("""
+        SELECT COALESCE(CURRENT_DATE - MAX(e.date_proper), 9999)
+        FROM event_details e
+        WHERE EXISTS (SELECT 1 FROM fight_stats fs WHERE fs.event_id = e.id)
+    """)).scalar()
+    r = CheckResult(
+        "fight_stats - days since the newest event with stats",
+        int(stale_days), 45, "max_count",
+        f"newest event carrying round stats: {latest}"
+    )
+    r.log(); results.append(r)
+
+    return results
+
+
+def check_identity_integrity(conn):
+    """Correctness checks on fighter identity.
+
+    Every other group in this file measures *coverage* - what fraction of rows
+    got populated. Coverage cannot see the failure this group exists for: FK
+    resolution keyed on fighter names, so when two fighters shared a name the
+    lookup silently kept one and gave that id both careers. Coverage read 100%
+    the whole time while 36 bouts sat under the wrong human being.
+
+    So these are thresholded at zero, not at a percentage. A percentage gate is
+    structurally blind here - 36 bad rows out of 8,847 passes any sane one.
+    """
+    results = []
+    log.info("\n  [Identity Integrity]")
+
+    # A name shared by two fighter rows is the precondition for the merge bug:
+    # the resolver has to pick one, and it picks by heap order.
+    rows = conn.execute(text("""
+        SELECT lower(trim(coalesce("FIRST", '') || ' ' || coalesce("LAST", ''))) AS nm,
+               COUNT(*) AS n
+        FROM fighter_details
+        WHERE trim(coalesce("FIRST", '') || ' ' || coalesce("LAST", '')) <> ''
+        GROUP BY 1
+        HAVING COUNT(*) > 1
+        ORDER BY 2 DESC, 1
+    """)).fetchall()
+    r = CheckResult(
+        "fighter_details - names shared by multiple fighters",
+        len(rows), 0, _identity_threshold_type(),
+        ", ".join(f"{nm} x{n}" for nm, n in rows[:6]) or "no shared names"
+    )
+    r.log(); results.append(r)
+
+    # The UFCStats URL is the real identity. Two rows sharing one means a single
+    # person's career is split in half.
+    rows = conn.execute(text("""
+        SELECT "URL", COUNT(*) AS n
+        FROM fighter_details
+        WHERE "URL" IS NOT NULL
+        GROUP BY "URL"
+        HAVING COUNT(*) > 1
+        ORDER BY 2 DESC
+    """)).fetchall()
+    r = CheckResult(
+        "fighter_details - duplicate UFCStats URLs",
+        len(rows), 0, _identity_threshold_type(),
+        f"{len(rows)} URL(s) claimed by more than one fighter row"
+    )
+    r.log(); results.append(r)
+
+    # build_fighter_lookup() skips rows with an empty LAST, so these can never
+    # receive an FK no matter how many times the ETL runs. Mononyms land here.
+    rows = conn.execute(text("""
+        SELECT id, "FIRST"
+        FROM fighter_details
+        WHERE coalesce("FIRST", '') <> '' AND coalesce("LAST", '') = ''
+        ORDER BY "FIRST"
+    """)).fetchall()
+    r = CheckResult(
+        "fighter_details - rows unreachable by name lookup",
+        len(rows), 0, _identity_threshold_type(),
+        ", ".join(f"{fid}:{nm}" for fid, nm in rows[:6]) or "all rows reachable"
+    )
+    r.log(); results.append(r)
+
+    # Two tale-of-the-tape rows for one fighter means the tott linker collided
+    # the same way the fight linker did.
+    count = conn.execute(text("""
+        SELECT COUNT(*) FROM (
+            SELECT fighter_id FROM fighter_tott
+            WHERE fighter_id IS NOT NULL
+            GROUP BY fighter_id HAVING COUNT(*) > 1
+        ) t
+    """)).scalar()
+    r = CheckResult(
+        "fighter_tott - fighters with duplicate rows",
+        count, 0, _identity_threshold_type(),
+        f"{count} fighter(s) with more than one tott row"
+    )
+    r.log(); results.append(r)
+
+    # The detector that found this whole class: a fighter whose name appears in
+    # a BOUT string but who owns no bouts. Their fights went to someone else.
+    rows = conn.execute(text("""
+        WITH sides AS (
+            SELECT lower(trim(split_part("BOUT", ' vs. ', 1))) AS nm
+            FROM fight_results WHERE "BOUT" LIKE :sep
+            UNION
+            SELECT lower(trim(split_part("BOUT", ' vs. ', 2)))
+            FROM fight_results WHERE "BOUT" LIKE :sep
+        ),
+        linked AS (
+            SELECT fighter_id AS id FROM fight_results WHERE fighter_id IS NOT NULL
+            UNION
+            SELECT opponent_id FROM fight_results WHERE opponent_id IS NOT NULL
+        ),
+        named AS (
+            SELECT id, lower(trim(coalesce("FIRST", '') || ' ' || coalesce("LAST", ''))) AS nm
+            FROM fighter_details
+            WHERE trim(coalesce("FIRST", '') || ' ' || coalesce("LAST", '')) <> ''
+        )
+        SELECT n.id, n.nm
+        FROM named n
+        JOIN sides s ON s.nm = n.nm
+        WHERE n.id NOT IN (SELECT id FROM linked)
+        ORDER BY n.nm
+    """), {"sep": "% vs. %"}).fetchall()
+    r = CheckResult(
+        "fight_results - fighters named in a bout but owning none",
+        len(rows), 0, _identity_threshold_type(),
+        ", ".join(f"{fid}:{nm}" for fid, nm in rows[:6]) or "no orphaned fighters"
+    )
+    r.log(); results.append(r)
+
+    # Nobody fights twice on one card outside the tournament era. Two bouts on
+    # one event for one id means two people wearing that id.
+    count = conn.execute(text("""
+        SELECT COUNT(*) FROM (
+            SELECT fr.event_id, x.fid
+            FROM fight_results fr
+            JOIN event_details e ON e.id = fr.event_id
+            CROSS JOIN LATERAL (VALUES (fr.fighter_id), (fr.opponent_id)) AS x(fid)
+            WHERE x.fid IS NOT NULL AND e.date_proper >= :cutoff
+            GROUP BY 1, 2 HAVING COUNT(*) > 1
+        ) t
+    """), {"cutoff": TOURNAMENT_ERA_END}).scalar()
+    r = CheckResult(
+        "fight_results - fighter booked twice on one event",
+        count, 0, _identity_threshold_type(),
+        f"{count} fighter/event pair(s) after {TOURNAMENT_ERA_END}"
+    )
+    r.log(); results.append(r)
+
+    # Weight-class oscillation. Measured in divisions, not pounds: a pound
+    # threshold flags every legitimate 205/265 mover (Couture, Cormier, Pereira)
+    # because heavyweight's 265 is a limit rather than a fighting weight.
+    rows = conn.execute(text("""
+        SELECT x.fid, fr.weight_class
+        FROM fight_results fr
+        JOIN event_details e ON e.id = fr.event_id
+        CROSS JOIN LATERAL (VALUES (fr.fighter_id), (fr.opponent_id)) AS x(fid)
+        WHERE x.fid IS NOT NULL AND fr.weight_class IS NOT NULL
+        ORDER BY x.fid, e.date_proper
+    """)).fetchall()
+
+    career = {}
+    for fid, wc in rows:
+        if wc in DIVISION_LADDER:
+            career.setdefault(fid, []).append(DIVISION_LADDER[wc])
+
+    def _oscillates(divs):
+        """True if the career drops OSCILLATION_DIVISIONS rungs, then returns."""
+        for i in range(len(divs) - 1):
+            for j in range(i + 1, len(divs)):
+                if divs[i] - divs[j] < OSCILLATION_DIVISIONS:
+                    continue
+                if any(divs[k] >= divs[i] for k in range(j + 1, len(divs))):
+                    return True
+        return False
+
+    offenders = [fid for fid, divs in career.items() if _oscillates(divs)]
+    r = CheckResult(
+        "fight_results - impossible weight-class oscillation",
+        len(offenders), 0, _identity_threshold_type(),
+        ", ".join(offenders[:6]) or
+        f"no career drops {OSCILLATION_DIVISIONS}+ divisions and returns"
+    )
+    r.log(); results.append(r)
+
+    return results
+
+
 # ---------------------------------------------------------------------------
 # Main validation runner
 # ---------------------------------------------------------------------------
@@ -375,6 +642,8 @@ def run_validation():
         all_results += check_derived_columns(conn)
         all_results += check_type_parsing(conn)
         all_results += check_row_counts(conn)
+        all_results += check_identity_integrity(conn)
+        all_results += check_stat_ingestion(conn)
 
     passed  = sum(1 for r in all_results if r.status == "PASS")
     failed  = sum(1 for r in all_results if r.status == "FAIL")
@@ -390,6 +659,16 @@ def run_validation():
     log.info(f"  Informational:{info}")
     log.info(f"  Overall:      {overall}")
 
+    identity = [r for r in all_results if r.status == "INFO"
+                and r.threshold_type == "info" and isinstance(r.value, int)
+                and r.value > 0 and " - " in r.name]
+    if identity and not IDENTITY_CHECKS_BLOCKING:
+        log.warning("")
+        log.warning("  Identity-integrity violations (non-blocking, see "
+                    "IDENTITY_CHECKS_BLOCKING):")
+        for r in identity:
+            log.warning(f"    !  {r.name}: {r.value}")
+
     if failed:
         log.error("\n  FAILED checks:")
         for r in all_results:
@@ -401,12 +680,12 @@ def run_validation():
 
 def write_report(all_results, overall, report_dir):
     os.makedirs(report_dir, exist_ok=True)
-    ts       = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    ts       = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     filename = f"etl_validation_{ts}.json"
     path     = os.path.join(report_dir, filename)
 
     report = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "overall":   overall,
         "passed":    sum(1 for r in all_results if r.status == "PASS"),
         "failed":    sum(1 for r in all_results if r.status == "FAIL"),

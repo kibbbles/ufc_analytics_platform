@@ -586,39 +586,59 @@ class LiveUFCScraper:
         Returns (fighter_a_rounds, fighter_b_rounds) — lists of dicts.
         """
         results_a, results_b = [], []
-        tbody = table.find('tbody')
-        if not tbody:
+
+        # UFCStats serves two shapes for this table and we have to read both.
+        #
+        # Current shape (since roughly May 2026): the <tbody class=
+        # "b-fight-details__table-body"> is an empty shell, and the per-round
+        # data sits in one ADDITIONAL unclassed <tbody> per round, appended
+        # after it. Number of non-empty bodies equals rounds fought.
+        #
+        # Legacy shape: a single <tbody> holding an "All Rounds" summary row
+        # followed by one row per round. The historical data was parsed this
+        # way, so it is still the shape to expect from anything cached.
+        #
+        # Reading only the first <tbody>, as this did before, finds the empty
+        # shell under the current shape and silently returns nothing. That is
+        # how 13 events were ingested with zero round stats.
+        bodies = [tb for tb in table.find_all('tbody') if tb.find_all('tr')]
+        if not bodies:
             return results_a, results_b
 
+        if len(bodies) == 1 and len(bodies[0].find_all('tr')) > 1:
+            # Legacy: drop the leading "All Rounds" summary, one round per row.
+            round_rows = [[row] for row in bodies[0].find_all('tr')[1:]]
+        else:
+            # Current: one body per round.
+            round_rows = [tb.find_all('tr') for tb in bodies]
+
         round_num = 0
-        for i, row in enumerate(tbody.find_all('tr')):
-            if i == 0:
-                continue  # "All Rounds" summary row — skip
+        for rows in round_rows:
             round_num += 1
+            for row in rows:
+                cells = row.find_all('td', class_='b-fight-details__table-col')
+                if not cells:
+                    cells = row.find_all('td')
+                if not cells:
+                    continue
 
-            cells = row.find_all('td', class_='b-fight-details__table-col')
-            if not cells:
-                cells = row.find_all('td')
-            if not cells:
-                continue
+                vals_a = {'round': str(round_num)}
+                vals_b = {'round': str(round_num)}
 
-            vals_a = {'round': str(round_num)}
-            vals_b = {'round': str(round_num)}
+                for j, cell in enumerate(cells):
+                    p_tags = cell.find_all('p')
+                    val_a = p_tags[0].text.strip() if p_tags else cell.text.strip()
+                    val_b = p_tags[1].text.strip() if len(p_tags) > 1 else val_a
 
-            for j, cell in enumerate(cells):
-                p_tags = cell.find_all('p')
-                val_a = p_tags[0].text.strip() if p_tags else cell.text.strip()
-                val_b = p_tags[1].text.strip() if len(p_tags) > 1 else val_a
+                    if j == 0:
+                        vals_a['fighter'] = val_a
+                        vals_b['fighter'] = val_b
+                    elif j - 1 < len(col_names):
+                        vals_a[col_names[j - 1]] = val_a
+                        vals_b[col_names[j - 1]] = val_b
 
-                if j == 0:
-                    vals_a['fighter'] = val_a
-                    vals_b['fighter'] = val_b
-                elif j - 1 < len(col_names):
-                    vals_a[col_names[j - 1]] = val_a
-                    vals_b[col_names[j - 1]] = val_b
-
-            results_a.append(vals_a)
-            results_b.append(vals_b)
+                results_a.append(vals_a)
+                results_b.append(vals_b)
 
         return results_a, results_b
 
@@ -692,7 +712,20 @@ class LiveUFCScraper:
             # Fight metadata from this same page (Greco's parse_fight_results selectors)
             result['fight_meta'] = self._parse_fight_meta(soup)
 
-            logging.info(f"Parsed {len(result['round_stats'])} round-stat rows from {fight_url}")
+            if result['round_stats']:
+                logging.info(
+                    f"Parsed {len(result['round_stats'])} round-stat rows "
+                    f"from {fight_url}"
+                )
+            else:
+                # Either the fight genuinely has no recorded stats (very old
+                # events) or the page structure moved again. Either way this
+                # must be visible: silence here cost three months of data.
+                logging.warning(
+                    f"NO round-stat rows parsed from {fight_url} — if this "
+                    f"fires for a recent event the stat tables have changed "
+                    f"shape again"
+                )
             return result
 
         except Exception as e:
@@ -755,27 +788,95 @@ class LiveUFCScraper:
     # 3.9.3 — fighter_details + fighter_tott: create profiles for new fighters
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _split_fighter_name(fighter_name):
+        """Split a display name into (FIRST, LAST) the way this table stores it.
+
+        Mononyms ("Aoriqileng", "Sumudaerji") are stored as LAST with a NULL
+        FIRST, which is the convention the original import used. Writing them
+        the other way round produces a second row for a fighter who already
+        exists, and the FK resolver then cannot link either copy.
+        """
+        parts = fighter_name.strip().split()
+        if len(parts) <= 1:
+            return None, fighter_name.strip()
+        return parts[0], ' '.join(parts[1:])
+
+    @staticmethod
+    def _id_from_url(fighter_url):
+        """Derive this table's id from a UFCStats fighter URL.
+
+        Existing ids are the first 8 hex characters of the URL slug, so deriving
+        rather than randomising means a fighter gets the same id the historical
+        import would have given them.
+        """
+        if not fighter_url:
+            return None
+        slug = fighter_url.rstrip('/').rsplit('/', 1)[-1]
+        candidate = slug[:8].lower()
+        return candidate if len(candidate) == 8 and all(
+            c in '0123456789abcdef' for c in candidate) else None
+
     def get_or_create_fighter(self, fighter_name, fighter_url=None):
-        """Return existing fighter_details.id or insert a new row."""
+        """Return existing fighter_details.id or insert a new row.
+
+        Matches on URL first. The URL is the only stable identity UFCStats
+        gives us: names are not unique (two UFC Bruno Silvas, two Mike Davises),
+        and matching on name alone both merges distinct people and creates
+        duplicate rows for the same person when a name is stored in a different
+        shape. A URL match is exact or it is nothing.
+        """
         try:
-            name_parts = fighter_name.strip().split()
-            first = name_parts[0] if name_parts else fighter_name
-            last  = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+            first, last = self._split_fighter_name(fighter_name)
 
             with engine.connect() as conn:
+                # 1. Identity: exact URL match.
+                if fighter_url:
+                    row = conn.execute(text("""
+                        SELECT id FROM fighter_details WHERE "URL" = :url
+                    """), {'url': fighter_url}).fetchone()
+                    if row:
+                        return row[0]
+
+                # 2. No URL match. A name match is only safe against a row that
+                #    has no URL yet — otherwise the name belongs to a different
+                #    fighter who already has an identity, and reusing their row
+                #    is exactly the merge bug.
                 row = conn.execute(text("""
-                    SELECT id FROM fighter_details
-                    WHERE "FIRST" = :first AND "LAST" = :last
-                """), {'first': first, 'last': last}).fetchone()
+                    SELECT id, "URL" FROM fighter_details
+                    WHERE coalesce("FIRST", '') = coalesce(:first, '')
+                      AND coalesce("LAST",  '') = coalesce(:last,  '')
+                """), {'first': first, 'last': last}).fetchall()
 
-                if row:
-                    return row[0]
+                unclaimed = [r[0] for r in row if not r[1]]
+                if len(unclaimed) == 1 and fighter_url:
+                    # Adopt the pre-URL row and give it its identity.
+                    conn.execute(text("""
+                        UPDATE fighter_details SET "URL" = :url WHERE id = :id
+                    """), {'url': fighter_url, 'id': unclaimed[0]})
+                    conn.commit()
+                    logging.info(
+                        f"Backfilled URL for existing fighter: {fighter_name} "
+                        f"({unclaimed[0]})"
+                    )
+                    return unclaimed[0]
+                if len(unclaimed) == 1 and not fighter_url:
+                    return unclaimed[0]
+                if row and not unclaimed:
+                    logging.warning(
+                        f"Name '{fighter_name}' already belongs to "
+                        f"{', '.join(r[0] for r in row)} with a different URL — "
+                        f"creating a separate fighter, not reusing theirs"
+                    )
 
-                fighter_id = self.get_unique_id()
+                # 3. Genuinely new fighter.
+                fighter_id = self._id_from_url(fighter_url) or self.get_unique_id()
                 conn.execute(text("""
                     INSERT INTO fighter_details (id, "FIRST", "LAST", "URL")
                     VALUES (:id, :first, :last, :url)
-                """), {'id': fighter_id, 'first': first, 'last': last, 'url': fighter_url})
+                    ON CONFLICT (id) DO NOTHING
+                """), {'id': fighter_id, 'first': first, 'last': last,
+                       'url': fighter_url})
                 conn.commit()
                 logging.info(f"New fighter created: {fighter_name} ({fighter_id})")
                 return fighter_id
