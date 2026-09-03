@@ -11,6 +11,7 @@ Usage
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
@@ -33,6 +34,13 @@ class ModelStore:
     method_pipeline: Any   # fitted sklearn Pipeline  (RF multi-class)
     feature_importance: dict = field(default_factory=dict)
     ready: bool = True
+    # Content fingerprint of the artefacts these pipelines were loaded from.
+    # Retraining rewrites the .joblib files but leaves every version STRING
+    # unchanged - MODEL_NAME here and PIPELINE_VERSION in features/pipeline.py
+    # are both constants describing the model family and the feature shape, not
+    # the fitted weights. Consumers that need to know "are these the same models
+    # as last time" have nothing else to compare, so they get this.
+    fingerprint: str = "unknown"
 
     # ------------------------------------------------------------------ #
     # Factory                                                              #
@@ -57,12 +65,29 @@ class ModelStore:
         win    = joblib.load(win_path)
         method = joblib.load(method_path)
         feat_imp = json.loads(imp_path.read_text()) if imp_path.exists() else {}
+        fingerprint = cls.fingerprint_of(win_path, method_path)
 
         logger.info("ModelStore: loaded win model from %s", win_path)
         logger.info("ModelStore: loaded method model from %s", method_path)
-        return cls(win_pipeline=win, method_pipeline=method, feature_importance=feat_imp)
+        logger.info("ModelStore: artefact fingerprint %s", fingerprint)
+        return cls(win_pipeline=win, method_pipeline=method,
+                   feature_importance=feat_imp, fingerprint=fingerprint)
+
+    @staticmethod
+    def fingerprint_of(*paths: Path) -> str:
+        """Short content hash over the given artefact files.
+
+        Hashes bytes rather than mtime so it is stable across a fresh checkout,
+        which matters because retrain.yml commits these files and CI clones them
+        anew on every run.
+        """
+        digest = hashlib.sha256()
+        for path in paths:
+            digest.update(Path(path).read_bytes())
+        return digest.hexdigest()[:12]
 
     @classmethod
     def empty(cls) -> "ModelStore":
         """Sentinel store used when models haven't been trained yet."""
-        return cls(win_pipeline=None, method_pipeline=None, ready=False)
+        return cls(win_pipeline=None, method_pipeline=None, ready=False,
+                   fingerprint="unloaded")

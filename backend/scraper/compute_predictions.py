@@ -38,6 +38,9 @@ from features.pipeline import build_prediction_features, PIPELINE_VERSION
 from ml.loader import ModelStore
 from ml.predictor import predict
 
+# Model family. Combined with the artefact fingerprint by _model_version().
+MODEL_NAME = 'win_loss_v1' 
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -77,6 +80,18 @@ def _sanitize(feat: dict) -> dict:
     return out
 
 
+def _model_version(store) -> str:
+    """Identify the exact artefacts that produced a prediction.
+
+    'win_loss_v1' on its own names the model family, not the fitted weights, and
+    it never changes: retraining rewrites the .joblib files and leaves that
+    string alone, as it does PIPELINE_VERSION. Appending the artefact
+    fingerprint makes the column answer the question it looks like it answers -
+    which model produced this row - and lets a stale prediction be detected.
+    """
+    return f'{MODEL_NAME}@{getattr(store, "fingerprint", "unknown")}'
+
+
 def _feature_hash(feat: dict) -> str:
     """Stable SHA-256 hex digest of a feature dict (None/NaN-safe)."""
     clean = _sanitize(feat)
@@ -113,8 +128,13 @@ def compute_for_fight(
     dry_run: bool,
     existing_ids: set,
     conn,
-) -> bool:
-    """Compute and upsert prediction for one fight. Returns True on success."""
+) -> str:
+    """Compute and upsert one fight's prediction.
+
+    Returns 'written', 'skipped' (features and models both unchanged) or
+    'failed'. The caller counts these separately so a run that changed nothing
+    cannot be mistaken for one that refreshed everything.
+    """
     fa_id   = fight['fighter_a_id']
     fb_id   = fight['fighter_b_id']
     wc      = fight['weight_class'] or None
@@ -128,7 +148,7 @@ def compute_for_fight(
         fhash  = _feature_hash(feat)
     except Exception as e:
         logger.error(f'  Feature build failed for {name}: {e}')
-        return False
+        return 'failed' 
 
     win_prob_a    = result['win_probability']
     win_prob_b    = round(1.0 - win_prob_a, 6)
@@ -142,23 +162,34 @@ def compute_for_fight(
         f'KO:{method_ko_tko:.0%} Sub:{method_sub:.0%} Dec:{method_dec:.0%}'
     )
 
-    if dry_run:
-        return True
-
-    # Check if prediction already exists with same hash (skip if unchanged)
+    # Skip only when BOTH the inputs and the models are unchanged. Comparing the
+    # feature hash alone meant a retrain never reached this table: the features
+    # are identical, so every fight was skipped and the site kept serving
+    # predictions from the previous model with no error and no visible log line.
+    #
+    # This runs before the dry-run return on purpose. It is a read-only lookup,
+    # and a dry run that reported every fight as a write would be useless for
+    # deciding whether a recompute is worth running.
+    mver = _model_version(store)
     existing = conn.execute(
-        text('SELECT id, feature_hash FROM upcoming_predictions WHERE fight_id = :fid'),
+        text('SELECT id, feature_hash, model_version FROM upcoming_predictions '
+             'WHERE fight_id = :fid'),
         {'fid': fight_id}
     ).fetchone()
+    unchanged = bool(existing and existing[1] == fhash and existing[2] == mver)
 
-    if existing and existing[1] == fhash:
-        logger.debug(f'  Skipped (hash unchanged): {name}')
-        return True
+    if dry_run:
+        return 'skipped' if unchanged else 'written'
+
+    if unchanged:
+        logger.debug(f'  Skipped (features and model unchanged): {name}')
+        return 'skipped' 
 
     if existing:
         conn.execute(text("""
             UPDATE upcoming_predictions
-            SET win_prob_a    = :wpa,
+            SET model_version = :ver,
+                win_prob_a    = :wpa,
                 win_prob_b    = :wpb,
                 method_ko_tko = :ko,
                 method_sub    = :sub,
@@ -169,6 +200,7 @@ def compute_for_fight(
                 predicted_at  = now()
             WHERE fight_id = :fid
         """), {
+            'ver': mver,
             'wpa': win_prob_a, 'wpb': win_prob_b,
             'ko': method_ko_tko, 'sub': method_sub, 'dec': method_dec,
             'feat': json.dumps(_sanitize(feat), default=str),
@@ -191,7 +223,7 @@ def compute_for_fight(
         """), {
             'id': pred_id,
             'fid': fight_id,
-            'ver': 'win_loss_v1',
+            'ver': mver,
             'wpa': win_prob_a, 'wpb': win_prob_b,
             'ko': method_ko_tko, 'sub': method_sub, 'dec': method_dec,
             'feat': json.dumps(_sanitize(feat), default=str),
@@ -200,7 +232,7 @@ def compute_for_fight(
         })
         logger.info(f'  Inserted prediction: {name} ({pred_id})')
 
-    return True
+    return 'written' 
 
 
 def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
@@ -214,14 +246,14 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
     # Load models
     try:
         store = ModelStore.load()
-        logger.info('Models loaded OK')
+        logger.info('Models loaded OK  (%s)', _model_version(store))
     except FileNotFoundError as e:
         print(f'ERROR: models not found — {e}')
         return False
 
-    ok_count   = 0
-    skip_count = 0
-    fail_count = 0
+    written_count = 0
+    skip_count    = 0
+    fail_count    = 0
 
     with engine.connect() as conn:
         existing_ids = _load_existing_ids(conn)
@@ -274,15 +306,17 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
                 current_event = fight['event_name']
                 print(f'\n>> {current_event}  ({fight["date_proper"]})')
 
-            success = compute_for_fight(
+            outcome = compute_for_fight(
                 store=store,
                 fight=dict(fight),
                 dry_run=dry_run,
                 existing_ids=existing_ids,
                 conn=conn,
             )
-            if success:
-                ok_count += 1
+            if outcome == 'written':
+                written_count += 1
+            elif outcome == 'skipped':
+                skip_count += 1
             else:
                 fail_count += 1
 
@@ -290,7 +324,13 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
             conn.commit()
 
     print('\n' + '=' * 60)
-    print(f'Done  -  {ok_count} predicted, {total_skipped} skipped (no fighter match), {fail_count} errors')
+    # A run that writes nothing must not look like a run that refreshed
+    # everything. Both counts are printed even when zero.
+    print(f'Done  -  {written_count} written, {skip_count} unchanged, '
+          f'{fail_count} errors, {total_skipped} not predicted (no fighter match)')
+    print(f'Model    -  {_model_version(store)}')
+    if written_count == 0 and skip_count:
+        print('Note     -  nothing changed: same features, same model artefacts')
     if dry_run:
         print('[DRY RUN - nothing written]')
     print(f'Finished: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
