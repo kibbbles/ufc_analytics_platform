@@ -34,7 +34,9 @@ sys.path.insert(0, backend_dir)
 from sqlalchemy import text
 
 from db.database import engine
-from features.pipeline import build_prediction_features, PIPELINE_VERSION
+from features.pipeline import (build_prediction_features,
+                               build_prediction_features_batch,
+                               PIPELINE_VERSION)
 from ml.loader import ModelStore
 from ml.predictor import predict
 
@@ -122,12 +124,66 @@ def _load_existing_ids(conn) -> set:
 # Core
 # ---------------------------------------------------------------------------
 
+def _build_features_bulk(fights: list) -> dict:
+    """Build every fight's feature vector up front, in as few passes as possible.
+
+    Each build_prediction_features call runs every feature module across the
+    whole fights and stats tables and reads two rows out of the result, so
+    calling it per fight repeated that full-table pass once per fight: about 25
+    seconds each, roughly half an hour for a card. Batched it is one pass for
+    the entire card, measured at 29.5 seconds for 71 matchups.
+
+    Phantom fight ids are derived from the fighter id, so a fighter booked twice
+    cannot share a batch. Matchups are grouped so no fighter repeats within a
+    group, which is normally a single group.
+
+    Returns {fight_id: feature_dict}. A fight missing from the mapping failed to
+    build and is handled by the caller.
+    """
+    groups: list[list] = []
+    for fight in fights:
+        for group in groups:
+            if all(fight['fighter_a_id'] not in (f['fighter_a_id'], f['fighter_b_id'])
+                   and fight['fighter_b_id'] not in (f['fighter_a_id'], f['fighter_b_id'])
+                   for f in group):
+                group.append(fight)
+                break
+        else:
+            groups.append([fight])
+
+    if len(groups) > 1:
+        logger.info(f'  {len(groups)} batch groups (a fighter appears on more than one card)')
+
+    feats: dict = {}
+    for group in groups:
+        matchups = [(f['fighter_a_id'], f['fighter_b_id'], f['weight_class'] or None)
+                    for f in group]
+        try:
+            for fight, feat in zip(group, build_prediction_features_batch(matchups)):
+                feats[fight['id']] = feat
+        except Exception as e:
+            # One unbuildable matchup must not cost the whole group, so fall
+            # back to per-fight builds and let the bad one fail alone.
+            logger.warning(f'  Batch feature build failed ({e}); falling back per fight')
+            for fight in group:
+                try:
+                    feats[fight['id']] = build_prediction_features(
+                        fight['fighter_a_id'], fight['fighter_b_id'],
+                        weight_class=fight['weight_class'] or None)
+                except Exception as inner:
+                    logger.error(
+                        f'  Feature build failed for {fight["fighter_a_name"]} vs '
+                        f'{fight["fighter_b_name"]}: {inner}')
+    return feats
+
+
 def compute_for_fight(
     store: ModelStore,
     fight: dict,
     dry_run: bool,
     existing_ids: set,
     conn,
+    feat: dict | None = None,
 ) -> str:
     """Compute and upsert one fight's prediction.
 
@@ -143,7 +199,8 @@ def compute_for_fight(
     name = f"{fight['fighter_a_name']} vs {fight['fighter_b_name']}"
 
     try:
-        feat   = build_prediction_features(fa_id, fb_id, weight_class=wc)
+        if feat is None:
+            feat = build_prediction_features(fa_id, fb_id, weight_class=wc)
         result = predict(store, feat)
         fhash  = _feature_hash(feat)
     except Exception as e:
@@ -300,6 +357,8 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
 
         logger.info(f'{len(fights)} fights to predict, {total_skipped} skipped (unmatched fighters)')
 
+        prebuilt = _build_features_bulk([dict(f) for f in fights])
+
         current_event = None
         for fight in fights:
             if fight['event_name'] != current_event:
@@ -312,6 +371,7 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
                 dry_run=dry_run,
                 existing_ids=existing_ids,
                 conn=conn,
+                feat=prebuilt.get(fight['id']),
             )
             if outcome == 'written':
                 written_count += 1

@@ -292,14 +292,17 @@ def _phantom_fight_id(fighter_id: str) -> str:
 def _augment_for_inference(
     fights: pd.DataFrame,
     stats: pd.DataFrame,
-    fighter_a_id: str,
-    fighter_b_id: str,
-    weight_class: Optional[str],
+    matchups: "list[tuple[str, str, Optional[str]]]",
     as_of: pd.Timestamp,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """Append one synthetic "upcoming fight" row per fighter to *fights* and
     *stats* so the existing shift-based builders roll every completed fight
     into the phantom row.
+
+    Takes a list of (fighter_a_id, fighter_b_id, weight_class) so a whole card
+    can be augmented in one pass. The per-fighter phantom id is deterministic,
+    so a fighter booked in two matchups would collide; callers must not pass
+    the same fighter twice.
 
     The phantom carries no outcome or stats of its own: is_winner=False and
     method=None are inert (only ever read via shift into a later row, which
@@ -310,24 +313,25 @@ def _augment_for_inference(
 
     Returns (fights_aug, stats_aug, {fighter_id: phantom_fight_id}).
     """
-    phantom_ids = {
-        fighter_a_id: _phantom_fight_id(fighter_a_id),
-        fighter_b_id: _phantom_fight_id(fighter_b_id),
-    }
+    phantom_ids = {}
+    for a_id, b_id, _wc in matchups:
+        phantom_ids[a_id] = _phantom_fight_id(a_id)
+        phantom_ids[b_id] = _phantom_fight_id(b_id)
 
     # ---- fights (long) phantom rows — one per fighter --------------------
     fight_rows = []
-    for fid, opp in ((fighter_a_id, fighter_b_id), (fighter_b_id, fighter_a_id)):
-        fight_rows.append({
-            "fight_id":                 phantom_ids[fid],
-            "fighter_id":               fid,
-            "opponent_id":              opp,
-            "is_winner":                False,      # inert: shifted out, never read for its own row
-            "weight_class":             weight_class,
-            "method":                   None,
-            "total_fight_time_seconds": np.nan,
-            "date_proper":              as_of,
-        })
+    for a_id, b_id, weight_class in matchups:
+        for fid, opp in ((a_id, b_id), (b_id, a_id)):
+            fight_rows.append({
+                "fight_id":                 phantom_ids[fid],
+                "fighter_id":               fid,
+                "opponent_id":              opp,
+                "is_winner":                False,  # inert: shifted out, never read for its own row
+                "weight_class":             weight_class,
+                "method":                   None,
+                "total_fight_time_seconds": np.nan,
+                "date_proper":              as_of,
+            })
     fights_ph  = pd.DataFrame(fight_rows, columns=fights.columns)
     fights_aug = pd.concat([fights, fights_ph], ignore_index=True)
     fights_aug["date_proper"] = pd.to_datetime(fights_aug["date_proper"])
@@ -338,7 +342,7 @@ def _augment_for_inference(
         if c not in ("id", "fight_id", "event_id", "fighter_id", "ROUND", "date_proper")
     ]
     stat_rows = []
-    for fid in (fighter_a_id, fighter_b_id):
+    for fid in phantom_ids:
         row = {c: 0 for c in stat_num_cols}      # 0 → summed to 0 → shifted out
         row.update({
             "id":          phantom_ids[fid],
@@ -364,11 +368,10 @@ def build_prediction_features(
 ) -> dict:
     """Build a feature dict for a hypothetical matchup, ready for inference.
 
-    Features are computed from each fighter's full career history up to
-    `as_of` (defaults to today).  Time-based features (age, days since
-    last fight, career length) are recomputed relative to `as_of` so they
-    reflect each fighter's current state, not their state as of their last
-    recorded fight.
+    Thin wrapper over `build_prediction_features_batch`, which is the single
+    implementation. Building one matchup costs a full pass over every fight and
+    stat row, so predicting a whole card one call at a time repeats that pass
+    once per fight. Use the batch form for more than one matchup.
 
     Args:
         fighter_a_id: fighter_details.id for fighter A.
@@ -381,9 +384,54 @@ def build_prediction_features(
         Dict with keys matching selected_features.json (feature_names +
         categorical_features).  Unknown values are None.
     """
+    return build_prediction_features_batch(
+        [(fighter_a_id, fighter_b_id, weight_class)], as_of=as_of
+    )[0]
+
+
+def build_prediction_features_batch(
+    matchups: "list[tuple[str, str, Optional[str]]]",
+    as_of: Optional[date_type] = None,
+) -> "list[dict]":
+    """Build feature dicts for several matchups in one pass over the data.
+
+    The expensive part of inference is not per matchup: every feature module
+    (rolling metrics, style, time, opponent quality) runs across the entire
+    fights and stats tables, and only two phantom rows are read out of the
+    result. Doing that once per matchup meant a card of 71 fights repeated the
+    same full-table computation 71 times.
+
+    Phantom rows are inert for anything but their own fighter - they carry no
+    outcome, zeroed stats, and a date of `as_of` that every point-in-time
+    aggregation excludes from earlier rows - so augmenting the whole card at
+    once yields the same values as augmenting each matchup separately. That
+    equivalence is asserted by tests rather than assumed.
+
+    Args:
+        matchups: (fighter_a_id, fighter_b_id, weight_class) tuples. A fighter
+                  must not appear in more than one matchup: phantom ids are
+                  derived from the fighter id and would collide.
+        as_of:    Reference date (defaults to today).
+
+    Returns:
+        One feature dict per matchup, in the order given.
+    """
+    if not matchups:
+        return []
+
+    seen = {}
+    for a_id, b_id, _wc in matchups:
+        for fid in (a_id, b_id):
+            if fid in seen:
+                raise ValueError(
+                    f"fighter {fid} appears in more than one matchup; phantom "
+                    f"fight ids are derived from the fighter id and would collide"
+                )
+            seen[fid] = True
+
     today = pd.Timestamp(as_of or date_type.today())
 
-    # ---- Load data --------------------------------------------------------
+    # ---- Load data once for every matchup ---------------------------------
     stats    = get_stats_df()
     fights   = get_fights_long_df()
     fighters = get_fighters_df()
@@ -391,12 +439,15 @@ def build_prediction_features(
 
     # Determine weight class (fallback to fighter_a's most recent) BEFORE
     # augmentation so the phantom row carries the correct weight class.
-    if weight_class is None:
-        a_fights = fights[fights["fighter_id"] == fighter_a_id]
-        if not a_fights.empty:
-            a_fights = a_fights.copy()
-            a_fights["date_proper"] = pd.to_datetime(a_fights["date_proper"])
-            weight_class = a_fights.sort_values("date_proper").iloc[-1]["weight_class"]
+    resolved: list = []
+    for a_id, b_id, weight_class in matchups:
+        if weight_class is None:
+            a_fights = fights[fights["fighter_id"] == a_id]
+            if not a_fights.empty:
+                a_fights = a_fights.copy()
+                a_fights["date_proper"] = pd.to_datetime(a_fights["date_proper"])
+                weight_class = a_fights.sort_values("date_proper").iloc[-1]["weight_class"]
+        resolved.append((a_id, b_id, weight_class))
 
     # ---- Option B: synthetic "upcoming fight" row -------------------------
     # Append one phantom fight per fighter (dated `today`, no outcome/stats)
@@ -407,7 +458,7 @@ def build_prediction_features(
     # training).  This also removes the systemic one-fight lag that affected
     # rolling / style / opponent-quality at inference.  Training is untouched.
     fights_aug, stats_aug, phantom_ids = _augment_for_inference(
-        fights, stats, fighter_a_id, fighter_b_id, weight_class, today
+        fights, stats, resolved, today
     )
 
     # ---- Compute feature modules on the augmented data --------------------
@@ -417,146 +468,154 @@ def build_prediction_features(
     tf_df  = build_time_features(fights_aug, fighters)
     oq_df  = build_opponent_quality(fights_aug)
 
-    def _phantom_feats(feat_df: pd.DataFrame, fid: str) -> dict:
-        """Return the phantom-row feature values for a fighter as a plain dict."""
-        sentinel = phantom_ids[fid]
-        rows = feat_df[
-            (feat_df["fighter_id"] == fid) & (feat_df["fight_id"] == sentinel)
-        ]
-        if rows.empty:
-            return {}
-        row  = rows.iloc[-1]
-        drop = [c for c in ("fighter_id", "fight_id") if c in row.index]
-        return row.drop(drop).to_dict()
 
-    a_rm = _phantom_feats(rm_df, fighter_a_id)
-    b_rm = _phantom_feats(rm_df, fighter_b_id)
-    a_sf = _phantom_feats(sf_df, fighter_a_id)
-    b_sf = _phantom_feats(sf_df, fighter_b_id)
-    a_tf = _phantom_feats(tf_df, fighter_a_id)
-    b_tf = _phantom_feats(tf_df, fighter_b_id)
-    a_oq = _phantom_feats(oq_df, fighter_a_id)
-    b_oq = _phantom_feats(oq_df, fighter_b_id)
+    # ---- Read each matchup out of the single computed result --------------
+    results: list = []
+    for a_id, b_id, weight_class in resolved:
+        def _phantom_feats(feat_df: pd.DataFrame, fid: str) -> dict:
+            """Return the phantom-row feature values for a fighter as a plain dict."""
+            sentinel = phantom_ids[fid]
+            rows = feat_df[
+                (feat_df["fighter_id"] == fid) & (feat_df["fight_id"] == sentinel)
+            ]
+            if rows.empty:
+                return {}
+            row  = rows.iloc[-1]
+            drop = [c for c in ("fighter_id", "fight_id") if c in row.index]
+            return row.drop(drop).to_dict()
 
-    def _current_career(fid: str) -> dict:
-        """Current career state from the fighter's phantom upcoming-fight row.
+        a_rm = _phantom_feats(rm_df, a_id)
+        b_rm = _phantom_feats(rm_df, b_id)
+        a_sf = _phantom_feats(sf_df, a_id)
+        b_sf = _phantom_feats(sf_df, b_id)
+        a_tf = _phantom_feats(tf_df, a_id)
+        b_tf = _phantom_feats(tf_df, b_id)
+        a_oq = _phantom_feats(oq_df, a_id)
+        b_oq = _phantom_feats(oq_df, b_id)
 
-        The phantom row's win_streak / loss_streak / win_rate reflect ALL
-        completed fights (the shift excludes only the phantom itself), so the
-        most recent result IS included — unlike reading a real fight row,
-        whose streak reflects the state BEFORE that fight.
-        """
-        sentinel = phantom_ids[fid]
-        rows = career[
-            (career["fighter_id"] == fid) & (career["fight_id"] == sentinel)
-        ]
-        if rows.empty:
-            return {"total_fights_before": 0, "win_streak": 0,
-                    "loss_streak": 0, "win_rate": None}
-        r = rows.iloc[-1]
-        return {
-            "total_fights_before": int(r["total_fights_before"]),
-            "win_streak":          int(r["win_streak"]),
-            "loss_streak":         int(r["loss_streak"]),
-            "win_rate":            (None if pd.isna(r["win_rate"]) else float(r["win_rate"])),
-        }
+        def _current_career(fid: str) -> dict:
+            """Current career state from the fighter's phantom upcoming-fight row.
 
-    a_career = _current_career(fighter_a_id)
-    b_career = _current_career(fighter_b_id)
+            The phantom row's win_streak / loss_streak / win_rate reflect ALL
+            completed fights (the shift excludes only the phantom itself), so the
+            most recent result IS included — unlike reading a real fight row,
+            whose streak reflects the state BEFORE that fight.
+            """
+            sentinel = phantom_ids[fid]
+            rows = career[
+                (career["fighter_id"] == fid) & (career["fight_id"] == sentinel)
+            ]
+            if rows.empty:
+                return {"total_fights_before": 0, "win_streak": 0,
+                        "loss_streak": 0, "win_rate": None}
+            r = rows.iloc[-1]
+            return {
+                "total_fights_before": int(r["total_fights_before"]),
+                "win_streak":          int(r["win_streak"]),
+                "loss_streak":         int(r["loss_streak"]),
+                "win_rate":            (None if pd.isna(r["win_rate"]) else float(r["win_rate"])),
+            }
 
-    # Physical attributes
-    def _phys(fid: str) -> dict:
-        if fid not in fighters_idx.index:
-            return {}
-        row = fighters_idx.loc[fid]
-        dob = row.get("dob_date")
-        age_days = None
-        if dob is not None and not (isinstance(dob, float) and np.isnan(dob)):
-            age_days = int((today - pd.Timestamp(dob)).days)
-        return {
-            "height_inches": row.get("height_inches"),
-            "weight_lbs":    row.get("weight_lbs"),
-            "reach_inches":  row.get("reach_inches"),
-            "age_days":      age_days,
-        }
+        a_career = _current_career(a_id)
+        b_career = _current_career(b_id)
 
-    a_phys = _phys(fighter_a_id)
-    b_phys = _phys(fighter_b_id)
+        # Physical attributes
+        def _phys(fid: str) -> dict:
+            if fid not in fighters_idx.index:
+                return {}
+            row = fighters_idx.loc[fid]
+            dob = row.get("dob_date")
+            age_days = None
+            if dob is not None and not (isinstance(dob, float) and np.isnan(dob)):
+                age_days = int((today - pd.Timestamp(dob)).days)
+            return {
+                "height_inches": row.get("height_inches"),
+                "weight_lbs":    row.get("weight_lbs"),
+                "reach_inches":  row.get("reach_inches"),
+                "age_days":      age_days,
+            }
 
-    def _diff(a_val, b_val):
-        if a_val is None or b_val is None:
-            return None
-        try:
-            return float(a_val) - float(b_val)
-        except (TypeError, ValueError):
-            return None
+        a_phys = _phys(a_id)
+        b_phys = _phys(b_id)
 
-    # ---- Assemble flat diff dict ------------------------------------------
-    feat: dict = {}
+        def _diff(a_val, b_val):
+            if a_val is None or b_val is None:
+                return None
+            try:
+                return float(a_val) - float(b_val)
+            except (TypeError, ValueError):
+                return None
 
-    # Differentials (matching differentials.py column names exactly)
-    feat["height_diff_inches"] = _diff(a_phys.get("height_inches"), b_phys.get("height_inches"))
-    feat["weight_diff_lbs"]    = _diff(a_phys.get("weight_lbs"),    b_phys.get("weight_lbs"))
-    feat["reach_diff_inches"]  = _diff(a_phys.get("reach_inches"),  b_phys.get("reach_inches"))
-    feat["age_diff_days"]      = _diff(a_phys.get("age_days"),      b_phys.get("age_days"))
-    feat["experience_diff"]    = _diff(a_career["total_fights_before"], b_career["total_fights_before"])
-    feat["win_streak_diff"]    = _diff(a_career["win_streak"],  b_career["win_streak"])
-    feat["loss_streak_diff"]   = _diff(a_career["loss_streak"], b_career["loss_streak"])
-    feat["win_rate_diff"]      = _diff(a_career["win_rate"],    b_career["win_rate"])
+        # ---- Assemble flat diff dict ------------------------------------------
+        feat: dict = {}
 
-    # Per-fighter module diffs (diff_ prefix matches _add_fighter_diffs convention)
-    for col in set(a_rm) | set(b_rm):
-        feat[f"diff_{col}"] = _diff(a_rm.get(col), b_rm.get(col))
-    for col in set(a_sf) | set(b_sf):
-        feat[f"diff_{col}"] = _diff(a_sf.get(col), b_sf.get(col))
-    for col in set(a_tf) | set(b_tf):
-        feat[f"diff_{col}"] = _diff(a_tf.get(col), b_tf.get(col))
-    for col in set(a_oq) | set(b_oq):
-        feat[f"diff_{col}"] = _diff(a_oq.get(col), b_oq.get(col))
+        # Differentials (matching differentials.py column names exactly)
+        feat["height_diff_inches"] = _diff(a_phys.get("height_inches"), b_phys.get("height_inches"))
+        feat["weight_diff_lbs"]    = _diff(a_phys.get("weight_lbs"),    b_phys.get("weight_lbs"))
+        feat["reach_diff_inches"]  = _diff(a_phys.get("reach_inches"),  b_phys.get("reach_inches"))
+        feat["age_diff_days"]      = _diff(a_phys.get("age_days"),      b_phys.get("age_days"))
+        feat["experience_diff"]    = _diff(a_career["total_fights_before"], b_career["total_fights_before"])
+        feat["win_streak_diff"]    = _diff(a_career["win_streak"],  b_career["win_streak"])
+        feat["loss_streak_diff"]   = _diff(a_career["loss_streak"], b_career["loss_streak"])
+        feat["win_rate_diff"]      = _diff(a_career["win_rate"],    b_career["win_rate"])
 
-    # Context features
-    feat["weight_class"]      = weight_class
-    feat["is_women_division"] = int(str(weight_class or "").startswith("Women's"))
-    feat["is_title_fight"]    = 0   # unknown for future fights; default non-title
+        # Per-fighter module diffs (diff_ prefix matches _add_fighter_diffs convention)
+        for col in set(a_rm) | set(b_rm):
+            feat[f"diff_{col}"] = _diff(a_rm.get(col), b_rm.get(col))
+        for col in set(a_sf) | set(b_sf):
+            feat[f"diff_{col}"] = _diff(a_sf.get(col), b_sf.get(col))
+        for col in set(a_tf) | set(b_tf):
+            feat[f"diff_{col}"] = _diff(a_tf.get(col), b_tf.get(col))
+        for col in set(a_oq) | set(b_oq):
+            feat[f"diff_{col}"] = _diff(a_oq.get(col), b_oq.get(col))
 
-    # ---- Guard + filter to selected features only -------------------------
-    if _SEL_PATH.exists():
-        with open(_SEL_PATH, encoding="utf-8") as f:
-            sel = json.load(f)
-        all_keys = sel["feature_names"] + sel["categorical_features"]
+        # Context features
+        feat["weight_class"]      = weight_class
+        feat["is_women_division"] = int(str(weight_class or "").startswith("Women's"))
+        feat["is_title_fight"]    = 0   # unknown for future fights; default non-title
 
-        # Guard against silent wrongness — the failure mode that hid win_rate_diff.
-        # Every selected feature MUST be actively produced above.  A selected key
-        # that is never assigned would fall through `feat.get(k)` to None and then
-        # be imputed to the training median at predict time: a plausible-looking
-        # wrong answer that never errors.  Fail loudly instead.
-        missing = [k for k in all_keys if k not in feat]
-        if missing:
-            raise ValueError(
-                "build_prediction_features: selected feature(s) not produced by the "
-                f"pipeline and would be silently imputed: {sorted(missing)}. Wire them "
-                "in build_prediction_features or remove them from selected_features.json."
-            )
+        # ---- Guard + filter to selected features only -------------------------
+        if _SEL_PATH.exists():
+            with open(_SEL_PATH, encoding="utf-8") as f:
+                sel = json.load(f)
+            all_keys = sel["feature_names"] + sel["categorical_features"]
 
-        # Null values can be legitimate (data sparsity, e.g. a fighter with no
-        # takedown attempts), so warn rather than raise here — but surface it so a
-        # feature that is null for well-established fighters is visible in logs.
-        # A hard assertion on fully-populated fighters lives in
-        # validate_inference_completeness(), run at retrain time.
-        null_feats = [
-            k for k in all_keys
-            if feat.get(k) is None or (isinstance(feat.get(k), float) and pd.isna(feat.get(k)))
-        ]
-        if null_feats:
-            logger.warning(
-                "build_prediction_features(%s vs %s): %d selected feature(s) null, "
-                "imputed at predict time: %s",
-                fighter_a_id, fighter_b_id, len(null_feats), sorted(null_feats),
-            )
+            # Guard against silent wrongness — the failure mode that hid win_rate_diff.
+            # Every selected feature MUST be actively produced above.  A selected key
+            # that is never assigned would fall through `feat.get(k)` to None and then
+            # be imputed to the training median at predict time: a plausible-looking
+            # wrong answer that never errors.  Fail loudly instead.
+            missing = [k for k in all_keys if k not in feat]
+            if missing:
+                raise ValueError(
+                    "build_prediction_features: selected feature(s) not produced by the "
+                    f"pipeline and would be silently imputed: {sorted(missing)}. Wire them "
+                    "in build_prediction_features or remove them from selected_features.json."
+                )
 
-        feat = {k: feat.get(k) for k in all_keys}
+            # Null values can be legitimate (data sparsity, e.g. a fighter with no
+            # takedown attempts), so warn rather than raise here — but surface it so a
+            # feature that is null for well-established fighters is visible in logs.
+            # A hard assertion on fully-populated fighters lives in
+            # validate_inference_completeness(), run at retrain time.
+            null_feats = [
+                k for k in all_keys
+                if feat.get(k) is None or (isinstance(feat.get(k), float) and pd.isna(feat.get(k)))
+            ]
+            if null_feats:
+                logger.warning(
+                    "build_prediction_features(%s vs %s): %d selected feature(s) null, "
+                    "imputed at predict time: %s",
+                    a_id, b_id, len(null_feats), sorted(null_feats),
+                )
 
-    return feat
+            feat = {k: feat.get(k) for k in all_keys}
+
+        results.append(feat)
+
+
+
+    return results
 
 
 def validate_inference_completeness(n_pairs: int = 8, min_fights: int = 12) -> None:
