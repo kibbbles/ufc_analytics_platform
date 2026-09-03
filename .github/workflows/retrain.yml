@@ -81,3 +81,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run deploy-backend.yml --ref main
+
+      # Retraining changes what the models predict but not what the features
+      # are, so nothing else in the chain refreshes upcoming_predictions.
+      # Without this the table kept serving the previous model's numbers while
+      # the API served the new one, until the next Saturday scrape - up to six
+      # days of disagreement.
+      #
+      # This runs the models just written to this workspace, so it does not
+      # wait for the artefact commit to propagate. compute_predictions.py only
+      # touches events with date_proper >= CURRENT_DATE, so frozen pre-fight
+      # snapshots for past events cannot be overwritten.
+      #
+      # Deliberately placed after the deploy trigger: a failure here should be
+      # loud and fail the run, but it should not hold back a deploy that is
+      # otherwise ready.
+      - name: Recompute upcoming predictions with the new models
+        if: ${{ github.event.inputs.eval_only != 'true' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        working-directory: backend
+        run: python scraper/compute_predictions.py
