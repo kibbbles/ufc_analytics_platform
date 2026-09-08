@@ -36,7 +36,8 @@ logging.basicConfig(
 
 class LiveUFCScraper:
     def __init__(self):
-        self._pw = sync_playwright().__enter__()
+        self._pw_manager = sync_playwright()
+        self._pw = self._pw_manager.__enter__()
         self._browser = self._pw.chromium.launch(
             headless=True,
             args=['--no-sandbox', '--disable-dev-shm-usage'],
@@ -64,7 +65,7 @@ class LiveUFCScraper:
     def _close(self):
         try:
             self._browser.close()
-            self._pw.__exit__(None, None, None)
+            self._pw_manager.__exit__(None, None, None)
         except Exception:
             pass
     
@@ -398,7 +399,10 @@ class LiveUFCScraper:
 
         try:
             with engine.connect() as conn:
-                for fight in fights:
+                # `fights` arrives in UFCStats event-page order: index 0 is the
+                # main event, the last index is the opening prelim.  Persisting
+                # that index keeps the card readable everywhere it is rendered.
+                for position, fight in enumerate(fights):
                     fight_id  = self.get_unique_id()
                     result_id = self.get_unique_id()
 
@@ -409,14 +413,15 @@ class LiveUFCScraper:
 
                     # fight_details
                     conn.execute(text("""
-                        INSERT INTO fight_details (id, "EVENT", "BOUT", "URL", event_id)
-                        VALUES (:id, :event, :bout, :url, :event_id)
+                        INSERT INTO fight_details (id, "EVENT", "BOUT", "URL", event_id, position)
+                        VALUES (:id, :event, :bout, :url, :event_id, :position)
                     """), {
                         'id':       fight_id,
                         'event':    event_name,
                         'bout':     bout_str,
                         'url':      fight.get('fight_url'),
                         'event_id': event_id,
+                        'position': position,
                     })
 
                     # fight_results (3.9.1)

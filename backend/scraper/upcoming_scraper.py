@@ -86,7 +86,8 @@ FUZZY_THRESHOLD = 88
 class UpcomingScraper:
 
     def __init__(self):
-        self._pw = sync_playwright().__enter__()
+        self._pw_manager = sync_playwright()
+        self._pw = self._pw_manager.__enter__()
         self._browser = self._pw.chromium.launch(
             headless=True,
             args=['--no-sandbox', '--disable-dev-shm-usage'],
@@ -144,7 +145,7 @@ class UpcomingScraper:
     def _close(self):
         try:
             self._browser.close()
-            self._pw.__exit__(None, None, None)
+            self._pw_manager.__exit__(None, None, None)
         except Exception:
             pass
 
