@@ -1,304 +1,304 @@
 {
-  "generated_at": "2026-09-06T16:39:48.942018+00:00",
-  "n_training_rows": 6462,
+  "generated_at": "2026-09-13T17:14:10.519071+00:00",
+  "n_training_rows": 6473,
   "n_features_before": 71,
   "n_features_removed_collinear": 33,
   "n_features_removed_zero_mi": 10,
   "n_features_selected": 28,
   "feature_names": [
-    "age_diff_days",
+    "diff_age_at_fight",
     "win_rate_diff",
     "diff_ewa_kd",
     "loss_streak_diff",
     "diff_career_length_days",
-    "diff_finish_rate",
     "diff_roll3_sig_str_landed",
     "height_diff_inches",
+    "diff_finish_rate",
     "diff_avg_opponent_losses",
     "diff_days_in_weight_class",
+    "diff_ko_rate",
     "diff_roll5_td_att",
     "diff_ewa_sig_str_pct",
-    "diff_ko_rate",
-    "diff_roll5_td_landed",
-    "diff_days_since_last_fight",
     "diff_grappling_ratio",
+    "diff_days_since_last_fight",
     "diff_roll7_sig_str_att",
+    "diff_roll5_td_landed",
     "diff_roll7_ctrl_s",
+    "diff_strength_of_schedule",
     "diff_roll5_td_pct",
     "weight_diff_lbs",
     "diff_sapm",
-    "diff_strength_of_schedule",
     "diff_roll5_total_str_landed",
-    "diff_aggression_score",
     "diff_roll3_ctrl_s",
+    "diff_aggression_score",
     "diff_career_avg_kd",
     "diff_career_avg_total_str_attempted",
     "win_streak_diff"
   ],
   "mi_scores": {
-    "age_diff_days": 0.02802,
-    "win_rate_diff": 0.016322,
-    "diff_ewa_kd": 0.014034,
-    "loss_streak_diff": 0.013953,
-    "diff_career_length_days": 0.013132,
-    "diff_finish_rate": 0.011707,
-    "diff_roll3_sig_str_landed": 0.011559,
-    "height_diff_inches": 0.011318,
-    "diff_avg_opponent_losses": 0.009725,
-    "diff_days_in_weight_class": 0.008723,
-    "diff_roll5_td_att": 0.008626,
-    "diff_ewa_sig_str_pct": 0.008367,
-    "diff_ko_rate": 0.008249,
-    "diff_roll5_td_landed": 0.007383,
-    "diff_days_since_last_fight": 0.00704,
-    "diff_grappling_ratio": 0.00676,
-    "diff_roll7_sig_str_att": 0.00663,
-    "diff_roll7_ctrl_s": 0.006391,
-    "diff_roll5_td_pct": 0.005745,
-    "weight_diff_lbs": 0.005689,
-    "diff_sapm": 0.005567,
-    "diff_strength_of_schedule": 0.005533,
-    "diff_roll5_total_str_landed": 0.004457,
-    "diff_aggression_score": 0.002879,
-    "diff_roll3_ctrl_s": 0.002846,
-    "diff_career_avg_kd": 0.002667,
-    "diff_career_avg_total_str_attempted": 0.000797,
-    "win_streak_diff": 0.000703
+    "diff_age_at_fight": 0.027684,
+    "win_rate_diff": 0.016281,
+    "diff_ewa_kd": 0.014613,
+    "loss_streak_diff": 0.013834,
+    "diff_career_length_days": 0.013012,
+    "diff_roll3_sig_str_landed": 0.012231,
+    "height_diff_inches": 0.0117,
+    "diff_finish_rate": 0.01147,
+    "diff_avg_opponent_losses": 0.009493,
+    "diff_days_in_weight_class": 0.009404,
+    "diff_ko_rate": 0.008453,
+    "diff_roll5_td_att": 0.008256,
+    "diff_ewa_sig_str_pct": 0.007946,
+    "diff_grappling_ratio": 0.007482,
+    "diff_days_since_last_fight": 0.007475,
+    "diff_roll7_sig_str_att": 0.007408,
+    "diff_roll5_td_landed": 0.006944,
+    "diff_roll7_ctrl_s": 0.006473,
+    "diff_strength_of_schedule": 0.006142,
+    "diff_roll5_td_pct": 0.006018,
+    "weight_diff_lbs": 0.006005,
+    "diff_sapm": 0.005719,
+    "diff_roll5_total_str_landed": 0.004597,
+    "diff_roll3_ctrl_s": 0.003178,
+    "diff_aggression_score": 0.002773,
+    "diff_career_avg_kd": 0.002411,
+    "diff_career_avg_total_str_attempted": 0.001394,
+    "win_streak_diff": 0.000331
   },
   "categorical_features": [
     "weight_class"
   ],
   "removed_collinear": [
     {
-      "feature": "diff_age_at_fight",
-      "correlated_with": "age_diff_days",
+      "feature": "age_diff_days",
+      "correlated_with": "diff_age_at_fight",
       "r": 1.0,
-      "mi_score_dropped": 0.027985,
-      "mi_score_kept": 0.02802
+      "mi_score_dropped": 0.027618,
+      "mi_score_kept": 0.027684
     },
     {
       "feature": "diff_roll7_sig_str_pct",
       "correlated_with": "diff_career_avg_sig_str_pct",
       "r": 0.9796,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.003229
+      "mi_score_kept": 0.003045
     },
     {
       "feature": "diff_roll7_td_att",
       "correlated_with": "diff_roll5_td_att",
       "r": 0.9796,
-      "mi_score_dropped": 0.005317,
-      "mi_score_kept": 0.008626
+      "mi_score_dropped": 0.005328,
+      "mi_score_kept": 0.008256
     },
     {
       "feature": "diff_career_avg_td_landed",
       "correlated_with": "diff_roll7_td_landed",
-      "r": 0.9754,
+      "r": 0.9752,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.006581
+      "mi_score_kept": 0.00681
     },
     {
       "feature": "diff_roll7_td_landed",
       "correlated_with": "diff_roll5_td_landed",
       "r": 0.975,
-      "mi_score_dropped": 0.006581,
-      "mi_score_kept": 0.007383
+      "mi_score_dropped": 0.00681,
+      "mi_score_kept": 0.006944
     },
     {
       "feature": "diff_career_avg_ctrl_s",
       "correlated_with": "diff_roll7_ctrl_s",
-      "r": 0.9733,
-      "mi_score_dropped": 0.004506,
-      "mi_score_kept": 0.006391
+      "r": 0.9732,
+      "mi_score_dropped": 0.004694,
+      "mi_score_kept": 0.006473
     },
     {
       "feature": "diff_roll5_ctrl_s",
       "correlated_with": "diff_roll7_ctrl_s",
       "r": 0.9727,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.006391
+      "mi_score_kept": 0.006473
     },
     {
       "feature": "diff_roll7_total_str_att",
       "correlated_with": "diff_roll5_total_str_att",
-      "r": 0.9716,
+      "r": 0.9717,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.000387
+      "mi_score_kept": 0.001339
     },
     {
       "feature": "diff_roll5_sig_str_att",
       "correlated_with": "diff_roll7_sig_str_att",
-      "r": 0.9713,
-      "mi_score_dropped": 0.001689,
-      "mi_score_kept": 0.00663
+      "r": 0.9715,
+      "mi_score_dropped": 0.001479,
+      "mi_score_kept": 0.007408
     },
     {
       "feature": "diff_roll7_total_str_landed",
       "correlated_with": "diff_roll5_total_str_landed",
-      "r": 0.971,
-      "mi_score_dropped": 0.004025,
-      "mi_score_kept": 0.004457
+      "r": 0.9711,
+      "mi_score_dropped": 0.004242,
+      "mi_score_kept": 0.004597
     },
     {
       "feature": "diff_roll7_sig_str_landed",
       "correlated_with": "diff_roll5_sig_str_landed",
-      "r": 0.9698,
+      "r": 0.97,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.008422
+      "mi_score_kept": 0.00899
     },
     {
       "feature": "diff_roll7_kd",
       "correlated_with": "diff_career_avg_kd",
-      "r": 0.9666,
-      "mi_score_dropped": 0.002249,
-      "mi_score_kept": 0.002667
+      "r": 0.9667,
+      "mi_score_dropped": 0.001955,
+      "mi_score_kept": 0.002411
     },
     {
       "feature": "diff_career_avg_sig_str_attempted",
       "correlated_with": "diff_roll7_sig_str_att",
-      "r": 0.9646,
+      "r": 0.9648,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.00663
+      "mi_score_kept": 0.007408
     },
     {
       "feature": "diff_roll3_sig_str_pct",
       "correlated_with": "diff_ewa_sig_str_pct",
       "r": 0.961,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.008367
+      "mi_score_kept": 0.007946
     },
     {
       "feature": "diff_career_avg_td_attempted",
       "correlated_with": "diff_roll5_td_att",
-      "r": 0.9584,
-      "mi_score_dropped": 0.004689,
-      "mi_score_kept": 0.008626
+      "r": 0.9583,
+      "mi_score_dropped": 0.004325,
+      "mi_score_kept": 0.008256
     },
     {
       "feature": "diff_career_avg_sig_str_pct",
       "correlated_with": "diff_roll5_sig_str_pct",
-      "r": 0.956,
-      "mi_score_dropped": 0.003229,
-      "mi_score_kept": 0.004743
+      "r": 0.9561,
+      "mi_score_dropped": 0.003045,
+      "mi_score_kept": 0.005092
     },
     {
       "feature": "experience_diff",
       "correlated_with": "diff_strength_of_schedule",
-      "r": 0.9527,
+      "r": 0.9528,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.005533
+      "mi_score_kept": 0.006142
     },
     {
       "feature": "diff_ewa_ctrl_s",
       "correlated_with": "diff_roll3_ctrl_s",
-      "r": 0.9494,
+      "r": 0.9493,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.002846
+      "mi_score_kept": 0.003178
     },
     {
       "feature": "diff_roll5_sig_str_pct",
       "correlated_with": "diff_ewa_sig_str_pct",
-      "r": 0.9437,
-      "mi_score_dropped": 0.004743,
-      "mi_score_kept": 0.008367
+      "r": 0.9436,
+      "mi_score_dropped": 0.005092,
+      "mi_score_kept": 0.007946
     },
     {
       "feature": "diff_roll3_td_att",
       "correlated_with": "diff_roll5_td_att",
-      "r": 0.9428,
-      "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.008626
+      "r": 0.9427,
+      "mi_score_dropped": 0.000162,
+      "mi_score_kept": 0.008256
     },
     {
       "feature": "diff_career_avg_total_str_landed",
       "correlated_with": "diff_roll5_total_str_landed",
-      "r": 0.9392,
+      "r": 0.9393,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.004457
+      "mi_score_kept": 0.004597
     },
     {
       "feature": "diff_roll5_total_str_att",
       "correlated_with": "diff_career_avg_total_str_attempted",
-      "r": 0.9382,
-      "mi_score_dropped": 0.000387,
-      "mi_score_kept": 0.000797
+      "r": 0.9384,
+      "mi_score_dropped": 0.001339,
+      "mi_score_kept": 0.001394
     },
     {
       "feature": "diff_roll3_kd",
       "correlated_with": "diff_ewa_kd",
       "r": 0.9368,
-      "mi_score_dropped": 0.002613,
-      "mi_score_kept": 0.014034
+      "mi_score_dropped": 0.002504,
+      "mi_score_kept": 0.014613
     },
     {
       "feature": "diff_roll5_kd",
       "correlated_with": "diff_career_avg_kd",
-      "r": 0.9322,
+      "r": 0.9323,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.002667
+      "mi_score_kept": 0.002411
     },
     {
       "feature": "diff_career_avg_sig_str_landed",
       "correlated_with": "diff_roll5_sig_str_landed",
-      "r": 0.9316,
+      "r": 0.932,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.008422
+      "mi_score_kept": 0.00899
     },
     {
       "feature": "diff_roll3_td_landed",
       "correlated_with": "diff_roll5_td_landed",
-      "r": 0.9308,
-      "mi_score_dropped": 0.004359,
-      "mi_score_kept": 0.007383
+      "r": 0.9306,
+      "mi_score_dropped": 0.003555,
+      "mi_score_kept": 0.006944
     },
     {
       "feature": "diff_career_avg_td_pct",
       "correlated_with": "diff_roll7_td_pct",
-      "r": 0.9284,
-      "mi_score_dropped": 0.001391,
-      "mi_score_kept": 0.002624
+      "r": 0.9285,
+      "mi_score_dropped": 0.001583,
+      "mi_score_kept": 0.001836
     },
     {
       "feature": "diff_roll7_td_pct",
       "correlated_with": "diff_roll5_td_pct",
       "r": 0.9267,
-      "mi_score_dropped": 0.002624,
-      "mi_score_kept": 0.005745
+      "mi_score_dropped": 0.001836,
+      "mi_score_kept": 0.006018
     },
     {
       "feature": "diff_roll3_total_str_att",
       "correlated_with": "diff_roll3_sig_str_att",
-      "r": 0.9235,
-      "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.006162
+      "r": 0.9238,
+      "mi_score_dropped": 0.000763,
+      "mi_score_kept": 0.005772
     },
     {
       "feature": "diff_roll3_sig_str_att",
       "correlated_with": "diff_roll3_sig_str_landed",
-      "r": 0.9204,
-      "mi_score_dropped": 0.006162,
-      "mi_score_kept": 0.011559
+      "r": 0.9207,
+      "mi_score_dropped": 0.005772,
+      "mi_score_kept": 0.012231
     },
     {
       "feature": "diff_roll3_total_str_landed",
       "correlated_with": "diff_roll5_total_str_landed",
-      "r": 0.9198,
-      "mi_score_dropped": 0.003097,
-      "mi_score_kept": 0.004457
+      "r": 0.92,
+      "mi_score_dropped": 0.003249,
+      "mi_score_kept": 0.004597
     },
     {
       "feature": "diff_roll5_sig_str_landed",
       "correlated_with": "diff_roll3_sig_str_landed",
-      "r": 0.9177,
-      "mi_score_dropped": 0.008422,
-      "mi_score_kept": 0.011559
+      "r": 0.9182,
+      "mi_score_dropped": 0.00899,
+      "mi_score_kept": 0.012231
     },
     {
       "feature": "diff_ewa_td_pct",
       "correlated_with": "diff_roll5_td_pct",
       "r": 0.9065,
       "mi_score_dropped": 0.0,
-      "mi_score_kept": 0.005745
+      "mi_score_kept": 0.006018
     }
   ]
 }
