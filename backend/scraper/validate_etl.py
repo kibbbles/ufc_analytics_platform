@@ -621,6 +621,47 @@ def check_identity_integrity(conn):
     )
     r.log(); results.append(r)
 
+    # The direct test the checks above approximate. fight_details stores each
+    # fighter's UFCStats URL (migration 008), which names exactly one person, so
+    # a stored FK can be compared with the fighter that URL belongs to instead
+    # of inferred from symptoms. A URL claimed by two fighter rows (a duplicate
+    # counted above) accepts either id, so this check reports only disagreement.
+    rows = conn.execute(text("""
+        SELECT fd.id, x.side, x.fk, x.url,
+               EXISTS (SELECT 1 FROM fighter_details f WHERE f."URL" = x.url) AS url_known
+        FROM fight_details fd
+        CROSS JOIN LATERAL (VALUES ('a', fd.fighter_a_id, fd.fighter_a_url),
+                                   ('b', fd.fighter_b_id, fd.fighter_b_url)) AS x(side, fk, url)
+        WHERE x.url IS NOT NULL
+          AND x.fk IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM fighter_details f
+                          WHERE f."URL" = x.url AND f.id = x.fk)
+        ORDER BY fd.id, x.side
+    """)).fetchall()
+    r = CheckResult(
+        "fight_details - fighter FK disagrees with stored UFCStats URL",
+        len(rows), 0, _identity_threshold_type(),
+        ", ".join(
+            f"{fid}.{side}:{fk}->{url.rsplit('/', 1)[-1][:8] if known else 'unknown URL'}"
+            for fid, side, fk, url, known in rows[:6]
+        ) or "every stored URL agrees with its FK"
+    )
+    r.log(); results.append(r)
+
+    # Fights with no stored URL can only be checked by name, which is the
+    # method the check above exists to replace. Tracked so the gap stays visible.
+    total, with_urls = conn.execute(text("""
+        SELECT COUNT(*),
+               COUNT(*) FILTER (WHERE fighter_a_url IS NOT NULL AND fighter_b_url IS NOT NULL)
+        FROM fight_details
+    """)).one()
+    r = CheckResult(
+        "fight_details - fights with both fighter URLs stored (%)",
+        _pct(with_urls, total), 0, "info",
+        f"{with_urls:,} / {total:,} fights verifiable by URL"
+    )
+    r.log(); results.append(r)
+
     return results
 
 
