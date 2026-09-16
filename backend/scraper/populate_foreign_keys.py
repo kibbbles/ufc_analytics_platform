@@ -275,67 +275,104 @@ def populate_fight_stats_fight_id():
 
 
 def populate_fighter_tott_fighter_id():
-    """Populate fighter_tott.fighter_id from fighter_details by matching FIGHTER name."""
+    """Link fighter_tott rows to fighter_details by identity, never by name alone.
+
+    Names are not identifiers.  Seven UFCStats fighters share a name with
+    another fighter, and `UPDATE ... FROM` with two matching rows resolves the
+    collision arbitrarily and reports success.  That is how Michael McDonald
+    (b. 1965) came to carry Michael McDonald's (b. 1991) height, reach and DOB.
+    See db/migrations/007_fighter_tott_identity.sql for the repair.
+
+    Resolution order, strongest key first:
+      1. fighter_tott.id  = fighter_details.id   - the tott PK is the fighter id
+      2. fighter_tott.URL = fighter_details.URL  - UFCStats identity
+      3. full name, and only when that name belongs to exactly one fighter
+
+    Ambiguous names are left NULL and reported, never guessed.  A NULL
+    fighter_id is a visible gap that validation can see; a wrong one is not.
+    """
     print_header("6. POPULATING fighter_tott.fighter_id")
 
     with engine.connect() as conn:
-        result = conn.execute(text("""
-            SELECT COUNT(*) as total,
-                   COUNT(fighter_id) as populated
+        row = conn.execute(text("""
+            SELECT COUNT(*) AS total, COUNT(fighter_id) AS populated
             FROM fighter_tott
-        """))
-        row = result.fetchone()
+        """)).fetchone()
         print(f"Before: {row[1]:,} / {row[0]:,} rows have fighter_id")
 
-        # Match by combining FIRST + LAST name
-        result = conn.execute(text("""
+        # 1. Primary key match. The tott id IS the fighter id for every row
+        #    loaded from UFCStats, which covers ~98% of the table.
+        by_id = conn.execute(text("""
             UPDATE fighter_tott ft
             SET fighter_id = fd.id
             FROM fighter_details fd
-            WHERE TRIM(ft."FIGHTER") = TRIM(CONCAT(fd."FIRST", ' ', fd."LAST"))
-            AND ft.fighter_id IS NULL
-        """))
+            WHERE fd.id = ft.id
+              AND ft.fighter_id IS DISTINCT FROM fd.id
+        """)).rowcount
         conn.commit()
+        print(f"Matched by id:   {by_id:,} rows")
 
-        updated = result.rowcount
-        print(f"Updated: {updated:,} rows")
+        # 2. URL match. Distinct people always have distinct UFCStats URLs, so
+        #    this is exact even when the names collide.
+        by_url = conn.execute(text("""
+            UPDATE fighter_tott ft
+            SET fighter_id = fd.id
+            FROM fighter_details fd
+            WHERE fd."URL" = ft."URL"
+              AND ft."URL" IS NOT NULL
+              AND ft.fighter_id IS NULL
+        """)).rowcount
+        conn.commit()
+        print(f"Matched by URL:  {by_url:,} rows")
 
-        result = conn.execute(text("""
-            SELECT COUNT(*) as total,
-                   COUNT(fighter_id) as populated
+        # 3. Name match, restricted to names owned by exactly one fighter.
+        #    The HAVING COUNT(*) = 1 clause is what makes this safe: a shared
+        #    name produces no candidate at all rather than an arbitrary one.
+        by_name = conn.execute(text("""
+            UPDATE fighter_tott ft
+            SET fighter_id = u.id
+            FROM (
+                SELECT TRIM(CONCAT(fd."FIRST", ' ', fd."LAST")) AS nm, MIN(fd.id) AS id
+                FROM fighter_details fd
+                GROUP BY 1
+                HAVING COUNT(*) = 1
+            ) u
+            WHERE TRIM(ft."FIGHTER") = u.nm
+              AND ft.fighter_id IS NULL
+        """)).rowcount
+        conn.commit()
+        print(f"Matched by name: {by_name:,} rows (unambiguous names only)")
+
+        row = conn.execute(text("""
+            SELECT COUNT(*) AS total, COUNT(fighter_id) AS populated
             FROM fighter_tott
-        """))
-        row = result.fetchone()
+        """)).fetchone()
         print(f"After: {row[1]:,} / {row[0]:,} rows have fighter_id")
 
         if row[1] == row[0]:
             print("[OK] All fighter_tott rows have fighter_id")
             return True
-        else:
-            print(f"[WARN] {row[0] - row[1]} rows still missing fighter_id")
-            # Try to match remaining by LAST name only (for fighters with NULL first name)
-            result = conn.execute(text("""
-                UPDATE fighter_tott ft
-                SET fighter_id = fd.id
-                FROM fighter_details fd
-                WHERE TRIM(ft."FIGHTER") = TRIM(fd."LAST")
-                AND ft.fighter_id IS NULL
-                AND fd."FIRST" IS NULL
-            """))
-            conn.commit()
 
-            if result.rowcount > 0:
-                print(f"Matched {result.rowcount} more by LAST name only (for NULL first names)")
+        # Report what was deliberately not guessed, so the gap is actionable.
+        unresolved = conn.execute(text("""
+            SELECT ft.id, ft."FIGHTER",
+                   (SELECT COUNT(*) FROM fighter_details fd
+                     WHERE TRIM(CONCAT(fd."FIRST", ' ', fd."LAST")) = TRIM(ft."FIGHTER")) AS candidates
+            FROM fighter_tott ft
+            WHERE ft.fighter_id IS NULL
+            ORDER BY candidates DESC, ft."FIGHTER"
+        """)).fetchall()
 
-            result = conn.execute(text("""
-                SELECT COUNT(*) as total,
-                       COUNT(fighter_id) as populated
-                FROM fighter_tott
-            """))
-            row = result.fetchone()
-            print(f"Final: {row[1]:,} / {row[0]:,} rows have fighter_id")
+        ambiguous = [r for r in unresolved if r[2] > 1]
+        unknown   = [r for r in unresolved if r[2] == 0]
+        print(f"[WARN] {len(unresolved)} rows unlinked "
+              f"({len(ambiguous)} ambiguous, {len(unknown)} no candidate)")
+        for tid, name, n in ambiguous[:10]:
+            print(f"    ambiguous: {tid} {name} -> {n} fighters share this name")
+        for tid, name, _ in unknown[:10]:
+            print(f"    no match : {tid} {name}")
 
-            return row[1] == row[0]
+        return False
 
 
 def verify_relationships():
