@@ -1,23 +1,30 @@
 """
 Task 3.1 — Populate fight_details.fighter_a_id and fighter_b_id
 
-Parses the BOUT text column ("Fighter A vs. Fighter B") in fight_details and
-resolves each name against fighter_details using exact match first, then
-rapidfuzz fuzzy matching as a fallback.
+Resolves each side of a fight to a fighter_details row, strongest key first:
+
+  1. fighter_a_url / fighter_b_url - the UFCStats profile URL scraped from the
+     fight page (migration 008). Exact identity, immune to shared names.
+  2. The name parsed out of "BOUT" - exact match, then rapidfuzz fuzzy match.
+     Used only when no URL was scraped, which is every row loaded before 008.
 
 Names are not identities. Two different fighters can share a name (there are two
-UFC Bruno Silvas, a flyweight and a middleweight), and when that happens this
-script CANNOT tell them apart from a BOUT string alone - no fight table stores a
-fighter URL. An earlier version resolved the ambiguity by keeping whichever row
-Postgres returned first, which filed 36 bouts under the wrong human being and
-reported every one of them as an "exact" match.
+UFC Bruno Silvas, a flyweight and a middleweight), and a BOUT string alone
+CANNOT tell them apart. An earlier version resolved the ambiguity by keeping
+whichever row Postgres returned first, which filed 36 bouts under the wrong
+human being and reported every one of them as an "exact" match.
 
-So an ambiguous name is now refused rather than guessed: the FK is left NULL and
-the name is written to unresolved_fighter_names.log with reason "ambiguous". A
+So an ambiguous name is refused rather than guessed: the FK is left NULL and the
+name is written to unresolved_fighter_names.log with reason "ambiguous". A
 missing FK is visible and repairable; a confidently wrong one is neither.
 
-Only processes rows where fighter_a_id IS NULL (idempotent — safe to re-run), so
-running this does not revisit or repair FKs that were already written.
+A scraped URL that matches no fighter is likewise left NULL, and does NOT fall
+back to the name: the URL says who fought, and a name match could name someone
+else.
+
+Only processes rows where fighter_a_id or fighter_b_id IS NULL, and only fills
+the NULL side (idempotent — safe to re-run). FKs already written are never
+revisited.
 
 Usage:
     cd backend/scraper
@@ -117,6 +124,30 @@ def resolve_name(name, lookup, names_list, ambiguous=None):
     return None, None
 
 
+def build_url_lookup(conn):
+    """Build a UFCStats URL → fighter_details.id lookup."""
+    rows = conn.execute(text(
+        'SELECT "URL", id FROM fighter_details WHERE "URL" IS NOT NULL'
+    )).fetchall()
+    return {url.strip(): fighter_id for url, fighter_id in rows}
+
+
+def resolve_fighter(name, url, url_lookup, lookup, names_list, ambiguous=None):
+    """Resolve one side of a bout. Returns (fighter_id, match_type).
+
+    With a scraped URL the answer is the URL's owner or nothing: match_type is
+    'url', or 'unknown_url' with fighter_id None. Falling back to the name
+    there would be wrong in exactly the case URLs exist to handle, where the
+    name belongs to somebody else.
+
+    Without a URL this is resolve_name().
+    """
+    if url and url.strip():
+        fighter_id = url_lookup.get(url.strip())
+        return (fighter_id, "url") if fighter_id else (None, "unknown_url")
+    return resolve_name(name, lookup, names_list, ambiguous)
+
+
 def populate_fighter_a_b_ids():
     log.info("\n" + "=" * 70)
     log.info("  TASK 3.1 — Populate fight_details.fighter_a_id / fighter_b_id")
@@ -125,27 +156,33 @@ def populate_fighter_a_b_ids():
     with engine.connect() as conn:
         # Status before
         total, already_done = conn.execute(text("""
-            SELECT COUNT(*), COUNT(fighter_a_id) FROM fight_details
+            SELECT COUNT(*),
+                   COUNT(*) FILTER (WHERE fighter_a_id IS NOT NULL
+                                      AND fighter_b_id IS NOT NULL)
+            FROM fight_details
         """)).fetchone()
         todo = total - already_done
-        log.info(f"\nBefore: {already_done:,} / {total:,} rows already have fighter_a_id")
+        log.info(f"\nBefore: {already_done:,} / {total:,} rows already have both fighter ids")
         log.info(f"  Rows to process: {todo:,}")
 
         if todo == 0:
             log.info("  Nothing to do.")
             return
 
-        # Build lookup
-        log.info("\nBuilding fighter name lookup...")
+        # Build lookups
+        log.info("\nBuilding fighter lookups...")
+        url_lookup = build_url_lookup(conn)
+        log.info(f"  Fighter URL lookup built: {len(url_lookup):,} entries")
         lookup, ambiguous = build_fighter_lookup(conn)
         names_list = list(lookup.keys())
 
         # Load all fight_details rows that need resolving
         # Skip placeholder rows "win vs. "
         rows = conn.execute(text("""
-            SELECT id, "BOUT"
+            SELECT id, "BOUT", fighter_a_url, fighter_b_url,
+                   fighter_a_id, fighter_b_id
             FROM fight_details
-            WHERE fighter_a_id IS NULL
+            WHERE (fighter_a_id IS NULL OR fighter_b_id IS NULL)
               AND "BOUT" IS NOT NULL
               AND "BOUT" != 'win vs. '
         """)).fetchall()
@@ -153,11 +190,11 @@ def populate_fighter_a_b_ids():
         log.info(f"  Rows to resolve: {len(rows):,}")
 
         updates = []
-        stats = {"exact": 0, "fuzzy": 0, "ambiguous": 0,
-                 "unresolved_a": 0, "unresolved_b": 0}
+        stats = {"url": 0, "exact": 0, "fuzzy": 0, "ambiguous": 0,
+                 "unknown_url": 0, "unresolved_a": 0, "unresolved_b": 0}
         unresolved = []
 
-        for fight_id, bout in rows:
+        for fight_id, bout, url_a, url_b, existing_a, existing_b in rows:
             if " vs. " not in bout:
                 unresolved.append((fight_id, bout, "no_separator"))
                 stats["unresolved_a"] += 1
@@ -167,23 +204,34 @@ def populate_fighter_a_b_ids():
             name_a = parts[0].strip()
             name_b = parts[1].strip()
 
-            id_a, type_a = resolve_name(name_a, lookup, names_list, ambiguous)
-            id_b, type_b = resolve_name(name_b, lookup, names_list, ambiguous)
+            # Only a NULL side is resolved; an FK already written is kept as is.
+            if existing_a:
+                id_a, type_a = existing_a, "kept"
+            else:
+                id_a, type_a = resolve_fighter(
+                    name_a, url_a, url_lookup, lookup, names_list, ambiguous)
+            if existing_b:
+                id_b, type_b = existing_b, "kept"
+            else:
+                id_b, type_b = resolve_fighter(
+                    name_b, url_b, url_lookup, lookup, names_list, ambiguous)
 
             for side, name, fid_resolved, kind in (
                 ("fighter_a", name_a, id_a, type_a),
                 ("fighter_b", name_b, id_b, type_b),
             ):
+                if kind == "kept":
+                    continue
                 if fid_resolved is not None:
                     stats[kind] += 1
                     continue
                 # Refused or unmatched: record why, and leave the FK NULL.
-                if kind == "ambiguous":
-                    stats["ambiguous"] += 1
+                if kind in ("ambiguous", "unknown_url"):
+                    stats[kind] += 1
                 stats[f"unresolved_{side[-1]}"] += 1
                 unresolved.append((fight_id, name, f"{side}:{kind or 'no_match'}"))
 
-            if id_a is not None or id_b is not None:
+            if (id_a, id_b) != (existing_a, existing_b):
                 updates.append({
                     "fight_id": fight_id,
                     "fighter_a_id": id_a,
@@ -218,16 +266,24 @@ def populate_fighter_a_b_ids():
         log.info("=" * 70)
         log.info(f"  fighter_a_id populated: {populated_after:,} / {total_after:,}")
         log.info(f"  Both a+b populated:     {both_populated:,} / {total_after:,}")
+        log.info(f"  URL matches:            {stats['url']:,}")
         log.info(f"  Exact matches:          {stats['exact']:,}")
         log.info(f"  Fuzzy matches:          {stats['fuzzy']:,}")
         log.info(f"  Unresolved fighter_a:   {stats['unresolved_a']:,}")
         log.info(f"  Unresolved fighter_b:   {stats['unresolved_b']:,}")
         log.info(f"  Refused (ambiguous):    {stats['ambiguous']:,}")
+        log.info(f"  Unknown URL:            {stats['unknown_url']:,}")
         if stats["ambiguous"]:
             log.warning(
                 "\n  Some names belong to more than one fighter and were left "
                 "NULL on purpose.\n  Resolve them by merging or disambiguating "
                 "the fighter_details rows, then re-run."
+            )
+        if stats["unknown_url"]:
+            log.warning(
+                "\n  Some scraped fighter URLs match no fighter_details row and "
+                "were left NULL.\n  The live scraper creates the fighter before "
+                "storing the fight, so check its log for a failed insert."
             )
 
         # Write unresolved log

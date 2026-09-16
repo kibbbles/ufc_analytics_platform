@@ -14,7 +14,9 @@ Run from the project root:
 import pytest
 from unittest.mock import MagicMock
 
-from scraper.populate_fighter_fks import resolve_name, build_fighter_lookup, SCORE_CUTOFF
+from scraper.populate_fighter_fks import (
+    resolve_name, resolve_fighter, build_fighter_lookup, SCORE_CUTOFF,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +189,72 @@ class TestResolveNameAmbiguous:
         fid, match_type = resolve_name(name, lookup, names_list)
         assert fid == lookup[name]
         assert match_type == "exact"
+
+
+# ---------------------------------------------------------------------------
+# resolve_fighter — scraped URL is identity, name is only a fallback
+# ---------------------------------------------------------------------------
+
+class TestResolveFighterByUrl:
+    """resolve_fighter() prefers the scraped UFCStats URL over the BOUT name.
+
+    Modelled on Noche UFC: Silva vs. Delgado (2026-09-12): "Jean Silva" belongs
+    to two fighters, so name resolution refused the main event and the site
+    showed it with no winner.
+    """
+
+    SILVA_1996 = "http://ufcstats.com/fighter-details/52ef95b5860fb28c"
+    SILVA_1977 = "http://ufcstats.com/fighter-details/9211aae062b799d6"
+
+    @pytest.fixture()
+    def url_lookup(self):
+        return {self.SILVA_1996: "52ef95b5", self.SILVA_1977: "9211aae0"}
+
+    @pytest.fixture()
+    def ambiguous(self):
+        return {"jean silva": ["52ef95b5", "9211aae0"]}
+
+    def test_shared_name_resolves_to_the_fighter_the_url_names(
+            self, url_lookup, lookup, names_list, ambiguous):
+        fid, match_type = resolve_fighter(
+            "Jean Silva", self.SILVA_1996, url_lookup, lookup, names_list, ambiguous)
+        assert (fid, match_type) == ("52ef95b5", "url")
+
+        fid, _ = resolve_fighter(
+            "Jean Silva", self.SILVA_1977, url_lookup, lookup, names_list, ambiguous)
+        assert fid == "9211aae0"
+
+    def test_url_wins_over_a_name_that_belongs_to_someone_else(
+            self, url_lookup, lookup, names_list):
+        """A BOUT name matching a different fighter must not override the URL."""
+        fid, match_type = resolve_fighter(
+            "Conor McGregor", self.SILVA_1996, url_lookup, lookup, names_list)
+        assert (fid, match_type) == ("52ef95b5", "url")
+
+    def test_unknown_url_is_refused_not_resolved_by_name(
+            self, url_lookup, lookup, names_list):
+        fid, match_type = resolve_fighter(
+            "Conor McGregor", "http://ufcstats.com/fighter-details/deadbeef00000000",
+            url_lookup, lookup, names_list)
+        assert fid is None
+        assert match_type == "unknown_url"
+
+    def test_url_whitespace_is_ignored(self, url_lookup, lookup, names_list):
+        fid, _ = resolve_fighter(
+            "Jean Silva", f"  {self.SILVA_1977}\n", url_lookup, lookup, names_list)
+        assert fid == "9211aae0"
+
+    @pytest.mark.parametrize("missing_url", [None, "", "   "])
+    def test_rows_without_a_url_fall_back_to_name_resolution(
+            self, missing_url, url_lookup, lookup, names_list, ambiguous):
+        """Every row stored before migration 008 has no URL."""
+        fid, match_type = resolve_fighter(
+            "Conor McGregor", missing_url, url_lookup, lookup, names_list, ambiguous)
+        assert (fid, match_type) == ("CM002", "exact")
+
+        fid, match_type = resolve_fighter(
+            "Jean Silva", missing_url, url_lookup, lookup, names_list, ambiguous)
+        assert (fid, match_type) == (None, "ambiguous")
 
 
 # ---------------------------------------------------------------------------

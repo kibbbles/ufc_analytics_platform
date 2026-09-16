@@ -411,17 +411,41 @@ class LiveUFCScraper:
                         f"{fight.get('fighter_b_name', '')}"
                     )
 
+                    # Resolve both fighters by UFCStats URL now, while the fight
+                    # page is in hand.  Names in BOUT cannot do this: two fighters
+                    # can share one ("Jean Silva"), and the ETL name resolver
+                    # rightly refuses to guess between them.  The URLs are stored
+                    # too, so the ETL can resolve by identity if this lookup fails.
+                    fighter_a_url = fight.get('fighter_a_url')
+                    fighter_b_url = fight.get('fighter_b_url')
+                    fighter_a_id = (
+                        self.get_or_create_fighter(fight.get('fighter_a_name', ''), fighter_a_url)
+                        if fighter_a_url else None
+                    )
+                    fighter_b_id = (
+                        self.get_or_create_fighter(fight.get('fighter_b_name', ''), fighter_b_url)
+                        if fighter_b_url else None
+                    )
+
                     # fight_details
                     conn.execute(text("""
-                        INSERT INTO fight_details (id, "EVENT", "BOUT", "URL", event_id, position)
-                        VALUES (:id, :event, :bout, :url, :event_id, :position)
+                        INSERT INTO fight_details
+                            (id, "EVENT", "BOUT", "URL", event_id, position,
+                             fighter_a_url, fighter_b_url, fighter_a_id, fighter_b_id)
+                        VALUES
+                            (:id, :event, :bout, :url, :event_id, :position,
+                             :fighter_a_url, :fighter_b_url, :fighter_a_id, :fighter_b_id)
                     """), {
-                        'id':       fight_id,
-                        'event':    event_name,
-                        'bout':     bout_str,
-                        'url':      fight.get('fight_url'),
-                        'event_id': event_id,
-                        'position': position,
+                        'id':            fight_id,
+                        'event':         event_name,
+                        'bout':          bout_str,
+                        'url':           fight.get('fight_url'),
+                        'event_id':      event_id,
+                        'position':      position,
+                        'fighter_a_url': fighter_a_url,
+                        'fighter_b_url': fighter_b_url,
+                        'fighter_a_id':  fighter_a_id,
+                        'fighter_b_id':  fighter_b_id,
                     })
 
                     # fight_results (3.9.1)
@@ -461,6 +485,9 @@ class LiveUFCScraper:
 
         except Exception as e:
             logging.error(f"Error storing fights: {e}")
+            # Propagate: nothing is committed on failure, so swallowing this
+            # would drop the whole card while the run reports success.
+            raise
 
         return stored
     

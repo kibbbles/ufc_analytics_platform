@@ -182,7 +182,9 @@ fight_details (8,482 rows)
     "URL" TEXT,
     event_id VARCHAR(6) REFERENCES event_details(id),
     fighter_a_id VARCHAR(6),
-    fighter_b_id VARCHAR(6)
+    fighter_b_id VARCHAR(6),
+    fighter_a_url TEXT,  -- UFCStats profile URL, identity key for fighter_a_id (008; NULL on pre-008 rows)
+    fighter_b_url TEXT
 
 fight_results (8,482 rows)  -- ONE row per fight
     id VARCHAR(6) PRIMARY KEY,
