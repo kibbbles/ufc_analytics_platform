@@ -71,22 +71,41 @@ DIVISION_LADDER = {
 # journeymen (Diego Sanchez, Jeff Monson, Kevin Jackson).
 OSCILLATION_DIVISIONS = 3
 
-# Whether identity-integrity failures fail the pipeline.
+# Whether the symptom-based identity checks fail the pipeline.
 #
-# These checks currently find 65 real violations (16 shared names, 13 duplicate
-# URLs, 4 unreachable rows, 20 duplicate tott rows, 12 orphaned fighters, 1
-# weight-class oscillation). Making them blocking before that data is repaired
-# would fail post_scrape_clean.py every Sunday, which skips archive-predictions
-# and stops feature-engineering, retrain and deploy from running at all.
+# These infer a merged identity from its consequences: a shared name, a fighter
+# named in a bout who owns none, a career that drops three divisions and
+# returns. Two of them cannot reach zero even when the data is perfect, because
+# the UFC really does have two Jean Silvas and two Michael McDonalds, and the
+# namesake who never fought really does own no bouts. Seven shared names and
+# five such fighters remain today and all of them are legitimate.
 #
-# So they report as INFO until the identity repair lands. Flip this to True as
-# the last step of that repair - it then becomes the regression guard that stops
-# the merge bug from ever coming back.
+# Making these blocking would fail post_scrape_clean.py every Sunday, which
+# skips archive-predictions and stops feature-engineering, retrain and deploy
+# from running at all. They stay informational, and the URL-based checks below
+# are the ones that gate the pipeline.
 IDENTITY_CHECKS_BLOCKING = False
+
+# Whether the URL-based identity checks fail the pipeline.
+#
+# These compare two stored facts rather than reasoning from symptoms: a fight's
+# fighter FK against the UFCStats URL stored beside it (migration 008), and a
+# fighter's name against the names in their own bouts. A disagreement is a
+# contradiction in the data, never a fact about the sport, so zero is a floor
+# the data can actually sit on - and it does, since
+# db/migrations/009_montanha_identity.sql repaired the last violation.
+#
+# They gate the pipeline, so a merge bug stops the Sunday run instead of
+# quietly training a model on a fight filed under the wrong fighter.
+URL_IDENTITY_CHECKS_BLOCKING = True
 
 
 def _identity_threshold_type():
     return "max_count" if IDENTITY_CHECKS_BLOCKING else "info"
+
+
+def _url_identity_threshold_type():
+    return "max_count" if URL_IDENTITY_CHECKS_BLOCKING else "info"
 
 # One-night tournaments ran through 1999, so a fighter legitimately appears
 # twice on those cards. Anything after this date is a duplicate-identity bug.
@@ -640,11 +659,50 @@ def check_identity_integrity(conn):
     """)).fetchall()
     r = CheckResult(
         "fight_details - fighter FK disagrees with stored UFCStats URL",
-        len(rows), 0, _identity_threshold_type(),
+        len(rows), 0, _url_identity_threshold_type(),
         ", ".join(
             f"{fid}.{side}:{fk}->{url.rsplit('/', 1)[-1][:8] if known else 'unknown URL'}"
             for fid, side, fk, url, known in rows[:6]
         ) or "every stored URL agrees with its FK"
+    )
+    r.log(); results.append(r)
+
+    # The check above cannot see a fighter row whose *name* is wrong, because
+    # both the FK and the URL can agree while the name attached to them belongs
+    # to someone else - the defect 009 repaired. BOUT names the two fighters in
+    # order and fight_details stores a URL for each side, so a fighter's own
+    # bouts are a reference for their name that needs no scraping.
+    #
+    # A fighter is reported only when *none* of their bouts carry their stored
+    # name. One bout in a different spelling is a rename or a typo in the source
+    # (UFCStats now calls Kai Kamaka "Kai Kamaka III"); no bout at all matching
+    # means the row is named after a different person.
+    rows = conn.execute(text("""
+        WITH sides AS (
+            SELECT x.url, trim(x.nm) AS bout_name
+            FROM fight_details fd
+            CROSS JOIN LATERAL (VALUES (fd.fighter_a_url, split_part(fd."BOUT", ' vs. ', 1)),
+                                       (fd.fighter_b_url, split_part(fd."BOUT", ' vs. ', 2))) AS x(url, nm)
+            WHERE x.url IS NOT NULL AND fd."BOUT" LIKE :sep
+        ),
+        named AS (
+            SELECT f.id,
+                   trim(coalesce(f."FIRST", '') || ' ' || coalesce(f."LAST", '')) AS db_name,
+                   s.bout_name
+            FROM sides s
+            JOIN fighter_details f ON f."URL" = s.url
+        )
+        SELECT id, db_name, string_agg(DISTINCT bout_name, ' / ') AS bout_names
+        FROM named
+        GROUP BY id, db_name
+        HAVING COUNT(*) FILTER (WHERE lower(db_name) = lower(bout_name)) = 0
+        ORDER BY db_name
+    """), {"sep": "% vs. %"}).fetchall()
+    r = CheckResult(
+        "fighter_details - name matches none of the fighter's own bouts",
+        len(rows), 0, _url_identity_threshold_type(),
+        ", ".join(f"{fid}:{db_name} fought as {bout_names}" for fid, db_name, bout_names in rows[:4])
+        or "every fighter's name appears in at least one of their bouts"
     )
     r.log(); results.append(r)
 
@@ -705,8 +763,8 @@ def run_validation():
                 and r.value > 0 and " - " in r.name]
     if identity and not IDENTITY_CHECKS_BLOCKING:
         log.warning("")
-        log.warning("  Identity-integrity violations (non-blocking, see "
-                    "IDENTITY_CHECKS_BLOCKING):")
+        log.warning("  Identity symptoms (non-blocking - each needs a human to say "
+                    "whether it is two people or one):")
         for r in identity:
             log.warning(f"    !  {r.name}: {r.value}")
 
