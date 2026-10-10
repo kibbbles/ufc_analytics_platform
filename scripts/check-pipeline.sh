@@ -17,6 +17,10 @@
 
 set -euo pipefail
 
+# Under a git hook on Windows, stdout is a pipe and Python falls back to
+# cp1252, printing the validation marks as ✓ escapes.
+export PYTHONUTF8=1
+
 cd "$(dirname "$0")/../backend"
 
 step() { printf '\n==> %s\n' "$1"; }
