@@ -78,6 +78,9 @@ HEADERS = {
 }
 FUZZY_THRESHOLD = 88
 
+# Days a past-dated, unarchived prediction is kept for the archive to reach.
+PURGE_GRACE_DAYS = 30
+
 
 # ---------------------------------------------------------------------------
 # Scraper
@@ -214,8 +217,18 @@ class UpcomingScraper:
         return None
 
     def resolve_fighter(self, url: str, name: str) -> str | None:
-        """URL first, name fallback, None if neither matches."""
-        return self._match_by_url(url) or self._match_by_name(name)
+        """URL when the card gives one, name only when it does not.
+
+        Every fighter_details row stores its UFCStats URL, so a URL with no
+        match means the fighter is not in the database yet (usually a debut),
+        not that the name should decide. Falling back to the name there picked
+        a different person who shares it: UFC 332's Anthony Romero
+        (4419acb8...) was predicted with the features of an unrelated Anthony
+        Romero (6f813990...).
+        """
+        if url:
+            return self._match_by_url(url)
+        return self._match_by_name(name)
 
     # ------------------------------------------------------------------
     # Scraping — events listing
@@ -536,6 +549,63 @@ class UpcomingScraper:
     # Main run
     # ------------------------------------------------------------------
 
+    def _purge_past_events(self, conn) -> None:
+        """Remove past-dated cards, but never a prediction nothing has archived.
+
+        upcoming_predictions is the only copy of a pre-fight prediction until
+        archive_completed_predictions.py freezes it into past_predictions. The
+        purge used to drop every past-dated row, so when the Post-Scrape ETL
+        failed on 2026-09-27 and the archive was skipped, the next Saturday's
+        run deleted the whole Sep 26 card for good.
+
+        A past fight is now removed once it is archived or never had a
+        prediction. An unarchived prediction is kept for PURGE_GRACE_DAYS so
+        a later archive run can still reach it; past that it is one the
+        archive cannot match (a bout cancelled on the night, or fighter IDs
+        that disagree with the result) and is dropped with a warning.
+        """
+        past = """
+            SELECT uf.id FROM upcoming_fights uf
+            JOIN upcoming_events ue ON ue.id = uf.event_id
+            WHERE ue.date_proper < CURRENT_DATE
+        """
+        expired = conn.execute(text(f"""
+            SELECT uf.fighter_a_name, uf.fighter_b_name, ue.event_name
+            FROM upcoming_fights uf
+            JOIN upcoming_events ue ON ue.id = uf.event_id
+            JOIN upcoming_predictions up ON up.fight_id = uf.id
+            WHERE ue.date_proper < CURRENT_DATE - :grace
+              AND uf.archived IS NOT TRUE
+        """), {'grace': PURGE_GRACE_DAYS}).fetchall()
+        for a, b, event in expired:
+            logger.warning(f'Dropping unarchived prediction after {PURGE_GRACE_DAYS} days: {a} vs {b} ({event})')
+
+        preds = conn.execute(text(f"""
+            DELETE FROM upcoming_predictions
+            WHERE fight_id IN (
+                {past}
+                  AND (uf.archived IS TRUE OR ue.date_proper < CURRENT_DATE - :grace)
+            )
+        """), {'grace': PURGE_GRACE_DAYS}).rowcount
+        fights = conn.execute(text(f"""
+            DELETE FROM upcoming_fights uf
+            WHERE uf.id IN ({past})
+              AND NOT EXISTS (SELECT 1 FROM upcoming_predictions up WHERE up.fight_id = uf.id)
+        """)).rowcount
+        events = conn.execute(text("""
+            DELETE FROM upcoming_events ue
+            WHERE ue.date_proper < CURRENT_DATE
+              AND NOT EXISTS (SELECT 1 FROM upcoming_fights uf WHERE uf.event_id = ue.id)
+        """)).rowcount
+        kept = conn.execute(text(f"""
+            SELECT COUNT(*) FROM upcoming_predictions WHERE fight_id IN ({past})
+        """)).scalar()
+
+        if events or fights or preds:
+            print(f'Purged {events} past event(s), {fights} fight(s), {preds} prediction(s)')
+        if kept:
+            logger.warning(f'Kept {kept} past prediction(s) that are not archived yet')
+
     def run(self, dry_run: bool = False) -> bool:
         print('=' * 60)
         print('UFC UPCOMING SCRAPER')
@@ -545,32 +615,10 @@ class UpcomingScraper:
         print('=' * 60)
 
         try:
-            # Purge past events (and their fights/predictions) before scraping
             if not dry_run:
                 with engine.connect() as conn:
-                    result = conn.execute(text("""
-                        DELETE FROM upcoming_predictions
-                        WHERE fight_id IN (
-                            SELECT uf.id FROM upcoming_fights uf
-                            JOIN upcoming_events ue ON ue.id = uf.event_id
-                            WHERE ue.date_proper < CURRENT_DATE
-                        )
-                    """))
-                    preds_deleted = result.rowcount
-                    result = conn.execute(text("""
-                        DELETE FROM upcoming_fights
-                        WHERE event_id IN (
-                            SELECT id FROM upcoming_events WHERE date_proper < CURRENT_DATE
-                        )
-                    """))
-                    fights_deleted = result.rowcount
-                    result = conn.execute(text(
-                        "DELETE FROM upcoming_events WHERE date_proper < CURRENT_DATE"
-                    ))
-                    events_deleted = result.rowcount
+                    self._purge_past_events(conn)
                     conn.commit()
-                if events_deleted:
-                    print(f'Purged {events_deleted} past event(s), {fights_deleted} fight(s), {preds_deleted} prediction(s)')
 
             events = self.scrape_upcoming_events()
             if not events:
