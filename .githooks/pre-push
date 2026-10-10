@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Blocks a push that would break the weekly pipeline against today's data.
+# Enable once per clone:  git config core.hooksPath .githooks
+# Skip in an emergency:   git push --no-verify
+
+set -euo pipefail
+
+zero=0000000000000000000000000000000000000000
+pipeline_paths='^(backend/|scripts/|\.github/)'
+
+needs_check=false
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue          # deleting a branch
+    if [ "$remote_sha" = "$zero" ]; then
+        range="$local_sha"                           # new branch: everything not on any remote
+        files=$(git rev-list "$range" --not --remotes | xargs -r git diff-tree --no-commit-id --name-only -r)
+    else
+        files=$(git diff --name-only "$remote_sha" "$local_sha")
+    fi
+    if printf '%s\n' "$files" | grep -Eq "$pipeline_paths"; then
+        needs_check=true
+    fi
+done
+
+if [ "$needs_check" = true ]; then
+    echo "pre-push: pipeline files changed - running scripts/check-pipeline.sh"
+    "$(git rev-parse --show-toplevel)/scripts/check-pipeline.sh"
+fi

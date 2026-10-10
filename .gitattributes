@@ -1,0 +1,3 @@
+# Shell scripts run under bash on Windows too, where a CRLF breaks them
+*.sh text eol=lf
+.githooks/* text eol=lf

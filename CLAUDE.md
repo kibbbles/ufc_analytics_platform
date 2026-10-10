@@ -273,8 +273,10 @@ past_predictions
 UFCStats event page cell[1] contains `<a href="http://ufcstats.com/fighter-details/XXXXX">`.
 This URL matches `fighter_details."URL"` exactly.
 Primary: `SELECT id FROM fighter_details WHERE "URL" = :ufcstats_url`
-Fallback: fuzzy FIRST+LAST name match if URL not found.
+Fallback: fuzzy FIRST+LAST name match, only when the card gives no URL.
+A URL with no match is a fighter not in the DB yet (usually a debut), never a name match - two fighters can share a name.
 If no match: store fight with fighter_a_id/b_id = NULL, skip prediction.
+Past-dated cards are purged only once archived; an unarchived prediction is kept 30 days (`PURGE_GRACE_DAYS`).
 
 ### Relationship Status
 - ✅ event_details ↔ fight_details via event_id (100%)
@@ -327,15 +329,22 @@ python post_scrape_clean.py        # Run full ETL pipeline + validation
 ### Automation
 ```
 Daily    03:00 UTC  → daily-keepalive       (keep Supabase alive)
+Daily    06:00 UTC  → pipeline-health       (opens/closes a pipeline-failure issue)
 
 Saturday 15:00 UTC  → upcoming-predictions  (scrape same-day card + pre-compute)
 
 Sunday   14:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
-                    → post-scrape-clean     (ETL cleanup + archive pre-fight predictions)
+                    → post-scrape-clean     (ETL cleanup + archive pre-fight predictions;
+                                             archive runs even when validation fails)
                     → feature-engineering   (rebuild training_data.parquet)
                     → retrain               (retrain + commit model artefacts)
                     → deploy-backend        (build + deploy updated image to Cloud Run)
+
+Every push/PR  → pipeline-check        (scripts/check-pipeline.sh against live data)
 ```
+
+**Before pushing pipeline changes:** `bash scripts/check-pipeline.sh` runs the ETL validation gate, the archive dry run, the health check and both test suites against the live DB (read-only, ~10s).
+The pre-push hook in `.githooks/` runs it automatically when backend, scripts or workflows change; enable once per clone with `git config core.hooksPath .githooks`.
 
 ## Hosting & Deployment
 

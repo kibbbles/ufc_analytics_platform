@@ -69,20 +69,27 @@ All endpoints versioned under `/api/v1`. Swagger docs at `/docs`.
 
 ## Automation
 
-7 GitHub Actions workflows keep everything current:
+9 GitHub Actions workflows keep everything current:
 
 ```
 Daily    03:00 UTC  →  daily-keepalive          ping Supabase to prevent free tier pause
+Daily    06:00 UTC  →  pipeline-health          open a GitHub issue if a pipeline run failed
+                                                 or a finished card's predictions were not archived
 
 Saturday 15:00 UTC  →  upcoming-predictions     scrape announced fights + compute predictions
 
 Sunday   14:00 UTC  →  weekly-ufc-scraper       scrape completed events from UFCStats
                     →  post-scrape-clean         ETL (FK resolution, type parsing, derived cols)
                                                  + archive pre-fight predictions before features change
+                                                   (runs even if validation fails)
                     →  feature-engineering       rebuild training_data.parquet
                     →  retrain                   retrain models + commit artefacts
                     →  deploy-backend            build Docker image + deploy to Cloud Run
+
+Every push / PR     →  pipeline-check           run the pipeline's gates against live data
 ```
+
+`scripts/check-pipeline.sh` is the same check, runnable locally and wired into a pre-push hook (`git config core.hooksPath .githooks`).
 
 ## ML Model Performance
 
@@ -183,7 +190,7 @@ ufc_analytics_platform/
 │       ├── services/                  # Axios client + API service classes (chatService, etc.)
 │       ├── types/api.ts               # TypeScript interfaces mirroring Pydantic schemas
 │       └── utils/                     # Pure helpers
-├── .github/workflows/                 # 7 automation workflows
+├── .github/workflows/                 # 9 automation workflows
 ├── Dockerfile                         # Python 3.12-slim, Gunicorn
 ├── render.yaml                        # Render IaC (fallback config)
 └── docs/                              # project_history.ipynb, project_writeup.ipynb

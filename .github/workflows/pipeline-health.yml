@@ -1,0 +1,119 @@
+name: Daily Pipeline Health
+
+# Turns a silent pipeline failure into a GitHub issue that mentions the owner.
+#
+# The Post-Scrape ETL failed on 2026-09-27 and 2026-10-04 and nobody noticed
+# for two weeks. This runs on its own schedule rather than off workflow_run,
+# because workflow_run chains stop three levels deep and Retrain is already the
+# fourth link (Scraper -> ETL -> Feature Engineering -> Retrain).
+#
+# Unhealthy: opens an issue labelled pipeline-failure, or comments on the open
+# one. Healthy again: closes it.
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Check predictions are being archived
+        id: data
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python backend/scraper/check_pipeline_health.py | tee data_health.txt
+
+      # A run skipped because the run before it failed is not news on its
+      # own - the failed run is - so the latest run that actually ran is the
+      # one that counts.
+      - name: Check latest run of every pipeline workflow
+        id: runs
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          failed=0
+          for wf in weekly-ufc-scraper.yml post-scrape-clean.yml feature-engineering.yml \
+                    retrain.yml deploy-backend.yml upcoming-predictions.yml \
+                    daily-keepalive.yml pipeline-check.yml; do
+            line=$(gh run list --workflow "$wf" --status completed --limit 20 \
+                     --json conclusion,url,createdAt \
+                     --jq '([.[] | select(.conclusion != "skipped" and .conclusion != "cancelled")][0] // empty)
+                           | "\(.conclusion) \(.createdAt) \(.url)"') \
+              || line="unreadable (gh run list failed)"
+            echo "$wf: ${line:-no runs}"
+            case "$line" in
+              success*|"") ;;
+              *) failed=1; echo "- \`$wf\` last run: $line" >> failed_runs.txt ;;
+            esac
+          done
+          exit $failed
+
+      - name: Open, update or close the pipeline-failure issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DATA_OK: ${{ steps.data.outcome == 'success' }}
+          RUNS_OK: ${{ steps.runs.outcome == 'success' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create pipeline-failure --color B60205 \
+            --description "Opened by Daily Pipeline Health" 2>/dev/null || true
+          open=$(gh issue list --label pipeline-failure --state open --json number --jq '.[0].number // empty')
+
+          if [ "$DATA_OK" = true ] && [ "$RUNS_OK" = true ]; then
+            if [ -n "$open" ]; then
+              gh issue close "$open" --comment "Healthy again as of $RUN_URL"
+            fi
+            exit 0
+          fi
+
+          {
+            echo "@${{ github.repository_owner }} the weekly pipeline needs attention ($RUN_URL)."
+            echo
+            if [ -f failed_runs.txt ]; then
+              echo "**Failing workflows**"
+              cat failed_runs.txt
+              echo
+            fi
+            if [ "$DATA_OK" != true ]; then
+              echo "**Prediction archive**"
+              echo '```'
+              cat data_health.txt
+              echo '```'
+            fi
+          } > body.md
+
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file body.md
+          else
+            gh issue create --title "Weekly pipeline is failing" --label pipeline-failure --body-file body.md
+          fi
+          exit 1

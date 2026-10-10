@@ -1,0 +1,48 @@
+name: Pipeline Check
+
+# Runs the pipeline's own gates against today's data on every change that can
+# affect the pipeline, so a change that would fail the Sunday run fails here
+# first. Same script as the local pre-push hook: scripts/check-pipeline.sh.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'scripts/**'
+      - '.github/**'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'scripts/**'
+      - '.github/**'
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Pipeline gates against live data
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run pipeline check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: bash scripts/check-pipeline.sh

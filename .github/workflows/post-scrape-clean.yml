@@ -84,7 +84,16 @@ jobs:
 
   archive-predictions:
     name: Archive pre-fight predictions (prevent data leakage)
+    # Ordered after the ETL so FK resolution has run, but not gated on it.
+    # Validation exists to keep bad data out of training; it must not stop
+    # pre-fight predictions being saved. When it did (2026-09-27, 2026-10-04)
+    # the Sep 26 card's predictions were never archived and were lost.
+    # Feature engineering and retraining still wait for a passing ETL.
     needs: etl-cleanup
+    if: >
+      always() &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
 
     steps:

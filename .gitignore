@@ -76,3 +76,6 @@ docs/*.pdf
 docs/*.txt
 docs/*.py
 docs/.ipynb_checkpoints/
+
+# Local validate_etl.py runs (CI archives its own as artifacts)
+backend/scraper/reports/etl_validation_*.json
