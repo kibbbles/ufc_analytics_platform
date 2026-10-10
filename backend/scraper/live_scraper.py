@@ -506,6 +506,13 @@ class LiveUFCScraper:
                     tott['name'] = name_link.text.strip()
                     tott['url']  = name_link.get('href')
 
+            # Quoted ('"Mamba"'), or an empty line when there is no nickname.
+            # Left out entirely when the line is missing, so a layout change
+            # reads as unknown rather than as "no nickname".
+            nickname_elem = fighter_div.find('p', class_='b-fight-details__person-title')
+            if nickname_elem:
+                tott['nickname'] = nickname_elem.get_text().strip().strip('"').strip()
+
             stats_list = fighter_div.find('ul', class_='b-list__box-list')
             if stats_list:
                 for item in stats_list.find_all('li', class_='b-list__box-list-item'):
@@ -849,14 +856,56 @@ class LiveUFCScraper:
         return candidate if len(candidate) == 8 and all(
             c in '0123456789abcdef' for c in candidate) else None
 
-    def get_or_create_fighter(self, fighter_name, fighter_url=None):
+    def _sync_identity(self, conn, row, fighter_name, nickname):
+        """Bring a URL-matched fighter row's name and nickname in line with UFCStats.
+
+        The URL is the identity, so a different name on a URL match is UFCStats
+        renaming the fighter, not a different person. Valesca Machado became
+        Tina Black; her row kept the old name, stopped matching her new bout,
+        and validate_etl.py failed the Post-Scrape ETL two weeks running.
+
+        Names are compared whole, so a row split differently ("Da Un" / "Jung")
+        is not rewritten. nickname is None when the page had no nickname line
+        (unknown, left alone); '' means UFCStats lists none.
+        """
+        fighter_id, first, last, old_nickname = row
+        stored = ' '.join(filter(None, (first, last)))
+        name = ' '.join(fighter_name.split())
+
+        changes = {}
+        if name and name != stored:
+            changes['FIRST'], changes['LAST'] = self._split_fighter_name(name)
+        if nickname is not None and (nickname or None) != old_nickname:
+            changes['NICKNAME'] = nickname or None
+        if not changes:
+            return
+
+        # A failed sync must not cost the fight its fighter FK.
+        try:
+            assignments = ', '.join(f'"{col}" = :{col}' for col in changes)
+            conn.execute(text(f"""
+                UPDATE fighter_details SET {assignments} WHERE id = :id
+            """), {**changes, 'id': fighter_id})
+            conn.commit()
+            logging.warning(
+                f"Synced fighter {fighter_id} to UFCStats: "
+                f"{stored!r} (nickname {old_nickname!r}) -> "
+                f"{(name if 'FIRST' in changes else stored)!r} "
+                f"(nickname {changes.get('NICKNAME', old_nickname)!r})"
+            )
+        except Exception as e:
+            conn.rollback()
+            logging.error(f"Could not sync fighter {fighter_id} to UFCStats: {e}")
+
+    def get_or_create_fighter(self, fighter_name, fighter_url=None, nickname=None):
         """Return existing fighter_details.id or insert a new row.
 
         Matches on URL first. The URL is the only stable identity UFCStats
         gives us: names are not unique (two UFC Bruno Silvas, two Mike Davises),
         and matching on name alone both merges distinct people and creates
         duplicate rows for the same person when a name is stored in a different
-        shape. A URL match is exact or it is nothing.
+        shape. A URL match is exact or it is nothing, and the matched row takes
+        the name UFCStats lists now (see _sync_identity).
         """
         try:
             first, last = self._split_fighter_name(fighter_name)
@@ -865,9 +914,11 @@ class LiveUFCScraper:
                 # 1. Identity: exact URL match.
                 if fighter_url:
                     row = conn.execute(text("""
-                        SELECT id FROM fighter_details WHERE "URL" = :url
+                        SELECT id, "FIRST", "LAST", "NICKNAME"
+                        FROM fighter_details WHERE "URL" = :url
                     """), {'url': fighter_url}).fetchone()
                     if row:
+                        self._sync_identity(conn, row, fighter_name, nickname)
                         return row[0]
 
                 # 2. No URL match. A name match is only safe against a row that
@@ -923,7 +974,7 @@ class LiveUFCScraper:
             return
         try:
             fighter_id = self.get_or_create_fighter(
-                fighter_name, tott_data.get('url')
+                fighter_name, tott_data.get('url'), tott_data.get('nickname')
             )
             if not fighter_id:
                 return
@@ -999,7 +1050,11 @@ class LiveUFCScraper:
                     career_losses = int(m.group(2))
                     career_draws  = int(m.group(3))
 
+            # Empty when the fighter has none; None when the line is missing.
+            nickname_elem = soup.find('p', class_='b-content__Nickname')
+
             return {
+                'nickname':      nickname_elem.get_text().strip() if nickname_elem else None,
                 'height':        stats.get('Height'),
                 'weight':        stats.get('Weight'),
                 'reach':         stats.get('Reach'),
