@@ -47,7 +47,15 @@ RECORD_SQL = """
         COUNT(*) FILTER (WHERE (fr.fighter_id = :fid OR fr.opponent_id = :fid)
                           AND fr."OUTCOME" = 'NC/NC')                            AS nc
     FROM fight_results fr
+    JOIN event_details e ON e.id = fr.event_id
+    WHERE e.date_proper <= :as_of
 """
+
+# The record ground truths below were verified against UFCStats in 2025-12.
+# Counting only fights up to that date keeps them true after a fighter's next
+# bout - unpinned, McGregor's 2026 loss to Holloway turned a correct record
+# into a failing test.
+RECORDS_VERIFIED_AS_OF = "2025-12-31"
 
 
 def get_fighter_id(conn, last_name, first_name=None):
@@ -76,9 +84,9 @@ def get_fighter_id(conn, last_name, first_name=None):
     return row[0]
 
 
-def get_record(conn, fid):
-    """Return (wins, losses, draws, nc) for a fighter_details.id."""
-    row = conn.execute(text(RECORD_SQL), {"fid": fid}).fetchone()
+def get_record(conn, fid, as_of=RECORDS_VERIFIED_AS_OF):
+    """Return (wins, losses, draws, nc) for a fighter_details.id, up to as_of."""
+    row = conn.execute(text(RECORD_SQL), {"fid": fid, "as_of": as_of}).fetchone()
     return tuple(row)
 
 
@@ -478,14 +486,18 @@ class TestParsedColumns:
         assert row[1] <= 90, f"height_inches max is {row[1]} (> 90in = 7'6\")"
 
     def test_weight_lbs_range(self, conn):
-        """weight_lbs should be 100–350 lbs (flyweight to super heavyweight)."""
+        """weight_lbs should be 100–800 lbs.
+
+        Early open-weight UFC listed far past heavyweight: Emmanuel Yarborough
+        (UFC 3) is 770 lbs on UFCStats, and several others are 385-430.
+        """
         row = conn.execute(text("""
             SELECT MIN(weight_lbs), MAX(weight_lbs)
             FROM fighter_tott
             WHERE weight_lbs IS NOT NULL
         """)).fetchone()
         assert row[0] >= 100, f"weight_lbs min is {row[0]}"
-        assert row[1] <= 350, f"weight_lbs max is {row[1]}"
+        assert row[1] <= 800, f"weight_lbs max is {row[1]}"
 
     def test_reach_inches_range(self, conn):
         """reach_inches should be 40–90 inches."""
@@ -498,13 +510,16 @@ class TestParsedColumns:
         assert row[1] <= 90, f"reach_inches max is {row[1]}"
 
     def test_dob_date_range(self, conn):
-        """dob_date should be between 1950 and 2005 (fighters in UFC)."""
+        """dob_date should be between 1940 and 2005 (fighters in UFC).
+
+        Ron van Clief, born 1943, fought at UFC 4 aged 51.
+        """
         row = conn.execute(text("""
             SELECT MIN(dob_date), MAX(dob_date)
             FROM fighter_tott
             WHERE dob_date IS NOT NULL
         """)).fetchone()
-        assert str(row[0]) >= "1950-01-01", f"dob_date min is {row[0]}"
+        assert str(row[0]) >= "1940-01-01", f"dob_date min is {row[0]}"
         assert str(row[1]) <= "2006-01-01", f"dob_date max is {row[1]}"
 
     def test_fighter_tott_no_dash_placeholders(self, conn):
