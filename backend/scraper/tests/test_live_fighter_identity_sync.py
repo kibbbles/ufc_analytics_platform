@@ -87,10 +87,7 @@ def _fight_page_person(name, url, nickname_html):
     <div class="b-fight-details__person">
       <h3 class="b-fight-details__person-name"><a href="{url}">{name}</a></h3>
       {nickname_html}
-      <ul class="b-list__box-list">
-        <li class="b-list__box-list-item"><i>Height:</i> 5' 4"</li>
-      </ul>
-    </div>"""
+    </div>"""  # all a fight page shows; no height, reach, stance or DOB
     return BeautifulSoup(html, "html.parser").div
 
 
@@ -160,3 +157,60 @@ class TestNicknameSync:
                             lambda url, delay=None: BeautifulSoup(html, "html.parser"))
 
         assert scraper.scrape_fighter_physical_stats(TINA_URL)["nickname"] == ""
+
+
+PROFILE_HTML = """
+  <span class="b-content__title-highlight">Conor McGregor</span>
+  <span class="b-content__title-record">Record: 22-6-0</span>
+  <p class="b-content__Nickname">The Notorious</p>
+  <ul class="b-list__box-list">
+    <li class="b-list__box-list-item"><i class="b-list__box-item-title">Height:</i> 5' 9"</li>
+    <li class="b-list__box-list-item"><i class="b-list__box-item-title">Weight:</i> 155 lbs.</li>
+    <li class="b-list__box-list-item"><i class="b-list__box-item-title">Reach:</i> 74"</li>
+    <li class="b-list__box-list-item"><i class="b-list__box-item-title">STANCE:</i> Southpaw</li>
+    <li class="b-list__box-list-item"><i class="b-list__box-item-title">DOB:</i> Jul 14, 1988</li>
+  </ul>"""
+
+
+def _tott(db, fighter_id):
+    with db.connect() as conn:
+        return conn.execute(text("""
+            SELECT "HEIGHT", "WEIGHT", "REACH", "STANCE", "DOB", career_wins
+            FROM fighter_tott WHERE fighter_id = :id
+        """), {"id": fighter_id}).one()
+
+
+class TestTaleOfTheTape:
+    """The weekly scrape blanked the stance, height, reach and DOB text of
+    471 of the 593 fighters who fought in 2026, Max Holloway and Ilia Topuria
+    among them. Fight pages list only a fighter's name, URL and nickname, and
+    store_fighter_tott wrote '' for every field the page lacked."""
+
+    def test_fight_page_without_measurements_keeps_stored_values(self, db, scraper):
+        with db.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO fighter_tott (id, "FIGHTER", "HEIGHT", "WEIGHT", "REACH",
+                    "STANCE", "DOB", "URL", fighter_id, career_wins)
+                VALUES ('t1', 'Conor McGregor', '5'' 9"', '155 lbs.', '74"', 'Southpaw',
+                    'Jul 14, 1988', :url, 'f4c49976', 22)
+            """), {"url": URL + "f4c49976c75c5ab2"})
+        tott = scraper._parse_fighter_tott(_fight_page_person(
+            "Conor McGregor", URL + "f4c49976c75c5ab2",
+            '<p class="b-fight-details__person-title">"The Notorious"</p>'))
+
+        scraper.store_fighter_tott("Conor McGregor", tott)
+
+        assert _tott(db, "f4c49976") == ('5\' 9"', "155 lbs.", '74"', "Southpaw",
+                                         "Jul 14, 1988", 22)
+
+    def test_new_bout_reads_measurements_from_the_profile(self, db, scraper, monkeypatch):
+        monkeypatch.setattr(scraper, "_get_soup",
+                            lambda url, delay=None: BeautifulSoup(PROFILE_HTML, "html.parser"))
+        tott = scraper._parse_fighter_tott(_fight_page_person(
+            "Conor McGregor", URL + "f4c49976c75c5ab2",
+            '<p class="b-fight-details__person-title">"The Notorious"</p>'))
+
+        scraper.store_fighter_profile("Conor McGregor", tott)
+
+        assert _tott(db, "f4c49976") == ('5\' 9"', "155 lbs.", '74"', "Southpaw",
+                                         "Jul 14, 1988", 22)

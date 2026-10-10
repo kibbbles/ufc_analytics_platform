@@ -968,8 +968,24 @@ class LiveUFCScraper:
             logging.error(f"Error getting/creating fighter '{fighter_name}': {e}")
             return None
 
+    def store_fighter_profile(self, fighter_name, fight_page_tott):
+        """Store a fighter's tale of the tape, read from their UFCStats profile.
+
+        A fight page lists only each fighter's name, URL and nickname. Storing
+        that alone blanked the stance, height, reach and DOB of 471 of the 593
+        fighters who fought in 2026. The profile page carries all of them.
+        """
+        url = fight_page_tott.get('url')
+        profile = self.scrape_fighter_physical_stats(url) if url else None
+        known = {k: v for k, v in (profile or {}).items() if v is not None}
+        self.store_fighter_tott(fighter_name, {**fight_page_tott, **known})
+
     def store_fighter_tott(self, fighter_name, tott_data):
-        """Upsert fighter Tale of the Tape (height, weight, reach, stance, DOB)."""
+        """Upsert fighter Tale of the Tape (height, weight, reach, stance, DOB).
+
+        A field the source did not provide keeps its stored value: an empty
+        page field means "not on this page", never "erase it".
+        """
         if not tott_data or not fighter_name:
             return
         try:
@@ -986,12 +1002,12 @@ class LiveUFCScraper:
 
                 params = {
                     'fighter':       fighter_name,
-                    'height':        tott_data.get('height', ''),
-                    'weight':        tott_data.get('weight', ''),
-                    'reach':         tott_data.get('reach',  ''),
-                    'stance':        tott_data.get('stance', ''),
-                    'dob':           tott_data.get('dob',    ''),
-                    'url':           tott_data.get('url',    ''),
+                    'height':        tott_data.get('height') or None,
+                    'weight':        tott_data.get('weight') or None,
+                    'reach':         tott_data.get('reach')  or None,
+                    'stance':        tott_data.get('stance') or None,
+                    'dob':           tott_data.get('dob')    or None,
+                    'url':           tott_data.get('url')    or None,
                     'fighter_id':    fighter_id,
                     'career_wins':   tott_data.get('career_wins'),
                     'career_losses': tott_data.get('career_losses'),
@@ -1001,10 +1017,16 @@ class LiveUFCScraper:
                 if existing:
                     conn.execute(text("""
                         UPDATE fighter_tott
-                        SET "FIGHTER"=:fighter, "HEIGHT"=:height, "WEIGHT"=:weight,
-                            "REACH"=:reach, "STANCE"=:stance, "DOB"=:dob, "URL"=:url,
-                            career_wins=:career_wins, career_losses=:career_losses,
-                            career_draws=:career_draws
+                        SET "FIGHTER"=:fighter,
+                            "HEIGHT"=COALESCE(:height, "HEIGHT"),
+                            "WEIGHT"=COALESCE(:weight, "WEIGHT"),
+                            "REACH"=COALESCE(:reach, "REACH"),
+                            "STANCE"=COALESCE(:stance, "STANCE"),
+                            "DOB"=COALESCE(:dob, "DOB"),
+                            "URL"=COALESCE(:url, "URL"),
+                            career_wins=COALESCE(:career_wins, career_wins),
+                            career_losses=COALESCE(:career_losses, career_losses),
+                            career_draws=COALESCE(:career_draws, career_draws)
                         WHERE fighter_id=:fighter_id
                     """), params)
                 else:
@@ -1198,11 +1220,11 @@ class LiveUFCScraper:
                         )
 
                     if detail.get('fighter_a_tott'):
-                        self.store_fighter_tott(
+                        self.store_fighter_profile(
                             fight_data.get('fighter_a_name', ''), detail['fighter_a_tott']
                         )
                     if detail.get('fighter_b_tott'):
-                        self.store_fighter_tott(
+                        self.store_fighter_profile(
                             fight_data.get('fighter_b_name', ''), detail['fighter_b_tott']
                         )
 
