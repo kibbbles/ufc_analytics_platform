@@ -39,19 +39,17 @@ jobs:
         run: |
           docker push us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api:latest
 
+      # DATABASE_URL, ALLOWED_ORIGINS and GROQ_API_KEY are Secret Manager
+      # references set once on the service, and a deploy keeps them. Do not
+      # pass secrets here: --set-env-vars replaces every plain env var and
+      # stores the value in plain text in each revision's config.
       - name: Deploy to Cloud Run
         run: |
-          gcloud run services update kabes-maybes-api \
-            --region us-central1 \
-            --project kabes-maybes \
-            --remove-secrets GROQ_API_KEY \
-            --quiet || true
           gcloud run deploy kabes-maybes-api \
             --image us-central1-docker.pkg.dev/kabes-maybes/kabes-maybes/api:latest \
             --region us-central1 \
             --project kabes-maybes \
             --min-instances 1 \
-            --set-env-vars GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
             --quiet
 
       # Every deploy pushes :latest, which leaves the previous image in the
