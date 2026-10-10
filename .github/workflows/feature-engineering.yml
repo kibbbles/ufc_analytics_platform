@@ -59,6 +59,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backend/features/selected_features.json
           git diff --staged --quiet || git commit -m "chore: update selected_features.json [skip ci]"
+          # main moves whenever anyone pushes while this runs - on 2026-10-10 a
+          # fix landed mid-retrain and the artefact push was rejected - so
+          # replay this commit on top. The bot only touches its own files.
+          git pull --rebase origin main
           git push
 
       - name: Upload training_data.parquet as artifact
