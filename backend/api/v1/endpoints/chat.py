@@ -58,26 +58,40 @@ upcoming_predictions (id VARCHAR, fight_id VARCHAR,
                     features_json JSONB)  -- (fighter_a)-(fighter_b); POSITIVE=favors a, NEGATIVE=favors b
 
 RULES:
-1. Return ONLY raw SQL — no markdown, no backticks, no explanation.
+1. Return ONLY raw SQL starting with SELECT or WITH — no markdown, no backticks, no explanation, no prose.
+   Any question about a fighter's fights, record, stats, measurements or events is answered with SQL.
 2. Default LIMIT 20 unless aggregating (COUNT, SUM, MAX, etc.).
-3. Name search: WHERE fd."FIRST" || ' ' || fd."LAST" ILIKE '%name%'
-   CRITICAL: Never assume a first name. When unsure, search last name only: WHERE fd."LAST" ILIKE '%pyfer%'
-4. fight_results: ONE row per fight. fighter_id=winner, opponent_id=loser.
-   Full history: WHERE fr.fighter_id=fd.id OR fr.opponent_id=fd.id
-   ALWAYS use the OR join for ANY query about a specific fighter (wins, losses, dates, stats):
-     JOIN fighter_details fd ON (fr.fighter_id=fd.id OR fr.opponent_id=fd.id)
+3. Name search - many fighters share a last name (Jones, Pereira, Shevchenko, Nurmagomedov, Silva),
+   so a last-name-only search mixes different people's fights together.
+   When the question (or the conversation so far) gives a full name, match the full name exactly:
+     WHERE fd."FIRST" || ' ' || fd."LAST" ILIKE 'first last'   (the fighter's real first and last name)
+   Only when just one name is known, search it alone - never guess a first name:
+     WHERE fd."LAST" ILIKE 'pyfer'
+   Follow-up questions ("he", "his", "they") refer to the full name used earlier in the conversation.
+4. fight_results: ONE row per fight. fighter_id=WINNER, opponent_id=LOSER. Pick the join by what is asked:
+   - All of a fighter's fights (fight count, history, opponents, dates):
+       JOIN fighter_details fd ON (fr.fighter_id=fd.id OR fr.opponent_id=fd.id)
+   - Wins only (how many wins, KO wins, submission wins):
+       JOIN fighter_details fd ON fr.fighter_id=fd.id
+   - Losses only:
+       JOIN fighter_details fd ON fr.opponent_id=fd.id
+   COUNT(*) over the all-fights join counts fights, NOT wins.
    Fight count example ("how many UFC fights does X have?"):
      SELECT COUNT(*) FROM fight_results fr
      JOIN fighter_details fd ON (fr.fighter_id=fd.id OR fr.opponent_id=fd.id)
-     WHERE fd."LAST" ILIKE '%x%'
-5. Fighter W-L: wins WHERE fr.fighter_id=fd.id, losses WHERE fr.opponent_id=fd.id.
+     WHERE fd."FIRST" || ' ' || fd."LAST" ILIKE 'first last'
+   Win count example ("how many fights has X won?"):
+     SELECT COUNT(*) FROM fight_results fr
+     JOIN fighter_details fd ON fr.fighter_id=fd.id
+     WHERE fd."FIRST" || ' ' || fd."LAST" ILIKE 'first last' AND fr."METHOD" NOT ILIKE '%no contest%'
+5. Fighter W-L record: both counts in one query.
    Exclude NCs: AND fr."METHOD" NOT ILIKE '%no contest%'
    Record example ("what is X's record?"):
      SELECT SUM(CASE WHEN fr.fighter_id=fd.id THEN 1 ELSE 0 END) AS wins,
             SUM(CASE WHEN fr.opponent_id=fd.id THEN 1 ELSE 0 END) AS losses
      FROM fight_results fr
      JOIN fighter_details fd ON (fr.fighter_id=fd.id OR fr.opponent_id=fd.id)
-     WHERE fd."LAST" ILIKE '%x%' AND fr."METHOD" NOT ILIKE '%no contest%'
+     WHERE fd."FIRST" || ' ' || fd."LAST" ILIKE 'first last' AND fr."METHOD" NOT ILIKE '%no contest%'
 6. fight_stats totals: ALWAYS include WHERE fs."ROUND" NOT ILIKE '%total%' — fight_stats has per-round rows
    AND a duplicate "Totals" row per fight; omitting this filter double-counts every stat.
    ROUND format varies ('1' or 'Round 1') — never filter by exact format or regex.
@@ -99,6 +113,8 @@ RULES:
     For "next card"/"upcoming"/"this weekend"/"scheduled" use upcoming_events/upcoming_fights.
     upcoming_events may have stale entries — ALWAYS filter WHERE date_proper >= CURRENT_DATE.
     Next event subquery: ue.date_proper = (SELECT MIN(date_proper) FROM upcoming_events WHERE date_proper >= CURRENT_DATE)
+10b. Event names include a subtitle: "UFC 300: Pereira vs. Hill", "UFC Fight Night: Allen vs. Duncan".
+    Numbered event: WHERE ed."EVENT" ILIKE 'UFC 300:%'  (the colon keeps UFC 30 from matching UFC 300)
 11. Chronological ordering: ALWAYS use date_proper (DATE). Never use id columns for ordering.
     NEVER order by fight_time_seconds or total_fight_time_seconds for recency — those are fight durations, not dates.
     fight_results has NO date column — dates are ONLY on event_details.date_proper.
@@ -140,18 +156,35 @@ Methods: KO/TKO → 'KO/TKO'; sub/submission/choke/armbar/triangle/guillotine/RN
 Stats: TD=takedown (td_landed/td_attempted), sig str=sig_str_landed, ctrl=ctrl_seconds,
   KD=kd_int, head/body/leg=head_landed/body_landed/leg_landed, accuracy=sig_str_pct/td_pct
 
-Nicknames → real names (when unsure of first name, search last name only):
-  Eagle/Khabib → Nurmagomedov; Bones → Jon Jones; DC → Daniel Cormier
-  GSP/Rush → Georges St-Pierre; Izzy/Stylebender → Israel Adesanya; Poatan → Alex Pereira
-  DJ/Mighty Mouse → Demetrious Johnson; Korean Zombie → Chan Sung Jung
-  Jacare → Ronaldo Souza; Shogun → Mauricio Rua; Rampage → Quinton Jackson
-  Do Bronx → Charles Oliveira; RDA → Rafael Dos Anjos; JDS → Junior Dos Santos
+Nicknames → real names (search the full name; one per line):
+  Eagle/Khabib → Khabib Nurmagomedov
+  Bones → Jon Jones
+  DC → Daniel Cormier
+  GSP/Rush → Georges St-Pierre
+  Izzy/Stylebender → Israel Adesanya
+  Poatan → Alex Pereira
+  DJ/Mighty Mouse → Demetrious Johnson
+  Korean Zombie → Chan Sung Jung
+  Jacare → Ronaldo Souza
+  Shogun → Mauricio Rua
+  Rampage → Quinton Jackson
+  Do Bronx → Charles Oliveira
+  RDA → Rafael Dos Anjos
+  JDS → Junior Dos Santos
   Baddy/Pyfer → Joe Pyfer (FIRST=Joe LAST=Pyfer — never guess a different first name)
-  Moicano → Renato Moicano; Volk → Alexander Volkanovski; Chito → Marlon Vera
-  Makhachev → Islam Makhachev; Topuria → Ilia Topuria; Ankalaev → Magomed Ankalaev
-  Tsarukyan/Arman → Arman Tsarukyan; Dvalishvili/Merab → Merab Dvalishvili
-  Du Plessis/DDP → Dricus Du Plessis; Prochazka/Jiri → Jiri Prochazka
-  Fiziev → Rafael Fiziev; Pantoja → Alexandre Pantoja; Borz → Khamzat Chimaev
+  Moicano → Renato Moicano
+  Volk → Alexander Volkanovski
+  Chito → Marlon Vera
+  Makhachev → Islam Makhachev
+  Topuria → Ilia Topuria
+  Ankalaev → Magomed Ankalaev
+  Tsarukyan/Arman → Arman Tsarukyan
+  Dvalishvili/Merab → Merab Dvalishvili
+  Du Plessis/DDP → Dricus Du Plessis
+  Prochazka/Jiri → Jiri Prochazka
+  Fiziev → Rafael Fiziev
+  Pantoja → Alexandre Pantoja
+  Borz → Khamzat Chimaev
 
 FINAL RULE — output exactly NO_SQL (nothing else) ONLY for:
 - Clearly hypothetical questions: explicit fantasy matchups ("who would win a trilogy",
@@ -161,6 +194,8 @@ FINAL RULE — output exactly NO_SQL (nothing else) ONLY for:
 - Current champion questions ("who is the X champion", "who holds the X belt", "current X champ"):
   the database may contain non-UFC events with mislabeled title fights, making champion lookups
   unreliable. Use NO_SQL so general knowledge can answer accurately instead.
+NEVER NO_SQL for counts or stats about real fights - knockdowns, strikes, takedowns, control time,
+records, finishes, heights, reaches and dates are all stored; write SQL for them.
 When in doubt, write SQL.
 """
 
@@ -205,6 +240,27 @@ def _rows_to_text(rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+# Groq retired llama-3.3-70b-versatile; every chat call returned 404 until
+# 2026-10-10. gpt-oss-120b is a reasoning model: its hidden reasoning tokens
+# count against max_completion_tokens, so the budgets below cover reasoning plus
+# the visible answer. Low effort keeps reasoning short - SQL here is templated
+# by the schema prompt, not puzzled out. Measured by backend/scripts/eval_chat.py.
+CHAT_MODEL = "openai/gpt-oss-120b"
+REASONING_EFFORT = "low"
+SQL_TOKEN_BUDGET = 2048
+ANSWER_TOKEN_BUDGET = 1536
+
+
+def _complete(client: Groq, messages: list[dict], temperature: float, budget: int):
+    return client.chat.completions.create(
+        model=CHAT_MODEL,
+        messages=messages,
+        temperature=temperature,
+        max_completion_tokens=budget,
+        reasoning_effort=REASONING_EFFORT,
+    )
+
+
 def _get_groq_client() -> Groq:
     if not settings.groq_api_key:
         raise RuntimeError("GROQ_API_KEY is not configured")
@@ -231,13 +287,13 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     messages.append({"role": "user", "content": f"Question: {request.question}\nSQL:"})
 
     try:
-        sql_resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            temperature=0,       # deterministic SQL generation
-            max_tokens=512,
-        )
-        sql = _clean_sql(sql_resp.choices[0].message.content)
+        # gpt-oss occasionally returns an empty completion; one retry recovers it.
+        for _ in range(2):
+            sql_resp = _complete(client, messages, temperature=0,   # deterministic SQL generation
+                                 budget=SQL_TOKEN_BUDGET)
+            sql = _clean_sql(sql_resp.choices[0].message.content or "")
+            if sql:
+                break
     except RateLimitError as e:
         retry_after = 60
         try:
@@ -267,19 +323,16 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
                 "Be concise (2-4 sentences). If asked about a hypothetical matchup, give a thoughtful analysis "
                 "based on fighting styles and known history. "
                 "Do not invent specific statistics you cannot verify. "
-                "Do not mention databases, SQL, or prediction models."
+                "Do not mention databases, SQL, or prediction models. "
+                "Do not use gendered pronouns (he/she/him/her/his/hers) — refer to fighters by name only."
             )},
         ]
         for turn in history_turns:
             freeform_messages.append({"role": turn.role, "content": turn.content})
         freeform_messages.append({"role": "user", "content": request.question})
         try:
-            freeform_resp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=freeform_messages,
-                temperature=0.5,
-                max_tokens=300,
-            )
+            freeform_resp = _complete(client, freeform_messages, temperature=0.5,
+                                      budget=ANSWER_TOKEN_BUDGET)
             answer = freeform_resp.choices[0].message.content.strip()
             return ChatResponse(answer=answer, sql=None, status="ok", source="general_knowledge")
         except RateLimitError as e:
@@ -298,10 +351,19 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             logger.error("Free-form answer failed: %s", e)
             return ChatResponse(answer="I couldn't answer that question right now.", status="error")
 
+    if not re.match(r"(select|with)\b", sql, re.IGNORECASE):
+        logger.warning("Model returned non-SQL for question %r: %s", request.question, sql[:200])
+        return ChatResponse(answer="I couldn't generate a query for that question. Try rephrasing it.", status="error")
+
     logger.info("Generated SQL: %s", sql)
 
     # ── Step 2: Execute SQL ─────────────────────────────────────────────────
+    # The SQL is written by a model from user text, so it runs read-only and
+    # time-boxed: a prompt that talks the model into DELETE, UPDATE or DROP
+    # fails here, as does a query that would tie up the database.
     try:
+        db.execute(text("SET TRANSACTION READ ONLY"))
+        db.execute(text("SET LOCAL statement_timeout = '5s'"))
         rows = db.execute(text(sql)).mappings().all()
         rows = [dict(r) for r in rows]
     except Exception as e:
@@ -347,7 +409,6 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             "Be specific with numbers. Do not mention SQL, databases, or feature names literally. "
             "Do not use gendered pronouns (he/she/him/her/his/hers) — refer to fighters by name only."
         )
-        max_tokens = 600
     elif is_card_overview:
         format_prompt = (
             f"The user asked: {request.question}\n\n"
@@ -358,17 +419,17 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             "Do not mention SQL or databases. Keep it concise. "
             "Do not use gendered pronouns (he/she/him/her/his/hers) — refer to fighters by name only."
         )
-        max_tokens = 400
     else:
         format_prompt = (
             f"The user asked: {request.question}\n\n"
             f"Database results:\n{_rows_to_text(rows)}\n\n"
             "Write a clear, concise answer in 1-3 sentences. "
             "Include specific names, numbers, and fight details from the results. "
+            "Use only facts that appear in the results - do not add opponents, dates or details "
+            "from memory. "
             "Do not mention SQL or databases. "
             "Do not use gendered pronouns (he/she/him/her/his/hers) — refer to fighters by name only."
         )
-        max_tokens = 256
 
     def _card_fallback(rows: list[dict]) -> str:
         """Clean fallback for card overview when LLM formatting fails."""
@@ -386,12 +447,8 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         return "\n".join(lines) if lines else _rows_to_text(rows)
 
     try:
-        answer_resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": format_prompt}],
-            temperature=0.3,
-            max_tokens=max_tokens,
-        )
+        answer_resp = _complete(client, [{"role": "user", "content": format_prompt}],
+                                temperature=0.3, budget=ANSWER_TOKEN_BUDGET)
         answer = answer_resp.choices[0].message.content.strip()
     except RateLimitError as e:
         retry_after = 60

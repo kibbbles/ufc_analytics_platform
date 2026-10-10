@@ -43,4 +43,4 @@ isort==5.13.2
 pyarrow==23.0.1
 
 # AI / Chat
-groq==0.13.0
+groq==1.1.2
