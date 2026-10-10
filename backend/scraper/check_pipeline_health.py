@@ -42,7 +42,13 @@ def main() -> int:
         cards = conn.execute(text("""
             SELECT ue.event_name,
                    ue.date_proper,
-                   COUNT(*) FILTER (WHERE uf.archived IS TRUE)     AS archived,
+                   -- Counted from the archive itself. The Saturday purge deletes
+                   -- a card's archived fights from the upcoming tables, so on
+                   -- 2026-10-10 UFC 332 read as 0 archived of 1 and failed,
+                   -- although 10 of its 11 predictions were archived.
+                   (SELECT COUNT(*) FROM past_predictions pp
+                    WHERE pp.prediction_source = 'pre_fight_archive'
+                      AND pp.event_date = ue.date_proper)        AS archived,
                    COUNT(*) FILTER (WHERE uf.archived IS NOT TRUE) AS waiting
             FROM upcoming_events ue
             JOIN upcoming_fights uf      ON uf.event_id = ue.id
