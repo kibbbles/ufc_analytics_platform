@@ -77,7 +77,10 @@ jobs:
           # main moves whenever anyone pushes while this runs - on 2026-10-10 a
           # fix landed mid-retrain and the artefact push was rejected - so
           # replay this commit on top. The bot only touches its own files.
-          git pull --rebase origin main
+          # --autostash because the job also rewrites tracked files it does
+          # not commit (training_data.parquet), and a dirty tree makes the
+          # rebase refuse to start. scripts/tests/test_workflow_pushes.py.
+          git pull --rebase --autostash origin main
           git push
 
       - name: Trigger backend deploy

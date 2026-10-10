@@ -4,10 +4,12 @@
 # Runs every pipeline gate that can be exercised without writing to the
 # database, against the real database:
 #   1. unit tests (no database)
-#   2. data quality tests (read-only)
-#   3. validate_etl.py - the exact gate the Post-Scrape ETL blocks on
-#   4. the prediction archive, as a dry run
-#   5. the pipeline health check
+#   2. every workflow step that pushes to main, replayed against a scratch
+#      remote where main has moved and the job left tracked files dirty
+#   3. data quality tests (read-only)
+#   4. validate_etl.py - the exact gate the Post-Scrape ETL blocks on
+#   5. the prediction archive, as a dry run
+#   6. the pipeline health check
 #
 # Run by the Pipeline Check workflow on every push and pull request, and by
 # the pre-push hook in .githooks/ (enable once per clone with
@@ -27,6 +29,9 @@ step() { printf '\n==> %s\n' "$1"; }
 
 step "Unit tests"
 python -m pytest scraper/tests -q
+
+step "Workflow bot pushes"
+python -m pytest ../scripts/tests -q
 
 step "Data quality tests"
 python -m pytest tests -q
