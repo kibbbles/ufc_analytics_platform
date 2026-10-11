@@ -211,6 +211,15 @@ def cases() -> list[Case]:
     yan_ko = one("""SELECT COUNT(*) FROM fight_results fr JOIN fighter_details fd ON fd.id = fr.fighter_id
         WHERE fd."FIRST" = 'Petr' AND fd."LAST" = 'Yan' AND fr."METHOD" = 'KO/TKO'""")[0]
     ft, inch = divmod(int(pereira_height), 12)
+    def card_winner(event_pattern, position):
+        return one("""SELECT fd."FIRST" || ' ' || fd."LAST" FROM fight_details f
+            JOIN event_details e ON e.id = f.event_id
+            JOIN fight_results fr ON fr.fight_id = f.id
+            JOIN fighter_details fd ON fd.id = fr.fighter_id
+            WHERE e."EVENT" ILIKE :ev AND f.position = :pos""", ev=event_pattern, pos=position)[0]
+    main_300 = card_winner("UFC 300:%", 0)
+    co_main_300 = card_winner("UFC 300:%", 1)
+    main_229 = card_winner("UFC 229:%", 0)
 
     return [
         # -- records and counts -------------------------------------------
@@ -233,6 +242,13 @@ def cases() -> list[Case]:
         # -- events -------------------------------------------------------
         Case("ufc300_date", "events", "When was UFC 300?", lambda: [date_forms(ufc300[0])]),
         Case("ufc300_location", "events", "Where was UFC 300 held?", lambda: [lit("Las Vegas")]),
+        # "main" once matched the Aljamain in Aljamain Sterling's bout.
+        Case("ufc300_main_event", "events", "Who won the main event of UFC 300?",
+             lambda: [lit(main_300)]),
+        Case("ufc300_co_main", "events", "Who won the co-main event at UFC 300?",
+             lambda: [lit(co_main_300)]),
+        Case("ufc229_headliner", "events", "Who won the UFC 229 headliner?",
+             lambda: [lit(main_229)]),
         Case("pereira_ufc300", "events", "Who did Alex Pereira fight at UFC 300?",
              lambda: [lit(pereira_opp, pereira_opp.split()[-1])]),
         Case("latest_event", "events", "What was the most recent UFC event?",
