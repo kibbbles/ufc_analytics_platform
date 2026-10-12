@@ -52,7 +52,7 @@ All endpoints versioned under `/api/v1`. Swagger docs at `/docs`.
 | GET | `/api/v1/events` | Paginated event list (`?year=`) |
 | GET | `/api/v1/events/{id}` | Event detail + full fight card |
 | POST | `/api/v1/predictions/fight-outcome` | Win probability + method breakdown |
-| POST | `/api/v1/chat` | Natural-language Q&A — converts question to SQL, executes, returns formatted answer (Groq/llama-3.3-70b) |
+| POST | `/api/v1/chat` | Natural-language Q&A — converts question to SQL, executes, returns formatted answer (Groq/gpt-oss-120b) |
 | GET | `/api/v1/analytics/style-evolution` | Finish rates, output metrics, and physical stats by year (`?weight_class=`) |
 | GET | `/api/v1/analytics/fighter-endurance/{id}` | Round-by-round performance profile |
 | GET | `/api/v1/analytics/betting-insights` | Model vs Vegas ROI summary, strategy leaderboard, calibration data |

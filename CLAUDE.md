@@ -116,7 +116,7 @@ GET  /api/v1/past-predictions/events                paginated past events with p
 GET  /api/v1/past-predictions/events/{id}           all predictions for a specific past event
 GET  /api/v1/past-predictions/fights                fight-level search across all past predictions
 GET  /api/v1/past-predictions/fights/{id}           single past prediction by fight ID
-POST /api/v1/chat                                   natural-language Q&A (Groq/llama-3.3-70b → SQL → answer)
+POST /api/v1/chat                                   natural-language Q&A (Groq/gpt-oss-120b → SQL → answer)
 ```
 
 **Key files:**
