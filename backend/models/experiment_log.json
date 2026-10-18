@@ -1654,5 +1654,50 @@
     "brier_leader": "logistic_regression",
     "brier_margin": 0.0,
     "method_accuracy": 0.4928
+  },
+  {
+    "timestamp": "2026-10-18T17:08:05.486778+00:00",
+    "feature_hash": "920bc31c",
+    "n_features": 29,
+    "train_rows": 4566,
+    "val_rows": 978,
+    "test_rows": 979,
+    "models": {
+      "logistic_regression": {
+        "train_accuracy": 0.6119,
+        "val_accuracy": 0.6176,
+        "val_auc": 0.6585,
+        "val_brier": 0.2303,
+        "val_logloss": 0.6515,
+        "test_accuracy": 0.618,
+        "test_auc": 0.6644,
+        "val_test_gap": -0.0004
+      },
+      "xgboost": {
+        "train_accuracy": 0.6954,
+        "val_accuracy": 0.6063,
+        "val_auc": 0.6469,
+        "val_brier": 0.2333,
+        "val_logloss": 0.6589,
+        "test_accuracy": 0.6333,
+        "test_auc": 0.6756,
+        "val_test_gap": -0.027
+      },
+      "random_forest": {
+        "train_accuracy": 0.6914,
+        "val_accuracy": 0.6053,
+        "val_auc": 0.6431,
+        "val_brier": 0.236,
+        "val_logloss": 0.6646,
+        "test_accuracy": 0.6323,
+        "test_auc": 0.6767,
+        "val_test_gap": -0.027
+      }
+    },
+    "best_model": "logistic_regression",
+    "deployed_model": "logistic_regression",
+    "brier_leader": "logistic_regression",
+    "brier_margin": 0.0,
+    "method_accuracy": 0.4862
   }
 ]
