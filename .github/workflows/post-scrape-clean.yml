@@ -124,6 +124,15 @@ jobs:
         run: |
           python backend/scraper/archive_completed_predictions.py
 
+      # The ETL refreshed the materialized views before this job archived the
+      # week's predictions, so the betting views would lag a week behind the
+      # live record. Refresh again now that the new rows exist.
+      - name: Refresh materialized views
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python backend/scraper/post_scrape_clean.py --phase 5
+
       - name: Report success
         if: success()
         run: echo "Prediction archive step completed successfully."
