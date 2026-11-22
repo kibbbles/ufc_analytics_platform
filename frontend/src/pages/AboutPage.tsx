@@ -1,34 +1,41 @@
+import { useApi } from '@hooks/useApi'
+import { pastPredictionsService } from '@services/pastPredictionsService'
+
 export default function AboutPage() {
+  // Model name and feature count come from the deployed model, which retrains
+  // weekly, so they are fetched rather than written into the copy.
+  const { data } = useApi(() => pastPredictionsService.get(1), [])
+  const modelName = data?.summary.model_name
+  const nFeatures = data?.summary.n_features ?? 0
+
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-3xl font-bold">About</h1>
 
       <div className="space-y-4 text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] leading-relaxed">
+        <p>Hi, I'm Kabe (pronounced kay-bee).</p>
         <p>
-          Hi, I'm Kabe (pronounced kay-bee).
+          This project scrapes UFC fight data directly from UFCStats.com — no third-party APIs. The
+          data covers every UFC event since 1994, updated automatically after each event.
         </p>
         <p>
-          This project scrapes UFC fight data directly from UFCStats.com — no third-party APIs.
-          The data covers every UFC event since 1994, updated automatically after each event.
+          {modelName ? `A ${modelName} model` : 'A model'} trained on historical fight data
+          generates the predictions.{' '}
+          {nFeatures > 0 ? `Its ${nFeatures} features are` : 'Features are'} built from fighter
+          differentials — striking accuracy, takedown rate, reach, age, experience, and more. Each
+          upcoming card shows win probability, method prediction (KO/TKO, Submission, Decision), and
+          the key stats driving each pick.
         </p>
         <p>
-          A Random Forest model trained on historical fight data generates the predictions.
-          Features are built from fighter differentials — striking accuracy, takedown rate,
-          reach, age, experience, and more. Each upcoming card shows win probability, method
-          prediction (KO/TKO, Submission, Decision), and the key stats driving each pick.
+          The model scorecard shows past prediction accuracy. Fights predicted live before the event
+          are marked as pre-fight predictions and are frozen — they won't change when the model
+          retrains. Older historical fights are retroactive estimates.
         </p>
         <p>
-          The model scorecard shows past prediction accuracy. Fights predicted live before
-          the event are marked as pre-fight predictions and are frozen — they won't change
-          when the model retrains. Older historical fights are retroactive estimates.
+          Built with FastAPI, React, and PostgreSQL (Supabase), hosted on Google Cloud Run and
+          Vercel.
         </p>
-        <p>
-          Built with FastAPI, React, and PostgreSQL (Supabase), hosted on Google Cloud Run
-          and Vercel.
-        </p>
-        <p>
-          Built for fun and to sharpen data science and engineering skills. Open to feedback.
-        </p>
+        <p>Built for fun and to sharpen data science and engineering skills. Open to feedback.</p>
       </div>
     </div>
   )

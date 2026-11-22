@@ -37,7 +37,7 @@ export function BettingHero({ data }: Props) {
         {data.sample_size} fights tracked total
       </p>
       <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-        Early signal — needs ~400 fights to confirm. 26 bets is not a sufficient sample.
+        {edge ? `Early signal — ${edge.bets} bets is not a sufficient sample to confirm an edge.` : 'Early signal — not enough bets to confirm an edge.'}
       </p>
     </div>
   )

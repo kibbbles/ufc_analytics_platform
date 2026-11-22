@@ -76,6 +76,19 @@ _WC_ORDER = [
 ]
 
 
+def _expected_calibration_error(proba: np.ndarray, y: np.ndarray, n_bins: int = 10) -> float:
+    """Expected calibration error: the fight-weighted mean gap between predicted
+    P(fighter_a wins) and the observed win rate, over equal-width bins."""
+    proba = np.asarray(proba, dtype=float)
+    y     = np.asarray(y, dtype=float)
+    bins  = np.minimum((proba * n_bins).astype(int), n_bins - 1)
+    gap   = 0.0
+    for b in np.unique(bins):
+        mask = bins == b
+        gap += abs(proba[mask].mean() - y[mask].mean()) * mask.sum()
+    return float(gap / len(proba))
+
+
 def _encode_method(raw: str) -> str | None:
     """Map a raw METHOD string to one of ko_tko / submission / decision / None."""
     if pd.isna(raw):
@@ -433,6 +446,7 @@ def train(eval_only: bool = False) -> dict:
         test_proba = pipeline.predict_proba(X_test)[:, 1]
         test_acc   = float(accuracy_score(y_test, test_pred))
         test_auc   = float(roc_auc_score(y_test, test_proba))
+        test_ece   = _expected_calibration_error(test_proba, y_test.to_numpy())
 
         gap = round(val_acc - test_acc, 4)   # Tilburg reports this difference
         logger.info(
@@ -452,6 +466,7 @@ def train(eval_only: bool = False) -> dict:
             "val_logloss":    round(val_ll,   4),
             "test_accuracy":  round(test_acc, 4),
             "test_auc":       round(test_auc, 4),
+            "test_ece":       round(test_ece, 4),
             "val_test_gap":   round(gap,      4),
         }
         trained_models[name] = pipeline
@@ -544,6 +559,7 @@ def train(eval_only: bool = False) -> dict:
     metrics = {
         "win_accuracy":     round(best_res["test_accuracy"], 4),
         "win_roc_auc":      round(best_res["test_auc"], 4),
+        "win_ece":          best_res["test_ece"],
         "best_model":       best_name,
         "method_accuracy":  round(method_acc, 4),
         "train_rows":       len(train_df),

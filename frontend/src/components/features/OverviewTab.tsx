@@ -193,6 +193,13 @@ export function OverviewTab() {
     return { bets, wins, pnl, roi }
   }, [filtered, plSource])
 
+  // Track record of the default 5–15pp edge window across every fight, for the slider note
+  const edgeWindow = useMemo(() => {
+    const inWindow = fights.filter((f) => f.edge_pp >= 5 && f.edge_pp <= 15)
+    const pnl = inWindow.reduce((s, f) => s + plFor(f, 'model'), 0)
+    return { bets: inWindow.length, roi: inWindow.length > 0 ? pnl / inWindow.length : 0 }
+  }, [fights])
+
   const finalPnl   = chartData.at(-1)?.cumPnl ?? 0
   const lineColor  = finalPnl >= 0 ? 'var(--color-success)' : 'var(--color-error)'
   const pnl100     = (stats.pnl * 100)
@@ -307,7 +314,10 @@ export function OverviewTab() {
             unit="pp"
           />
           <p className="text-xs text-[var(--color-text-muted)]">
-            Model win % minus Vegas implied %. 5–15pp = historically profitable zone. Drag fill bar to shift window.
+            Model win % minus Vegas implied %.{' '}
+            {edgeWindow.bets > 0 &&
+              `5–15pp has returned ${edgeWindow.roi >= 0 ? '+' : ''}${(edgeWindow.roi * 100).toFixed(1)}% ROI over ${edgeWindow.bets} bets. `}
+            Drag fill bar to shift window.
           </p>
         </div>
       </div>

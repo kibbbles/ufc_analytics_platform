@@ -11,6 +11,38 @@ import AgeByWeightClassChart from '@components/features/AgeByWeightClassChart'
 import FighterStatsByWeightClassTable from '@components/features/FighterStatsByWeightClassTable'
 import FighterStatsTimeSeriesChart from '@components/features/FighterStatsTimeSeriesChart'
 import LoadingSpinner from '@components/common/LoadingSpinner'
+import type { StyleEvolutionPoint } from '@t/api'
+
+/** Fight-weighted rate of `key` over the rows, or null when there are no fights. */
+function weightedRate(rows: StyleEvolutionPoint[], key: 'finish_rate' | 'decision_rate'): number | null {
+  const fights = rows.reduce((n, r) => n + r.total_fights, 0)
+  return fights > 0 ? rows.reduce((n, r) => n + r[key] * r.total_fights, 0) / fights : null
+}
+
+/**
+ * The "how fights end" lede, computed from the finish-rate series: the early
+ * 2000s (or the first five years with fights, for divisions created later)
+ * against the latest complete year.
+ */
+function finishLede(rows: StyleEvolutionPoint[]): string | null {
+  const full = rows.filter((r) => !r.is_partial_year && r.total_fights > 0)
+  const latest = full.at(-1)
+  if (!latest) return null
+  const early2000s = full.filter((r) => r.year >= 2000 && r.year <= 2004)
+  const early = early2000s.length > 0 ? early2000s : full.slice(0, 5)
+  const earlyFinish = weightedRate(early, 'finish_rate')
+  const earlyDecision = weightedRate(early, 'decision_rate')
+  if (earlyFinish == null || earlyDecision == null || early.at(-1)!.year >= latest.year) return null
+  const span = early2000s.length > 0 ? 'the early 2000s' : `${early[0].year}–${early.at(-1)!.year}`
+  const pct = (v: number) => `${Math.round(v * 100)}%`
+  const trend =
+    latest.decision_rate - earlyDecision > 0.1
+      ? 'The UFC has become a decision-heavy sport. '
+      : earlyDecision - latest.decision_rate > 0.1
+        ? 'Fights have become more likely to end early. '
+        : ''
+  return `${trend}In ${span}, ${pct(earlyFinish)} of fights ended before the final bell. In ${latest.year}, ${pct(latest.decision_rate)} went to the judges.`
+}
 
 export default function StyleEvolutionPage() {
   const [weightClass, setWeightClass] = useState<string | null>(null)
@@ -29,6 +61,7 @@ export default function StyleEvolutionPage() {
   const ageData          = data?.age_data          ?? []
   const fighterStatsData = data?.fighter_stats     ?? []
   const styleStatsData   = data?.style_stats       ?? []
+  const lede             = finishLede(finishData)
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-12">
@@ -70,11 +103,11 @@ export default function StyleEvolutionPage() {
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <h2 className="text-lg font-semibold">How fights end</h2>
-                <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] max-w-2xl">
-                  The UFC has become a decision-heavy sport. In the early 2000s, nearly 7 in 10
-                  fights ended before the final bell. By 2024, that number had flipped — over half
-                  of all fights go to the judges.
-                </p>
+                {lede && (
+                  <p className="mt-1 text-sm text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)] max-w-2xl">
+                    {lede}
+                  </p>
+                )}
               </div>
 
               {/* Combined / Breakdown toggle */}

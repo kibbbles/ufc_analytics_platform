@@ -50,7 +50,9 @@ class PastPredictionSummary(BaseModel):
     total_fights: int
     correct: int
     accuracy: float
-    model_name: str = ""      # current win/loss model, auto-selected weekly (from metrics.json)
+    model_name: str = ""      # deployed win/loss model, pinned in ml/train.py (from metrics.json)
+    n_features: int = 0       # input columns of the loaded win/loss model; drifts weekly with feature selection
+    test_ece: float | None = None  # held-out test-set calibration error of the deployed model (from metrics.json)
     high_conf_fights: int     # confidence >= 0.65
     high_conf_correct: int
     high_conf_accuracy: float
@@ -64,6 +66,12 @@ class PastPredictionSummary(BaseModel):
     pre_fight_correct: int = 0
     pre_fight_accuracy: float = 0.0
     pre_fight_avg_confidence: float = 0.0
+    # Live predictions split at the July 2026 feature fixes (pipeline_version):
+    # legacy ones used the buggy streak and win_rate_diff inputs.
+    pre_fight_legacy_total: int = 0
+    pre_fight_corrected_total: int = 0
+    pre_fight_corrected_correct: int = 0
+    pre_fight_corrected_accuracy: float = 0.0
     pre_fight_high_conf_fights: int = 0
     pre_fight_high_conf_correct: int = 0
     pre_fight_high_conf_accuracy: float = 0.0

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import { LoadingSkeleton } from '@components/common'
 import { formatDate } from '@utils/format'
-import type { PastPredictionModalStats, PastPredictionItem, VegasComparison, VegasBucketStat } from '@t/api'
+import { calibrationVerdict } from '@utils/calibration'
+import type { PastPredictionModalStats, PastPredictionItem, VegasComparison, VegasBucketStat, CalibrationBin } from '@t/api'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -11,6 +12,22 @@ import type { PastPredictionModalStats, PastPredictionItem, VegasComparison, Veg
 
 function formatPct(v: number): string {
   return (v * 100).toFixed(1) + '%'
+}
+
+/** One-sentence reading of the live calibration table, computed from its bins. */
+function calibrationSummary(bins: CalibrationBin[]): string {
+  const describe = (b: CalibrationBin) => `${b.label} (says ${formatPct(b.predicted)}, wins ${formatPct(b.actual)})`
+  const over = bins.filter((b) => calibrationVerdict(b.predicted, b.actual, b.fights) === 'over')
+  const under = bins.filter((b) => calibrationVerdict(b.predicted, b.actual, b.fights) === 'under')
+  const parts: string[] = []
+  if (over.length) parts.push(`overconfident in ${over.map(describe).join(' and ')}`)
+  if (under.length) parts.push(`underconfident in ${under.map(describe).join(' and ')}`)
+  const verdict = parts.length
+    ? `On this record the model is ${parts.join(', and ')}.`
+    : 'On this record every bin is within sampling noise of the probability it shows.'
+  const total = bins.reduce((n, b) => n + b.fights, 0)
+  const above80 = bins.filter((b) => b.predicted >= 0.8).reduce((n, b) => n + b.fights, 0)
+  return total > 0 ? `${verdict} ${formatPct(above80 / total)} of live picks are above 80%.` : verdict
 }
 
 function winnerName(item: PastPredictionItem, id: string | null | undefined): string {
@@ -470,8 +487,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                       </thead>
                       <tbody>
                         {stats.calibration_pre_fight.map((b) => {
-                          const gap = b.actual - b.predicted
-                          const off = Math.abs(gap) >= 0.1 && b.fights >= 10
+                          const off = calibrationVerdict(b.predicted, b.actual, b.fights) !== 'noise'
                           return (
                             <tr key={b.label} className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0">
                               <td className="px-3 py-2 font-mono tabular-nums">{formatPct(b.predicted)}</td>
@@ -486,7 +502,7 @@ export default function ScorecardModal({ mode, onClose }: Props) {
                     </table>
                   </div>
                   <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                    Each row bins live predictions by the probability shown for the model's pick and reports how often that pick actually won. If the two columns diverge, the displayed percentage is not honest — on this record the model is overconfident in the 60-80% range (says ~65-75%, wins ~50-55%), and rarely ventures above 80%.
+                    Each row bins live predictions by the probability shown for the model's pick and reports how often that pick actually won. If the two columns diverge, the displayed percentage is not honest. {calibrationSummary(stats.calibration_pre_fight)}
                   </p>
                 </div>
               )}

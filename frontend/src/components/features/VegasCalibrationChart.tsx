@@ -9,29 +9,23 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { VegasCalibrationRow } from '@t/api'
+import { calibrationVerdict } from '@utils/calibration'
 
 interface Props {
   data: VegasCalibrationRow[]
 }
 
-const CALLOUTS = [
-  {
-    bucket: '50–60%',
-    text: 'Vegas implied ~55.9%, actual 61.7%. These modest favorites are consistently underestimated — this slight miscalibration is where the 5–15% edge filter finds its signal.',
-  },
-  {
-    bucket: '60–70%',
-    text: 'Vegas implied ~65.3%, actual 66.7%. Well-calibrated. No systematic edge here.',
-  },
-  {
-    bucket: '70–80%',
-    text: 'Vegas accurate or slightly over-estimates. Betting blindly loses to vig.',
-  },
-  {
-    bucket: '80%+',
-    text: 'Heavy favorites. Vegas is right. The model is rarely wrong here — but when it disagrees, results are very bad (−61.6% ROI).',
-  },
-]
+/** What one bucket's implied-vs-actual gap says, judged against binomial sampling noise. */
+function bucketReading(implied: number, actual: number, fights: number): string {
+  switch (calibrationVerdict(implied, actual, fights)) {
+    case 'under':
+      return 'Favorites here win clearly more often than Vegas implies: the market underrates them.'
+    case 'over':
+      return 'Favorites here win clearly less often than Vegas implies: the market overrates them.'
+    default:
+      return 'The gap is within sampling noise for this many fights, so Vegas looks calibrated here.'
+  }
+}
 
 export function VegasCalibrationChart({ data }: Props) {
   const chartData = [...data]
@@ -41,6 +35,10 @@ export function VegasCalibrationChart({ data }: Props) {
       'Vegas implied': +(d.avg_implied_prob * 100).toFixed(1),
       'Actual win rate': +(d.actual_win_rate * 100).toFixed(1),
     }))
+
+  const mispriced = chartData.filter(
+    (r) => calibrationVerdict(r.avg_implied_prob, r.actual_win_rate, r.fights) !== 'noise',
+  )
 
   return (
     <div className="space-y-6">
@@ -77,26 +75,23 @@ export function VegasCalibrationChart({ data }: Props) {
       </ResponsiveContainer>
 
       <div className="space-y-3">
-        {CALLOUTS.map((c) => {
-          const row = chartData.find((d) => d.bucket === c.bucket)
-          return (
-            <div key={c.bucket} className="text-sm">
-              <span className="font-semibold">{c.bucket} bucket</span>
-              {row && (
-                <span className="ml-2 font-mono text-xs text-[var(--color-text-muted)]">
-                  implied {row['Vegas implied']}% → actual {row['Actual win rate']}% ({row.fights} fights)
-                </span>
-              )}
-              <p className="mt-0.5 text-[var(--color-text-muted)]">{c.text}</p>
-            </div>
-          )
-        })}
+        {chartData.map((row) => (
+          <div key={row.bucket} className="text-sm">
+            <span className="font-semibold">{row.bucket} bucket</span>
+            <span className="ml-2 font-mono text-xs text-[var(--color-text-muted)]">
+              implied {row['Vegas implied']}% → actual {row['Actual win rate']}% ({row.fights} fights)
+            </span>
+            <p className="mt-0.5 text-[var(--color-text-muted)]">
+              {bucketReading(row.avg_implied_prob, row.actual_win_rate, row.fights)}
+            </p>
+          </div>
+        ))}
         <p className="border-t border-[var(--color-border)] pt-3 text-sm">
           <strong>Bottom line:</strong>{' '}
           <span className="text-[var(--color-text-muted)]">
-            Vegas is mostly right. The only exploitable gap in this data is in the 50–60% bucket,
-            and only when the model agrees with the direction but is slightly more confident than
-            Vegas (5–15% edge).
+            {mispriced.length === 0
+              ? 'Every bucket is within sampling noise of its implied probability, so this data shows no systematic Vegas mispricing. Any edge has to come from the model picking the right fights to disagree on, not from a market-wide bias.'
+              : `Vegas is clearly off only in the ${mispriced.map((r) => r.bucket).join(' and ')} ${mispriced.length === 1 ? 'bucket' : 'buckets'}; everywhere else the gap is within sampling noise.`}
           </span>
         </p>
       </div>

@@ -207,6 +207,7 @@ class BettingInsightsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
     sample_size: int
+    tracked_since: str | None = None  # earliest event_date among the sample_size fights
     avg_edge_qualifying: float
     upset_count_20pp: int = 0
     upset_rate_20pp: float = 0.0

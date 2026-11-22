@@ -19,8 +19,12 @@ export function BettingKPIRow({ data }: Props) {
 
   const avgEdgePp = (data.avg_edge_qualifying * 100).toFixed(1)
 
+  const trackedSince = data.tracked_since
+    ? `since ${new Date(data.tracked_since + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+    : ''
+
   const kpis: KPI[] = [
-    { label: 'Fights tracked', value: String(data.sample_size), sub: 'since Mar 2026' },
+    { label: 'Fights tracked', value: String(data.sample_size), sub: trackedSince },
     { label: 'Model accuracy', value: `${accuracy}%`, sub: accuracySub },
     { label: 'Upset rate', value: `${upsetRate}%`, sub: '≥20pp conviction wrong' },
     { label: 'Avg model edge', value: `${avgEdgePp}pp`, sub: '5–15% filter' },

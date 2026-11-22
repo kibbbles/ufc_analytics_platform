@@ -13,7 +13,7 @@ import logging
 import math
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -37,15 +37,37 @@ _MODEL_LABELS = {
 
 
 def _best_model() -> str:
-    """Human-readable name of the current win/loss model, auto-selected weekly
-    by validation AUC. Read live from metrics.json so the UI never hardcodes a
-    single algorithm (the three candidates sit within noise of each other, so
-    the winner varies retrain to retrain)."""
+    """Human-readable name of the deployed win/loss model. Training pins it
+    (DEPLOYED_MODEL in ml/train.py) rather than auto-selecting, but it is read
+    live from metrics.json so the UI never hardcodes an algorithm and follows a
+    re-pin with no frontend change."""
     try:
         raw = json.loads(_METRICS_PATH.read_text()).get("best_model", "")
         return _MODEL_LABELS.get(raw, raw.replace("_", " ").title() if raw else "")
     except Exception:
         return ""
+
+
+def _test_ece() -> float | None:
+    """Held-out test-set expected calibration error of the deployed model, or
+    None when metrics.json predates training recording it."""
+    try:
+        ece = json.loads(_METRICS_PATH.read_text()).get("win_ece")
+        return float(ece) if ece is not None else None
+    except Exception:
+        return None
+
+
+def _n_features(request: Request) -> int:
+    """Input column count of the loaded win/loss model, or 0 when none is loaded.
+
+    Read from the fitted pipeline itself rather than selected_features.json:
+    feature selection reruns weekly and the count drifts (27-30 so far), and the
+    selection file can run ahead of the model if a retrain fails, while the
+    pipeline is exactly what is serving predictions."""
+    store    = getattr(request.app.state, "models", None)
+    pipeline = getattr(store, "win_pipeline", None)
+    return len(getattr(pipeline, "feature_names_in_", []))
 
 from api.dependencies import get_db
 from schemas.past_prediction import (
@@ -76,6 +98,7 @@ router = APIRouter()
     summary="Model scorecard — summary accuracy + recent prediction outcomes",
 )
 def get_past_predictions(
+    request: Request,
     limit: int = Query(default=20, ge=1, le=200, description="Number of recent predictions to return"),
     db: Session = Depends(get_db),
 ) -> PastPredictionsResponse:
@@ -126,7 +149,12 @@ def get_past_predictions(
             SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)                        AS correct,
             AVG(confidence)                                                     AS avg_confidence,
             SUM(CASE WHEN confidence >= 0.30 THEN 1 ELSE 0 END)               AS high_conf_fights,
-            SUM(CASE WHEN is_correct AND confidence >= 0.30 THEN 1 ELSE 0 END) AS high_conf_correct
+            SUM(CASE WHEN is_correct AND confidence >= 0.30 THEN 1 ELSE 0 END) AS high_conf_correct,
+            -- pipeline_version was introduced with the July 2026 streak and
+            -- win_rate_diff fixes, so NULL marks a prediction made before them.
+            SUM(CASE WHEN pipeline_version IS NULL THEN 1 ELSE 0 END)          AS legacy_total,
+            SUM(CASE WHEN pipeline_version IS NOT NULL THEN 1 ELSE 0 END)      AS corrected_total,
+            SUM(CASE WHEN pipeline_version IS NOT NULL AND is_correct THEN 1 ELSE 0 END) AS corrected_correct
         FROM past_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND is_correct IS NOT NULL
@@ -140,6 +168,10 @@ def get_past_predictions(
     pf_hc_correct     = int(pf_row["high_conf_correct"] or 0)
     pf_accuracy       = pf_correct / pf_total if pf_total > 0 else 0.0
     pf_hc_accuracy    = pf_hc_correct / pf_hc_fights if pf_hc_fights > 0 else 0.0
+    pf_legacy_total   = int(pf_row["legacy_total"] or 0)
+    pf_fixed_total    = int(pf_row["corrected_total"] or 0)
+    pf_fixed_correct  = int(pf_row["corrected_correct"] or 0)
+    pf_fixed_accuracy = pf_fixed_correct / pf_fixed_total if pf_fixed_total > 0 else 0.0
 
     # ---- Backtested only (prediction_source = 'backfill') — corrected model --
     # reconstructed over past fights.  Kept strictly separate from the live
@@ -203,6 +235,8 @@ def get_past_predictions(
         correct=correct,
         accuracy=accuracy,
         model_name=_best_model(),
+        n_features=_n_features(request),
+        test_ece=_test_ece(),
         avg_confidence=avg_confidence,
         high_conf_fights=high_conf_fights,
         high_conf_correct=high_conf_correct,
@@ -211,6 +245,10 @@ def get_past_predictions(
         date_to=str(date_to_val) if date_to_val else "",
         available_years=[int(y) for y in years_rows],
         pre_fight_total=pf_total,
+        pre_fight_legacy_total=pf_legacy_total,
+        pre_fight_corrected_total=pf_fixed_total,
+        pre_fight_corrected_correct=pf_fixed_correct,
+        pre_fight_corrected_accuracy=pf_fixed_accuracy,
         pre_fight_correct=pf_correct,
         pre_fight_accuracy=pf_accuracy,
         pre_fight_avg_confidence=pf_avg_conf,

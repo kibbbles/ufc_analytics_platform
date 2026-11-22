@@ -264,11 +264,13 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
         ORDER BY event_date
     """)).mappings().all()
 
-    sample_size: int = db.execute(text("""
-        SELECT COUNT(DISTINCT fight_id)
+    sample_row = db.execute(text("""
+        SELECT COUNT(DISTINCT fight_id) AS n, MIN(event_date)::text AS since
         FROM past_predictions
         WHERE implied_prob_a IS NOT NULL AND actual_winner_id IS NOT NULL
-    """)).scalar() or 0
+    """)).mappings().first()
+    sample_size: int = int(sample_row["n"] or 0)
+    tracked_since: str | None = sample_row["since"]
 
     avg_edge: float = float(db.execute(text("""
         SELECT AVG(
@@ -370,6 +372,7 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
 
     return BettingInsightsResponse(
         sample_size=sample_size,
+        tracked_since=tracked_since,
         avg_edge_qualifying=round(avg_edge, 4),
         upset_count_20pp=upset_count_20,
         upset_rate_20pp=upset_rate_20,
@@ -457,6 +460,9 @@ def betting_insights_fights(db: Session = Depends(get_db)) -> BettingFightsRespo
         LEFT JOIN fighter_tott tb ON tb.fighter_id = pp.fighter_b_id
         WHERE pp.implied_prob_a IS NOT NULL
           AND pp.actual_winner_id IS NOT NULL
+          -- No model prediction (e.g. UFC 329's no-prediction archive rows):
+          -- not a bet, and would otherwise default to 50/50 and book a loss.
+          AND pp.is_correct IS NOT NULL
           AND pp.odds_a IS NOT NULL
           AND pp.odds_b IS NOT NULL
         ORDER BY pp.fight_id,

@@ -325,6 +325,7 @@ export interface RoiOverTimeRow {
 
 export interface BettingInsightsResponse {
   sample_size: number
+  tracked_since: string | null
   avg_edge_qualifying: number
   upset_count_20pp: number
   upset_rate_20pp: number
@@ -493,6 +494,8 @@ export interface PastPredictionSummary {
   correct: number
   accuracy: number
   model_name: string
+  n_features: number
+  test_ece: number | null
   avg_confidence: number
   high_conf_fights: number
   high_conf_correct: number
@@ -505,6 +508,11 @@ export interface PastPredictionSummary {
   pre_fight_correct: number
   pre_fight_accuracy: number
   pre_fight_avg_confidence: number
+  // Live predictions split at the July 2026 feature fixes
+  pre_fight_legacy_total: number
+  pre_fight_corrected_total: number
+  pre_fight_corrected_correct: number
+  pre_fight_corrected_accuracy: number
   pre_fight_high_conf_fights: number
   pre_fight_high_conf_correct: number
   pre_fight_high_conf_accuracy: number
