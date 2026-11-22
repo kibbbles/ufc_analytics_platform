@@ -1,3 +1,4 @@
+import type { TooltipContentProps, TooltipValueType } from 'recharts'
 import {
   BarChart,
   Bar,
@@ -71,8 +72,7 @@ function MetricPanel({ data, dataKey, label, formatValue, color, colorPartial }:
             width={32}
           />
           <Tooltip
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            content={((props: any) => {
+            content={((props: TooltipContentProps<TooltipValueType, string | number>) => {
               if (!props.active || !props.payload?.length) return null
               const d = props.payload[0]?.payload as FighterOutputPoint & { value: number }
               return (
@@ -84,7 +84,7 @@ function MetricPanel({ data, dataKey, label, formatValue, color, colorPartial }:
                   </p>
                 </div>
               )
-            }) as any}
+            })}
           />
           <Bar dataKey="value" radius={[2, 2, 0, 0]}>
             {chartData.map((entry, i) => (

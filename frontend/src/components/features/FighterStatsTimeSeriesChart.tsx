@@ -1,3 +1,4 @@
+import type { TooltipContentProps, TooltipValueType } from 'recharts'
 import {
   LineChart,
   Line,
@@ -48,8 +49,7 @@ function MetricPanel({ data, dataKey, label, formatValue, color, currentYear }: 
             domain={['auto', 'auto']}
           />
           <Tooltip
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            content={((props: any) => {
+            content={((props: TooltipContentProps<TooltipValueType, string | number>) => {
               if (!props.active || !props.payload?.length) return null
               const d = props.payload[0]?.payload as StyleStatsByWeightClassPoint
               return (
@@ -61,7 +61,7 @@ function MetricPanel({ data, dataKey, label, formatValue, color, currentYear }: 
                   </p>
                 </div>
               )
-            }) as any}
+            })}
           />
           <Line
             dataKey={dataKey as string}

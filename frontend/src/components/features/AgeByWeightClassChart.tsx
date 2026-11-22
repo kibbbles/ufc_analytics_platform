@@ -1,3 +1,4 @@
+import type { TooltipContentProps, TooltipValueType } from 'recharts'
 import {
   BarChart,
   Bar,
@@ -95,8 +96,7 @@ function TimeSeriesView({ data, weightClass }: { data: AgeByWeightClassPoint[]; 
             width={32}
           />
           <Tooltip
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            content={((props: any) => {
+            content={((props: TooltipContentProps<TooltipValueType, string | number>) => {
               if (!props.active || !props.payload?.length) return null
               const d = props.payload[0]?.payload as AgeByWeightClassPoint
               return (
@@ -108,7 +108,7 @@ function TimeSeriesView({ data, weightClass }: { data: AgeByWeightClassPoint[]; 
                   </p>
                 </div>
               )
-            }) as any}
+            })}
           />
           <Line
             dataKey="avg_age"
@@ -183,8 +183,7 @@ function SnapshotView({ data }: { data: AgeByWeightClassPoint[] }) {
           interval={0}
         />
         <Tooltip
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          content={((props: any) => {
+          content={((props: TooltipContentProps<TooltipValueType, string | number>) => {
             if (!props.active || !props.payload?.length) return null
             const d = props.payload[0]?.payload
             return (
@@ -196,7 +195,7 @@ function SnapshotView({ data }: { data: AgeByWeightClassPoint[] }) {
                 </p>
               </div>
             )
-          }) as any}
+          })}
         />
         <Legend
           wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
