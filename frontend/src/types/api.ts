@@ -487,6 +487,9 @@ export interface PastPredictionItem {
   // Data quality provenance
   prediction_source: 'pre_fight_archive' | 'backfill' | null
   pre_fight_predicted_at: string | null
+  // Listed but not scored: the live prediction was written after the fight's
+  // card section began, so every prediction field is null (event pages only).
+  not_scored_reason?: 'written_after_start' | null
 }
 
 export interface PastPredictionSummary {

@@ -98,10 +98,15 @@ function EventLayout({ item }: { item: PastPredictionItem }) {
   const isUpset = item.is_upset
   const isCorrect = item.is_correct
   const hasPred = item.predicted_winner_id != null
+  // The live prediction was written after the fight started: list the fight and
+  // its result, but no pick, and no link to a prediction page that has none.
+  const notScored = item.not_scored_reason === 'written_after_start'
   const winnerIsA = item.actual_winner_id === item.fighter_a_id
   const predWinnerIsA = item.predicted_winner_id === item.fighter_a_id
 
-  const resultBadge = !hasPred
+  const resultBadge = notScored
+    ? { label: 'Not scored', cls: 'bg-[var(--color-border)]/40 text-[var(--color-text-muted)]' }
+    : !hasPred
     ? { label: '·', cls: 'bg-[var(--color-border)]/40 text-[var(--color-text-muted)]' }
     : isUpset
     ? { label: '~ Upset', cls: 'bg-[var(--color-warning)]/15 text-[var(--color-warning-light)] dark:text-[var(--color-warning)]' }
@@ -109,11 +114,11 @@ function EventLayout({ item }: { item: PastPredictionItem }) {
     ? { label: '✓', cls: 'bg-[var(--color-success)]/15 text-[var(--color-success-light)] dark:text-[var(--color-success)]' }
     : { label: '✗', cls: 'bg-[var(--color-error)]/15 text-[var(--color-error-light)] dark:text-[var(--color-error)]' }
 
-  return (
-    <Link
-      to={`/past-predictions/fights/${item.fight_id}`}
-      className="block py-3 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border)]/10 transition-colors space-y-1.5"
-    >
+  const rowClass =
+    'block py-3 border-b border-[var(--color-border-light)] dark:border-[var(--color-border)] last:border-0 space-y-1.5'
+
+  const body = (
+    <>
       {/* Fighter names + result badge */}
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold leading-snug text-sm">
@@ -159,7 +164,11 @@ function EventLayout({ item }: { item: PastPredictionItem }) {
         <span className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted)]">
           Model
         </span>
-        {hasPred && item.win_prob_a != null && item.win_prob_b != null ? (
+        {notScored ? (
+          <span className="text-xs text-[var(--color-text-muted)]">
+            Not scored: written after the fight started.
+          </span>
+        ) : hasPred && item.win_prob_a != null && item.win_prob_b != null ? (
           <>
             <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary-light)] dark:text-[var(--color-text-secondary)]">
               {item.fighter_a_name?.split(' ').pop()} {formatPct(item.win_prob_a)}
@@ -182,6 +191,17 @@ function EventLayout({ item }: { item: PastPredictionItem }) {
           <span className="text-xs text-[var(--color-text-muted)]">{EMPTY} no prediction</span>
         )}
       </div>
+    </>
+  )
+
+  if (notScored) return <div className={rowClass}>{body}</div>
+
+  return (
+    <Link
+      to={`/past-predictions/fights/${item.fight_id}`}
+      className={`${rowClass} hover:bg-[var(--color-border)]/10 transition-colors`}
+    >
+      {body}
     </Link>
   )
 }

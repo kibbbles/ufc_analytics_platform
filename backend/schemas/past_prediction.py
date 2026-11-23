@@ -42,6 +42,11 @@ class PastPredictionItem(BaseModel):
     # Data quality / provenance
     prediction_source: Optional[str] = None          # 'pre_fight_archive' | 'backfill'
     pre_fight_predicted_at: Optional[datetime] = None # when the pre-fight prediction was made
+    # Set when the fight is listed but its prediction is not scored. Only
+    # 'written_after_start' today (migration 011): the live prediction was
+    # written after the fight's card section began. Every prediction field is
+    # null on such a row so it cannot be read as a right or wrong pick.
+    not_scored_reason: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

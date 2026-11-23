@@ -398,7 +398,18 @@ def get_past_prediction_event(
     db: Session = Depends(get_db),
 ) -> PastPredictionEventDetail:
     rows = db.execute(text("""
-        WITH best AS (
+        -- Fights whose live prediction was written after their card section
+        -- began (migration 011). They stay on the card with their result, but
+        -- every prediction field is null, and they replace any other
+        -- prediction for the fight, so no substitute pick is shown in their place.
+        WITH late AS (
+            SELECT fight_id
+            FROM past_predictions
+            WHERE event_id = :event_id
+              AND prediction_source = 'pre_fight_archive'
+              AND prediction_after_start
+        ),
+        best AS (
             SELECT DISTINCT ON (fight_id)
                 fight_id, event_id, event_name, event_date,
                 fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
@@ -408,26 +419,50 @@ def get_past_prediction_event(
                 actual_winner_id, actual_method,
                 is_correct, confidence, is_upset,
                 prediction_source, pre_fight_predicted_at,
-                (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_title_fight,
-                (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_interim_title
+                NULL::text AS not_scored_reason
             FROM scored_predictions
+            WHERE event_id = :event_id
+              AND fight_id NOT IN (SELECT fight_id FROM late)
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
+        ),
+        not_scored AS (
+            SELECT
+                fight_id, event_id, event_name, event_date,
+                fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
+                weight_class,
+                NULL::float AS win_prob_a, NULL::float AS win_prob_b,
+                NULL::float AS pred_method_ko_tko, NULL::float AS pred_method_sub,
+                NULL::float AS pred_method_dec,
+                NULL::text AS predicted_winner_id, NULL::text AS predicted_method,
+                actual_winner_id, actual_method,
+                NULL::boolean AS is_correct, NULL::float AS confidence, NULL::boolean AS is_upset,
+                prediction_source, NULL::timestamptz AS pre_fight_predicted_at,
+                'written_after_start'::text AS not_scored_reason
+            FROM past_predictions
+            WHERE fight_id IN (SELECT fight_id FROM late)
+              AND prediction_source = 'pre_fight_archive'
+        ),
+        listed AS (
+            SELECT * FROM best
+            UNION ALL
+            SELECT * FROM not_scored
         )
-        SELECT best.*
-        FROM best
-        LEFT JOIN fight_details fd ON fd.id = best.fight_id
+        SELECT listed.*,
+            (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = listed.fight_id LIMIT 1) AS is_title_fight,
+            (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = listed.fight_id LIMIT 1) AS is_interim_title
+        FROM listed
+        LEFT JOIN fight_details fd ON fd.id = listed.fight_id
         LEFT JOIN LATERAL (
             SELECT position FROM upcoming_fights uf
             WHERE (
-                (uf.fighter_a_id = best.fighter_a_id AND uf.fighter_b_id = best.fighter_b_id)
+                (uf.fighter_a_id = listed.fighter_a_id AND uf.fighter_b_id = listed.fighter_b_id)
                 OR
-                (uf.fighter_a_id = best.fighter_b_id AND uf.fighter_b_id = best.fighter_a_id)
+                (uf.fighter_a_id = listed.fighter_b_id AND uf.fighter_b_id = listed.fighter_a_id)
             )
             ORDER BY uf.scraped_at DESC
             LIMIT 1
         ) uf_pos ON TRUE
-        WHERE best.event_id = :event_id
         ORDER BY COALESCE(uf_pos.position, fd.position, 999) ASC
     """), {"event_id": event_id}).mappings().all()
 

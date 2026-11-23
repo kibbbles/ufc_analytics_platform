@@ -114,6 +114,21 @@ def test_scored_predictions_shows_odds_only_when_captured_before_the_start():
     assert leaked == 0
 
 
+# The one deliberate exception: the past event page lists fights whose late
+# prediction is excluded, so it must read them from the table. It nulls every
+# prediction field on those rows (see get_past_prediction_event).
+_ALLOWED_FILE = "past_predictions.py"
+_ALLOWED_FUNCTION = "def get_past_prediction_event("
+
+
+def _without_allowed_function(name, src):
+    if name != _ALLOWED_FILE:
+        return src
+    start = src.index(_ALLOWED_FUNCTION)
+    end = src.find("\n@router.", start)
+    return src[:start] + (src[end:] if end != -1 else "")
+
+
 def test_no_endpoint_reads_past_predictions_directly():
     # Every scorecard, ROI and Vegas figure must come from scored_predictions,
     # or flagged rows count again.
@@ -121,6 +136,7 @@ def test_no_endpoint_reads_past_predictions_directly():
     for name in os.listdir(ENDPOINTS):
         if name.endswith(".py"):
             src = open(os.path.join(ENDPOINTS, name), encoding="utf-8").read()
+            src = _without_allowed_function(name, src)
             if re.search(r"\b(FROM|JOIN)\s+past_predictions\b", src):
                 offenders.append(name)
     assert offenders == []
