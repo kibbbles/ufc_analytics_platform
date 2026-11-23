@@ -19,6 +19,7 @@ from typing import Optional
 import requests
 from rapidfuzz import fuzz
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 sys.path.insert(0, ".")
@@ -177,11 +178,15 @@ def run(dry_run: bool = False) -> None:
 
     db: Session = SessionLocal()
     try:
-        # Load all upcoming fights that still have a future event date
+        # Load all upcoming fights that still have a future event date. Frozen
+        # fights (section started, migration 011) stay in the list so the API's
+        # in-play line for a started bout matches that bout and is skipped,
+        # rather than fuzzy-matching some other fight on the card.
         rows = db.execute(text("""
             SELECT uf.id, uf.fighter_a_name, uf.fighter_b_name,
                    uf.odds_a, uf.odds_b, uf.odds_scraped_at,
-                   ue.date_proper
+                   ue.date_proper,
+                   now() >= prediction_freeze_at(uf.section_start_at, ue.date_proper) AS frozen
             FROM upcoming_fights uf
             JOIN upcoming_events ue ON ue.id = uf.event_id
             WHERE ue.date_proper >= CURRENT_DATE
@@ -195,6 +200,8 @@ def run(dry_run: bool = False) -> None:
         matched = 0
         updated = 0
         skipped_unchanged = 0
+        frozen = 0
+        refused = 0
         unmatched_api = []
 
         for event in events:
@@ -210,6 +217,15 @@ def run(dry_run: bool = False) -> None:
 
             fight, flipped = match
             matched += 1
+
+            # Odds that change after the section starts are in-play prices. One
+            # such write archived Prochazka vs. Stirling at +179/-212, two minutes
+            # after the knockout, against +128/-150 the week before.
+            if fight["frozen"]:
+                frozen += 1
+                print(f"  FROZEN {fight['fighter_a_name']} vs {fight['fighter_b_name']} "
+                      f"(section started; odds left as captured before it)")
+                continue
 
             # Assign odds correctly based on match orientation
             if flipped:
@@ -238,22 +254,30 @@ def run(dry_run: bool = False) -> None:
             )
 
             if not dry_run:
-                db.execute(text("""
-                    UPDATE upcoming_fights
-                    SET odds_a          = :odds_a,
-                        odds_b          = :odds_b,
-                        implied_prob_a  = :imp_a,
-                        implied_prob_b  = :imp_b,
-                        odds_scraped_at = :scraped_at
-                    WHERE id = :fight_id
-                """), {
-                    "odds_a":     odds_a,
-                    "odds_b":     odds_b,
-                    "imp_a":      imp_a,
-                    "imp_b":      imp_b,
-                    "scraped_at": datetime.now(timezone.utc),
-                    "fight_id":   fight["id"],
-                })
+                # The freeze trigger is the backstop if the section starts mid-run;
+                # the savepoint keeps that refusal from undoing the other fights.
+                try:
+                    with db.begin_nested():
+                        db.execute(text("""
+                            UPDATE upcoming_fights
+                            SET odds_a          = :odds_a,
+                                odds_b          = :odds_b,
+                                implied_prob_a  = :imp_a,
+                                implied_prob_b  = :imp_b,
+                                odds_scraped_at = :scraped_at
+                            WHERE id = :fight_id
+                        """), {
+                            "odds_a":     odds_a,
+                            "odds_b":     odds_b,
+                            "imp_a":      imp_a,
+                            "imp_b":      imp_b,
+                            "scraped_at": datetime.now(timezone.utc),
+                            "fight_id":   fight["id"],
+                        })
+                except DBAPIError as e:
+                    refused += 1
+                    print(f"  REFUSED {fight['fighter_a_name']} vs {fight['fighter_b_name']}: {e.orig}")
+                    continue
                 updated += 1
             else:
                 updated += 1
@@ -266,6 +290,8 @@ def run(dry_run: bool = False) -> None:
         print(f"  Matched to DB fights : {matched}")
         print(f"  Updated              : {updated}")
         print(f"  Skipped (unchanged)  : {skipped_unchanged}")
+        print(f"  Skipped (frozen)     : {frozen}")
+        print(f"  Refused by trigger   : {refused}")
         print(f"  Unmatched API events : {len(unmatched_api)}")
         if unmatched_api:
             print("  Unmatched:")

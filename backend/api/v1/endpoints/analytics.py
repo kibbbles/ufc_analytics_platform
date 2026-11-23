@@ -266,7 +266,7 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
 
     sample_row = db.execute(text("""
         SELECT COUNT(DISTINCT fight_id) AS n, MIN(event_date)::text AS since
-        FROM past_predictions
+        FROM scored_predictions
         WHERE implied_prob_a IS NOT NULL AND actual_winner_id IS NOT NULL
     """)).mappings().first()
     sample_size: int = int(sample_row["n"] or 0)
@@ -279,7 +279,7 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
                 ELSE win_prob_b - implied_prob_b
             END
         )
-        FROM past_predictions
+        FROM scored_predictions
         WHERE implied_prob_a IS NOT NULL
           AND actual_winner_id IS NOT NULL
           AND (
@@ -290,7 +290,7 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
           ) BETWEEN 0.05 AND 0.15
     """)).scalar() or 0.0)
 
-    # ── Extra strategies computed on-the-fly from raw past_predictions ───────────
+    # ── Extra strategies computed on-the-fly from scored_predictions ────────────
     raw_fights = db.execute(text("""
         SELECT DISTINCT ON (fight_id)
             fighter_a_id, actual_winner_id,
@@ -298,7 +298,7 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
             implied_prob_a, implied_prob_b,
             odds_a, odds_b,
             confidence, is_correct
-        FROM past_predictions
+        FROM scored_predictions
         WHERE implied_prob_a IS NOT NULL
           AND actual_winner_id IS NOT NULL
           AND odds_a IS NOT NULL AND odds_b IS NOT NULL
@@ -341,14 +341,14 @@ def betting_insights(db: Session = Depends(get_db)) -> BettingInsightsResponse:
         _extra_strategy(edge_conv_rows, "edge_5_15_conv_20",  "Edge 5-15pp + Conviction 20pp+",     7),
     ]
 
-    # ── Upset rate at 20pp threshold (full past_predictions, not Vegas-filtered) ─
+    # ── Upset rate at 20pp threshold (all scored_predictions, not Vegas-filtered) ─
     upset_stats = db.execute(text("""
         SELECT
             COUNT(*) AS total,
             SUM(CASE WHEN NOT is_correct AND confidence >= 0.20 THEN 1 ELSE 0 END) AS upset_count
         FROM (
             SELECT DISTINCT ON (fight_id) is_correct, confidence
-            FROM past_predictions
+            FROM scored_predictions
             WHERE actual_winner_id IS NOT NULL
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
@@ -454,7 +454,7 @@ def betting_insights_fights(db: Session = Depends(get_db)) -> BettingFightsRespo
             COALESCE(fr.is_title_fight, FALSE) AS is_title,
             ta.dob_date AS dob_a,
             tb.dob_date AS dob_b
-        FROM past_predictions pp
+        FROM scored_predictions pp
         LEFT JOIN fight_results fr ON fr.fight_id = pp.fight_id
         LEFT JOIN fighter_tott ta ON ta.fighter_id = pp.fighter_a_id
         LEFT JOIN fighter_tott tb ON tb.fighter_id = pp.fighter_b_id
@@ -618,7 +618,7 @@ def betting_roi(
                 ({bet_won_expr})    AS bet_won,
                 ({model_prob_expr}) AS model_prob,
                 ({vegas_prob_expr}) AS vegas_prob
-            FROM past_predictions pp
+            FROM scored_predictions pp
             {title_join}
             WHERE pp.implied_prob_a IS NOT NULL
               AND pp.actual_winner_id IS NOT NULL
@@ -707,7 +707,7 @@ def roi_over_time(
                 event_date,
                 ({bet_odds_expr}) AS bet_odds,
                 ({bet_won_expr})  AS bet_won
-            FROM past_predictions
+            FROM scored_predictions
             WHERE implied_prob_a IS NOT NULL
               AND actual_winner_id IS NOT NULL
               AND is_correct IS NOT NULL
@@ -782,7 +782,7 @@ def betting_upsets(
                     AS winner_name,
                 CASE WHEN pp.win_prob_a >= 0.5 THEN pp.odds_a ELSE pp.odds_b END
                     AS model_pick_odds
-            FROM past_predictions pp
+            FROM scored_predictions pp
             LEFT JOIN fight_results fr ON fr.fight_id = pp.fight_id
             WHERE NOT pp.is_correct
               AND pp.confidence >= :conviction_min

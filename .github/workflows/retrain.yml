@@ -103,9 +103,29 @@ jobs:
       # Deliberately placed after the deploy trigger: a failure here should be
       # loud and fail the run, but it should not hold back a deploy that is
       # otherwise ready.
+      #
+      # Section start times come first: compute_predictions.py skips any fight
+      # whose section has started (migration 011). A failed lookup must not
+      # stop the recompute, since an unknown start falls back to an earlier,
+      # safe freeze, so the failure is reported by the last step instead.
+      - name: Store section start times from UFC.com
+        id: sections
+        if: ${{ github.event.inputs.eval_only != 'true' }}
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        working-directory: backend
+        run: python scraper/refresh_section_starts.py
+
       - name: Recompute upcoming predictions with the new models
         if: ${{ github.event.inputs.eval_only != 'true' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         working-directory: backend
         run: python scraper/compute_predictions.py
+
+      - name: Fail if section start times were unavailable
+        if: ${{ steps.sections.outcome == 'failure' }}
+        run: |
+          echo "::error::Section start lookup failed. Predictions were recomputed under the fallback freeze (12:00 UTC the day before each event)."
+          exit 1

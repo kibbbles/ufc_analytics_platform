@@ -77,6 +77,27 @@ def _new_id(existing_ids: set) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
+def integrity_flags(r) -> dict:
+    """Columns that record whether this row was written before its fight started.
+
+    freeze_at is prediction_freeze_at(): the card section's start, or the
+    fallback before the event day. compute_predictions.py and fetch_odds.py
+    no longer write after it, so both flags should come out FALSE. They are
+    computed here anyway so a row that slipped through is excluded from
+    scored_predictions rather than counted.
+    """
+    freeze = r["freeze_at"]
+    predicted = r.get("pre_fight_predicted_at")
+    odds_at = r.get("odds_scraped_at")
+    return {
+        "section_start_at":       r.get("section_start_at"),
+        "prediction_after_start": bool(predicted is not None and predicted >= freeze),
+        # Unknown (NULL) unless the odds have a capture time; only FALSE is scored.
+        "odds_after_start":       None if r.get("odds_a") is None or odds_at is None else odds_at >= freeze,
+        "odds_scraped_at":        odds_at,
+    }
+
+
 def run(dry_run: bool = False) -> None:
     # ------------------------------------------------------------------
     # 1. Find upcoming fights whose event has passed and that have a
@@ -97,6 +118,9 @@ def run(dry_run: bool = False) -> None:
                 uf.odds_b,
                 uf.implied_prob_a,
                 uf.implied_prob_b,
+                uf.odds_scraped_at,
+                uf.section_start_at,
+                prediction_freeze_at(uf.section_start_at, ue.date_proper) AS freeze_at,
                 up.win_prob_a,
                 up.win_prob_b,
                 up.method_ko_tko     AS pred_method_ko_tko,
@@ -162,6 +186,7 @@ def run(dry_run: bool = False) -> None:
     existing_ids = _load_existing_ids()
     archived_count = 0
     skipped_count  = 0
+    flagged_count  = 0
 
     for r in rows:
         fight_id         = r["fight_id"]
@@ -239,7 +264,15 @@ def run(dry_run: bool = False) -> None:
             "odds_b":                r.get("odds_b"),
             "implied_prob_a":        r.get("implied_prob_a"),
             "implied_prob_b":        r.get("implied_prob_b"),
+            **integrity_flags(r),
         }
+        if archive_row["prediction_after_start"] or archive_row["odds_after_start"]:
+            flagged_count += 1
+            logger.warning(
+                "Fight %s was written after its section started (prediction=%s, odds=%s); "
+                "archived but excluded from scoring.",
+                fight_id, archive_row["prediction_after_start"], archive_row["odds_after_start"],
+            )
 
         if dry_run:
             logger.info(
@@ -264,7 +297,8 @@ def run(dry_run: bool = False) -> None:
                     actual_winner_id, actual_method,
                     is_correct, confidence, is_upset,
                     prediction_source, pipeline_version, pre_fight_predicted_at, features_json,
-                    odds_a, odds_b, implied_prob_a, implied_prob_b
+                    odds_a, odds_b, implied_prob_a, implied_prob_b,
+                    odds_scraped_at, section_start_at, prediction_after_start, odds_after_start
                 ) VALUES (
                     :id, :fight_id, :event_id, :event_name, :event_date,
                     :fighter_a_id, :fighter_b_id, :fighter_a_name, :fighter_b_name,
@@ -275,7 +309,8 @@ def run(dry_run: bool = False) -> None:
                     :actual_winner_id, :actual_method,
                     :is_correct, :confidence, :is_upset,
                     :prediction_source, :pipeline_version, :pre_fight_predicted_at, :features_json,
-                    :odds_a, :odds_b, :implied_prob_a, :implied_prob_b
+                    :odds_a, :odds_b, :implied_prob_a, :implied_prob_b,
+                    :odds_scraped_at, :section_start_at, :prediction_after_start, :odds_after_start
                 )
                 ON CONFLICT (fight_id, prediction_source) DO NOTHING
             """), archive_row)
@@ -309,6 +344,9 @@ def run(dry_run: bool = False) -> None:
                 uf.odds_b,
                 uf.implied_prob_a,
                 uf.implied_prob_b,
+                uf.odds_scraped_at,
+                uf.section_start_at,
+                prediction_freeze_at(uf.section_start_at, ue.date_proper) AS freeze_at,
                 fd.id                AS fight_id,
                 fd.event_id,
                 e."EVENT"            AS event_name,
@@ -370,6 +408,7 @@ def run(dry_run: bool = False) -> None:
             "implied_prob_a": r.get("implied_prob_a"),
             "implied_prob_b": r.get("implied_prob_b"),
             "prediction_source": "pre_fight_archive",
+            **integrity_flags(r),
         }
 
         if dry_run:
@@ -384,12 +423,14 @@ def run(dry_run: bool = False) -> None:
                     fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name,
                     weight_class, actual_winner_id, actual_method,
                     odds_a, odds_b, implied_prob_a, implied_prob_b,
+                    odds_scraped_at, section_start_at, prediction_after_start, odds_after_start,
                     prediction_source
                 ) VALUES (
                     :id, :fight_id, :event_id, :event_name, :event_date,
                     :fighter_a_id, :fighter_b_id, :fighter_a_name, :fighter_b_name,
                     :weight_class, :actual_winner_id, :actual_method,
                     :odds_a, :odds_b, :implied_prob_a, :implied_prob_b,
+                    :odds_scraped_at, :section_start_at, :prediction_after_start, :odds_after_start,
                     :prediction_source
                 )
                 ON CONFLICT (fight_id, prediction_source) DO NOTHING
@@ -411,6 +452,7 @@ def run(dry_run: bool = False) -> None:
         f"  Archived (predicted)    : {archived_count}\n"
         f"  Archived (no prediction): {no_pred_count}\n"
         f"  Skipped                 : {skipped_count} (already archived)\n"
+        f"  Written after the start : {flagged_count} (archived, excluded from scoring)\n"
     )
 
 

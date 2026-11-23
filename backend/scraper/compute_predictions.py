@@ -32,6 +32,7 @@ backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, backend_dir)
 
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from db.database import engine
 from features.pipeline import (build_prediction_features,
@@ -242,52 +243,60 @@ def compute_for_fight(
         logger.debug(f'  Skipped (features and model unchanged): {name}')
         return 'skipped' 
 
-    if existing:
-        conn.execute(text("""
-            UPDATE upcoming_predictions
-            SET model_version = :ver,
-                win_prob_a    = :wpa,
-                win_prob_b    = :wpb,
-                method_ko_tko = :ko,
-                method_sub    = :sub,
-                method_dec    = :dec,
-                features_json = :feat,
-                feature_hash  = :hash,
-                pipeline_version = :pver,
-                predicted_at  = now()
-            WHERE fight_id = :fid
-        """), {
-            'ver': mver,
-            'wpa': win_prob_a, 'wpb': win_prob_b,
-            'ko': method_ko_tko, 'sub': method_sub, 'dec': method_dec,
-            'feat': json.dumps(_sanitize(feat), default=str),
-            'hash': fhash,
-            'pver': PIPELINE_VERSION,
-            'fid': fight_id,
-        })
-        logger.info(f'  Updated prediction: {name}')
-    else:
-        pred_id = _new_id(existing_ids)
-        conn.execute(text("""
-            INSERT INTO upcoming_predictions
-                (id, fight_id, model_version, win_prob_a, win_prob_b,
-                 method_ko_tko, method_sub, method_dec,
-                 features_json, feature_hash, pipeline_version)
-            VALUES
-                (:id, :fid, :ver, :wpa, :wpb,
-                 :ko, :sub, :dec,
-                 :feat, :hash, :pver)
-        """), {
-            'id': pred_id,
-            'fid': fight_id,
-            'ver': mver,
-            'wpa': win_prob_a, 'wpb': win_prob_b,
-            'ko': method_ko_tko, 'sub': method_sub, 'dec': method_dec,
-            'feat': json.dumps(_sanitize(feat), default=str),
-            'hash': fhash,
-            'pver': PIPELINE_VERSION,
-        })
-        logger.info(f'  Inserted prediction: {name} ({pred_id})')
+    # One savepoint per fight: if the freeze trigger refuses this write (the
+    # section started while the run was going), only this fight is lost and
+    # the rest of the run still commits.
+    try:
+        with conn.begin_nested():
+            if existing:
+                conn.execute(text("""
+                    UPDATE upcoming_predictions
+                    SET model_version = :ver,
+                        win_prob_a    = :wpa,
+                        win_prob_b    = :wpb,
+                        method_ko_tko = :ko,
+                        method_sub    = :sub,
+                        method_dec    = :dec,
+                        features_json = :feat,
+                        feature_hash  = :hash,
+                        pipeline_version = :pver,
+                        predicted_at  = now()
+                    WHERE fight_id = :fid
+                """), {
+                    'ver': mver,
+                    'wpa': win_prob_a, 'wpb': win_prob_b,
+                    'ko': method_ko_tko, 'sub': method_sub, 'dec': method_dec,
+                    'feat': json.dumps(_sanitize(feat), default=str),
+                    'hash': fhash,
+                    'pver': PIPELINE_VERSION,
+                    'fid': fight_id,
+                })
+                logger.info(f'  Updated prediction: {name}')
+            else:
+                pred_id = _new_id(existing_ids)
+                conn.execute(text("""
+                    INSERT INTO upcoming_predictions
+                        (id, fight_id, model_version, win_prob_a, win_prob_b,
+                         method_ko_tko, method_sub, method_dec,
+                         features_json, feature_hash, pipeline_version)
+                    VALUES
+                        (:id, :fid, :ver, :wpa, :wpb,
+                         :ko, :sub, :dec,
+                         :feat, :hash, :pver)
+                """), {
+                    'id': pred_id,
+                    'fid': fight_id,
+                    'ver': mver,
+                    'wpa': win_prob_a, 'wpb': win_prob_b,
+                    'ko': method_ko_tko, 'sub': method_sub, 'dec': method_dec,
+                    'feat': json.dumps(_sanitize(feat), default=str),
+                    'hash': fhash,
+                    'pver': PIPELINE_VERSION,
+                })
+                logger.info(f'  Inserted prediction: {name} ({pred_id})')
+    except DBAPIError as e:
+        logger.error(f'  Write refused for {name}: {e.orig}')
+        return 'failed'
 
     return 'written' 
 
@@ -331,6 +340,23 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
 
         params = {'fight_id': fight_id_filter} if fight_id_filter else {}
 
+        # A prediction is frozen once its card section starts (migration 011).
+        # GitHub's Saturday cron has started this job hours late, mid-card, and
+        # a late run used to rewrite fights that were already under way. A
+        # trigger refuses those writes too; skipping them here keeps one late
+        # fight from failing the whole run.
+        frozen = conn.execute(text(f"""
+            SELECT uf.fighter_a_name, uf.fighter_b_name,
+                   prediction_freeze_at(uf.section_start_at, ue.date_proper) AS freeze_at,
+                   uf.section_start_at IS NOT NULL AS from_feed
+            FROM upcoming_fights uf
+            JOIN upcoming_events ue ON ue.id = uf.event_id
+            {where}
+              AND now() >= prediction_freeze_at(uf.section_start_at, ue.date_proper)
+            ORDER BY ue.date_proper ASC, uf.id ASC
+        """), params).mappings().all()
+        where += ' AND now() < prediction_freeze_at(uf.section_start_at, ue.date_proper)'
+
         fights = conn.execute(text(f"""
             SELECT
                 uf.id,
@@ -355,7 +381,12 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
             WHERE fighter_a_id IS NULL OR fighter_b_id IS NULL
         """)).scalar() or 0
 
-        logger.info(f'{len(fights)} fights to predict, {total_skipped} skipped (unmatched fighters)')
+        logger.info(f'{len(fights)} fights to predict, {total_skipped} skipped (unmatched fighters), '
+                    f'{len(frozen)} frozen (section started)')
+        for f in frozen:
+            source = 'section start' if f['from_feed'] else 'fallback, no section start known'
+            print(f"  Frozen since {f['freeze_at']:%Y-%m-%d %H:%M}Z ({source}): "
+                  f"{f['fighter_a_name']} vs {f['fighter_b_name']}")
 
         prebuilt = _build_features_bulk([dict(f) for f in fights])
 
@@ -387,7 +418,8 @@ def run(dry_run: bool = False, fight_id_filter: str | None = None) -> bool:
     # A run that writes nothing must not look like a run that refreshed
     # everything. Both counts are printed even when zero.
     print(f'Done  -  {written_count} written, {skip_count} unchanged, '
-          f'{fail_count} errors, {total_skipped} not predicted (no fighter match)')
+          f'{fail_count} errors, {total_skipped} not predicted (no fighter match), '
+          f'{len(frozen)} frozen (section started)')
     print(f'Model    -  {_model_version(store)}')
     if written_count == 0 and skip_count:
         print('Note     -  nothing changed: same features, same model artefacts')

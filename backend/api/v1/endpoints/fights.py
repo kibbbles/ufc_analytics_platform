@@ -150,7 +150,7 @@ def search_fights(
         LEFT JOIN fighter_details fw ON fw.id          = fr.fighter_id
         LEFT JOIN LATERAL (
             SELECT win_prob_a, win_prob_b, predicted_winner_id, confidence
-            FROM past_predictions
+            FROM scored_predictions
             WHERE fight_id = fd.id
             ORDER BY CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
             LIMIT 1

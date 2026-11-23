@@ -107,7 +107,7 @@ def get_past_predictions(
     summary_row = db.execute(text("""
         WITH best AS (
             SELECT DISTINCT ON (fight_id) *
-            FROM past_predictions
+            FROM scored_predictions
             WHERE (:test_from = '' OR event_date >= CAST(:test_from AS date))
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
@@ -136,7 +136,7 @@ def get_past_predictions(
 
     years_rows = db.execute(text("""
         SELECT DISTINCT EXTRACT(YEAR FROM event_date)::int AS yr
-        FROM past_predictions
+        FROM scored_predictions
         WHERE event_date IS NOT NULL
           AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
         ORDER BY yr DESC
@@ -155,7 +155,7 @@ def get_past_predictions(
             SUM(CASE WHEN pipeline_version IS NULL THEN 1 ELSE 0 END)          AS legacy_total,
             SUM(CASE WHEN pipeline_version IS NOT NULL THEN 1 ELSE 0 END)      AS corrected_total,
             SUM(CASE WHEN pipeline_version IS NOT NULL AND is_correct THEN 1 ELSE 0 END) AS corrected_correct
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND is_correct IS NOT NULL
           AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
@@ -183,7 +183,7 @@ def get_past_predictions(
             AVG(confidence)                                                     AS avg_confidence,
             SUM(CASE WHEN confidence >= 0.30 THEN 1 ELSE 0 END)               AS high_conf_fights,
             SUM(CASE WHEN is_correct AND confidence >= 0.30 THEN 1 ELSE 0 END) AS high_conf_correct
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'backfill'
           AND is_correct IS NOT NULL
           AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
@@ -216,7 +216,7 @@ def get_past_predictions(
                        AND ((win_prob_a >= 0.5 AND actual_winner_id = fighter_a_id)
                             OR (win_prob_a < 0.5 AND actual_winner_id != fighter_a_id))
                      THEN 1 ELSE 0 END) AS disagree_correct
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND implied_prob_a IS NOT NULL
           AND actual_winner_id IS NOT NULL
@@ -284,9 +284,9 @@ def get_past_predictions(
                 actual_winner_id, actual_method,
                 is_correct, confidence, is_upset,
                 prediction_source, pre_fight_predicted_at,
-                (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
-                (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
-            FROM past_predictions
+                (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_title_fight,
+                (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_interim_title
+            FROM scored_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -335,7 +335,7 @@ def list_past_prediction_events(
     total: int = db.execute(text(f"""
         WITH best AS (
             SELECT DISTINCT ON (fight_id) *
-            FROM past_predictions
+            FROM scored_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -350,7 +350,7 @@ def list_past_prediction_events(
     rows = db.execute(text(f"""
         WITH best AS (
             SELECT DISTINCT ON (fight_id) *
-            FROM past_predictions
+            FROM scored_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -408,9 +408,9 @@ def get_past_prediction_event(
                 actual_winner_id, actual_method,
                 is_correct, confidence, is_upset,
                 prediction_source, pre_fight_predicted_at,
-                (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
-                (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
-            FROM past_predictions
+                (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_title_fight,
+                (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_interim_title
+            FROM scored_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -476,7 +476,7 @@ _DEDUP_CTE = """
             is_correct, confidence, is_upset,
             features_json,
             prediction_source, pre_fight_predicted_at
-        FROM past_predictions
+        FROM scored_predictions
         ORDER BY fight_id,
                  CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
     )
@@ -507,7 +507,7 @@ def get_past_prediction_stats(
     all_bucket_rows = db.execute(text(f"""
         WITH best AS (
             SELECT DISTINCT ON (fight_id) confidence, is_correct, weight_class
-            FROM past_predictions
+            FROM scored_predictions
             WHERE TRUE {_DATE_FILTER}
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
@@ -542,7 +542,7 @@ def get_past_prediction_stats(
     all_wc_rows = db.execute(text(f"""
         WITH best AS (
             SELECT DISTINCT ON (fight_id) weight_class, is_correct
-            FROM past_predictions
+            FROM scored_predictions
             WHERE TRUE {_DATE_FILTER}
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
@@ -561,7 +561,7 @@ def get_past_prediction_stats(
         SELECT {_BUCKET_CASE} AS bucket,
                COUNT(*) AS fights,
                SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND confidence IS NOT NULL AND is_correct IS NOT NULL
           {_DATE_FILTER}
@@ -573,7 +573,7 @@ def get_past_prediction_stats(
         SELECT weight_class,
                COUNT(*) AS fights,
                SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND weight_class IS NOT NULL AND is_correct IS NOT NULL
           {_DATE_FILTER}
@@ -587,7 +587,7 @@ def get_past_prediction_stats(
             SELECT DISTINCT ON (fight_id)
                 confidence, is_correct, win_prob_a, win_prob_b,
                 actual_winner_id, fighter_a_id
-            FROM past_predictions
+            FROM scored_predictions
             WHERE (:test_from = '' OR event_date >= CAST(:test_from AS date))
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
@@ -601,7 +601,7 @@ def get_past_prediction_stats(
     pf_raw = db.execute(text("""
         SELECT confidence, is_correct, win_prob_a, win_prob_b,
                actual_winner_id, fighter_a_id
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'pre_fight_archive'
           AND confidence IS NOT NULL AND is_correct IS NOT NULL
           AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
@@ -614,7 +614,7 @@ def get_past_prediction_stats(
         SELECT {_BUCKET_CASE} AS bucket,
                COUNT(*) AS fights,
                SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'backfill'
           AND confidence IS NOT NULL AND is_correct IS NOT NULL
           {_DATE_FILTER}
@@ -626,7 +626,7 @@ def get_past_prediction_stats(
         SELECT weight_class,
                COUNT(*) AS fights,
                SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'backfill'
           AND weight_class IS NOT NULL AND is_correct IS NOT NULL
           {_DATE_FILTER}
@@ -637,7 +637,7 @@ def get_past_prediction_stats(
     bt_raw = db.execute(text("""
         SELECT confidence, is_correct, win_prob_a, win_prob_b,
                actual_winner_id, fighter_a_id
-        FROM past_predictions
+        FROM scored_predictions
         WHERE prediction_source = 'backfill'
           AND confidence IS NOT NULL AND is_correct IS NOT NULL
           AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
@@ -711,7 +711,7 @@ def get_past_prediction_stats(
     calib_rows = db.execute(text("""
         WITH picks AS (
             SELECT GREATEST(win_prob_a, win_prob_b) AS p, is_correct
-            FROM past_predictions
+            FROM scored_predictions
             WHERE prediction_source = 'pre_fight_archive'
               AND is_correct IS NOT NULL
               AND win_prob_a IS NOT NULL AND win_prob_b IS NOT NULL
@@ -748,7 +748,7 @@ def get_past_prediction_stats(
         WITH best AS (
             SELECT DISTINCT ON (fight_id)
                 implied_prob_a, win_prob_a, actual_winner_id, fighter_a_id, confidence
-            FROM past_predictions
+            FROM scored_predictions
             ORDER BY fight_id,
                      CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
         )
@@ -839,7 +839,7 @@ def get_past_prediction_stats(
     _VEGAS_PF_CTE = """
         WITH best AS (
             SELECT implied_prob_a, win_prob_a, actual_winner_id, fighter_a_id, confidence
-            FROM past_predictions
+            FROM scored_predictions
             WHERE prediction_source = 'pre_fight_archive'
         )
     """
@@ -897,7 +897,7 @@ def get_past_prediction_stats(
     _VEGAS_BT_CTE = """
         WITH best AS (
             SELECT implied_prob_a, win_prob_a, actual_winner_id, fighter_a_id, confidence
-            FROM past_predictions
+            FROM scored_predictions
             WHERE prediction_source = 'backfill'
         )
     """
@@ -1018,7 +1018,7 @@ def search_past_prediction_fights(
         where = "WHERE " + " AND ".join(source_conditions)
 
         total: int = db.execute(text(f"""
-            SELECT COUNT(*) FROM past_predictions {where}
+            SELECT COUNT(*) FROM scored_predictions {where}
         """), params).scalar() or 0
 
         params["limit"]  = page_size
@@ -1028,9 +1028,9 @@ def search_past_prediction_fights(
             SELECT pp.*
             FROM (
                 SELECT {_FIGHT_COLS},
-                    (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
-                    (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
-                FROM past_predictions
+                    (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_title_fight,
+                    (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_interim_title
+                FROM scored_predictions
                 {where}
             ) pp
             LEFT JOIN fight_details fd ON fd.id = pp.fight_id
@@ -1049,7 +1049,7 @@ def search_past_prediction_fights(
         total = db.execute(text(f"""
             WITH best AS (
                 SELECT DISTINCT ON (fight_id) *
-                FROM past_predictions
+                FROM scored_predictions
                 ORDER BY fight_id,
                          CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
             )
@@ -1070,9 +1070,9 @@ def search_past_prediction_fights(
                     actual_winner_id, actual_method,
                     is_correct, confidence, is_upset,
                     prediction_source, pre_fight_predicted_at,
-                    (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
-                    (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
-                FROM past_predictions
+                    (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_title_fight,
+                    (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_interim_title
+                FROM scored_predictions
                 ORDER BY fight_id,
                          CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
             )
@@ -1110,9 +1110,9 @@ def get_past_prediction_fight(
 ) -> PastPredictionItem:
     row = db.execute(text(f"""
         SELECT DISTINCT ON (fight_id) {_FIGHT_COLS},
-            (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_title_fight,
-            (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = past_predictions.fight_id LIMIT 1) AS is_interim_title
-        FROM past_predictions
+            (SELECT fr.is_title_fight  FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_title_fight,
+            (SELECT fr.is_interim_title FROM fight_results fr WHERE fr.fight_id = scored_predictions.fight_id LIMIT 1) AS is_interim_title
+        FROM scored_predictions
         WHERE fight_id = :fight_id
         ORDER BY fight_id,
                  CASE WHEN prediction_source = 'pre_fight_archive' THEN 0 ELSE 1 END
