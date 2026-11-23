@@ -97,7 +97,7 @@ export default function FighterStatsTimeSeriesChart({ data, weightClass }: Props
   if (!filtered.length) {
     return (
       <p className="text-sm text-[var(--color-text-muted)]">
-        No detailed stats available for {weightClass} (fight_stats data starts 2015+).
+        No output stats for {weightClass} fights since 2015.
       </p>
     )
   }

@@ -291,8 +291,8 @@ Past-dated cards are purged only once archived; an unarchived prediction is kept
 ### Data Format Notes
 - **Stats Format**: "X of Y" means X landed, Y attempted
 - **Winner Logic**: In OUTCOME "W/L", first fighter in BOUT won
-- **Coverage**: Detailed stats (fight_stats) mainly available 2015+
-- **2014 and earlier**: Limited to basic fight results only
+- **Coverage**: fight_stats covers nearly every fight since 1994 (2001-2014: 2,781 of 2,781; 1994-2000: 245 of 267 have strike counts)
+- **Style Evolution views** (`mv_*` behind /analytics/style-evolution) filter to 2015+, so those charts start in 2015
 
 ### CRITICAL: fight_results Query Pattern
 fight_results has ONE row per fight. `fighter_id` = winner, `opponent_id` = loser.

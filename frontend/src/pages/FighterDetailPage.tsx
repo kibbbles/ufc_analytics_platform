@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { fightersService } from '@services/fightersService'
 import { fightsService } from '@services/fightsService'
-import { LoadingSkeleton, DataCaveatNote, Card } from '@components/common'
+import { LoadingSkeleton, Card } from '@components/common'
 import { FighterProfileHeader, FightHistoryRow } from '@components/features'
 
 export default function FighterDetailPage() {
@@ -50,11 +50,6 @@ export default function FighterDetailPage() {
       {fighter && !fighterLoading && (
         <div className="space-y-6">
           <FighterProfileHeader fighter={fighter} />
-
-          <DataCaveatNote>
-            Detailed round-by-round stats are available for fights from 2015 onwards.
-            Earlier fights may show results only.
-          </DataCaveatNote>
 
           <Card
             header={
