@@ -4,7 +4,7 @@ import gzip
 import json
 from datetime import datetime, timedelta, timezone
 
-from scraper.record_live_feeds import Fetch, Recorder, summarize
+from scraper.record_live_feeds import Fetch, Recorder, summarize, wrong_year
 
 T0 = datetime(2026, 12, 5, 15, 0, tzinfo=timezone.utc)
 
@@ -158,3 +158,9 @@ def test_summaries_from_real_feed_shapes():
     assert summarize("ufc_feed", ufc_doc(["Final", "Final"], "Live"))["complete"] is True
     assert summarize("espn_scoreboard", espn_doc(["post", "in"]))["complete"] is False
     assert summarize("espn_scoreboard", {"events": []})["complete"] is False
+
+
+def test_a_recording_for_another_year_does_not_run():
+    assert wrong_year(2026, datetime(2026, 12, 5, 14, 25, tzinfo=timezone.utc)) is None
+    assert "2027" in wrong_year(2026, datetime(2027, 12, 5, 14, 25, tzinfo=timezone.utc))
+    assert wrong_year(None, datetime(2031, 1, 1, tzinfo=timezone.utc)) is None

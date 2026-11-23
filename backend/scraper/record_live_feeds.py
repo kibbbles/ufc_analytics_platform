@@ -246,6 +246,19 @@ class Recorder:
         return not problems
 
 
+def wrong_year(only_year: int | None, now: datetime) -> str | None:
+    """Why this run must not record, or None.
+
+    The Cloud Scheduler trigger for a one-off recording repeats every year. If
+    it is not deleted after the event, next year's run would record a
+    different event under this one's arguments.
+    """
+    if only_year is not None and now.year != only_year:
+        return (f'Not recording: this recording is for {only_year} and it is now {now.year}. '
+                'The yearly trigger that started it should be deleted.')
+    return None
+
+
 def _utc(value: str) -> datetime:
     return datetime.fromisoformat(value.replace('Z', '+00:00')).astimezone(timezone.utc)
 
@@ -263,7 +276,14 @@ def main():
                     help='keep polling this long after the card is final, for corrections (default 20)')
     ap.add_argument('--once', action='store_true', help='poll each source once and stop')
     ap.add_argument('--dry-run', action='store_true', help='print only; do not write snapshots')
+    ap.add_argument('--only-year', type=int,
+                    help='exit at once, recording nothing, unless the current UTC year is this one')
     args = ap.parse_args()
+
+    stop = wrong_year(args.only_year, datetime.now(timezone.utc))
+    if stop:
+        print(stop, flush=True)
+        sys.exit(0)
 
     start = args.start or datetime.now(timezone.utc)
     rec = Recorder(
