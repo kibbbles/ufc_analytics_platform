@@ -267,6 +267,13 @@ upcoming_predictions
 past_predictions
     prediction_source: 'pre_fight_archive' | 'backfill'
     -- DISTINCT ON (fight_id) dedup prefers pre_fight_archive
+    section_start_at, prediction_after_start, odds_after_start  -- migration 011
+scored_predictions  -- VIEW: past_predictions minus rows written after the
+                    -- section started, odds blanked unless captured before it.
+                    -- Every scorecard, ROI and Vegas query reads this, never the table.
+
+-- Fight-night recordings (Phase 0, research only; nothing reads it at runtime)
+live_feed_snapshots  -- record_live_feeds.py, migration 012
 ```
 
 ### Fighter Matching Logic (upcoming_scraper.py)
@@ -331,7 +338,10 @@ python post_scrape_clean.py        # Run full ETL pipeline + validation
 Daily    03:00 UTC  → daily-keepalive       (keep Supabase alive)
 Daily    06:00 UTC  → pipeline-health       (opens/closes a pipeline-failure issue)
 
-Saturday 15:00 UTC  → upcoming-predictions  (scrape same-day card + pre-compute)
+Friday   18:00 UTC  → upcoming-predictions  (same job; lands before early Saturday cards)
+Saturday 15:00 UTC  → upcoming-predictions  (scrape same-day card + section start times
+                                             from UFC.com + pre-compute; fights whose
+                                             section has started are frozen, migration 011)
 
 Sunday   14:00 UTC  → weekly-ufc-scraper    (scrape new completed events)
                     → post-scrape-clean     (ETL cleanup + archive pre-fight predictions;

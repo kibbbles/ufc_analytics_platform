@@ -1,9 +1,16 @@
 name: Upcoming Predictions
 
-# Scrapes upcoming UFC events and computes ML predictions every Saturday
-# Runs at 15:00 UTC (10 AM EST) — in time for Saturday fight cards
+# Scrapes upcoming UFC events and computes ML predictions, Friday and Saturday.
+#
+# GitHub has started these crons 3 to 6.5 hours late. Predictions and odds
+# freeze when a fight's card section starts (migration 011), so a late
+# Saturday run cannot refresh a card that starts early in the day, like the
+# 15:00 UTC Riyadh card on 2026-12-05. The Friday run lands before any
+# Saturday card even when it is late; the Saturday run still refreshes the
+# later-starting US cards.
 on:
   schedule:
+    - cron: '0 18 * * 5'  # Every Friday at 18:00 UTC
     - cron: '0 15 * * 6'  # Every Saturday at 15:00 UTC (10 AM EST)
   workflow_dispatch:       # Allow manual trigger
 
