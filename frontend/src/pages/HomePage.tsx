@@ -161,7 +161,7 @@ function ModelScorecard() {
                   avg conviction {formatPct(summary.pre_fight_avg_confidence)}
                 </p>
                 <p className="mt-2 text-xs italic text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  Frozen before each event · no look-ahead
+                  Frozen before each fight · no look-ahead
                 </p>
               </button>
             ) : (
@@ -247,7 +247,7 @@ function ModelScorecard() {
           )}
           <p className="mb-2 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
             {summary.model_name ? `${summary.model_name} model` : 'A model'} using {summary.n_features > 0 ? `${summary.n_features} ` : ''}features including physical differentials, career striking and grappling metrics, and recent fight history. It is pinned, chosen for best calibration from logistic regression, random forest, and gradient boosting rather than re-selected each retrain, which only added noise among three statistically tied models.{' '}
-            <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Live track record</span> is the model's real predictions, frozen the Saturday before each event and never rewritten: the honest number, with no look-ahead.{' '}
+            <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Live track record</span> is the model's real predictions, frozen once each fight starts and never rewritten: the honest number, with no look-ahead.{' '}
             <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Backtested</span> is the current model reconstructed over past fights; it benefits from hindsight in the code (features rebuilt after the fact), so it is not a live record.{' '}
             {summary.pre_fight_legacy_total > 0 &&
               `${summary.pre_fight_legacy_total === summary.pre_fight_total ? 'Every one' : `${summary.pre_fight_legacy_total}`} of these ${summary.pre_fight_total} live predictions ${summary.pre_fight_legacy_total === summary.pre_fight_total || summary.pre_fight_legacy_total === 1 ? 'was' : 'were'} made with a corrupted win/loss streak feature and with win_rate_diff silently imputed to the population mean; both were fixed in July 2026, and those predictions are kept unchanged.`}
@@ -430,7 +430,7 @@ export default function HomePage() {
           ML-powered fight predictions and historical analysis
         </p>
         <p className="mt-1 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-          Fight results and stats scraped every Sunday at 9 AM EST · Upcoming predictions refreshed every Saturday at 10 AM EST
+          Fight results and stats scraped every Sunday · Upcoming predictions refreshed after the Sunday retrain and again on Friday and Saturday, then frozen once a fight starts
         </p>
       </div>
 
