@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import type { FightResponse, FighterResponse, PastPredictionItem } from '@t/api'
-import { resolveFightSides, orientById } from './fightSides'
+import type { FightListItem, FightResponse, FighterResponse, PastPredictionItem } from '@t/api'
+import { resolveFightSides, orientById, listedFight, opponentOf } from './fightSides'
+import { EMPTY } from './format'
 
 const STRICKLAND = '0d801111'
 const ADESANYA = '1338e2c7'
@@ -121,8 +122,8 @@ describe('resolveFightSides - other cases', () => {
       fighter_b_name: null,
     })
     const sides = resolveFightSides(fight, null)
-    expect(sides.a).toEqual({ id: ADESANYA, name: '—' })
-    expect(sides.winner).toEqual({ id: STRICKLAND, name: '—' })
+    expect(sides.a).toEqual({ id: ADESANYA, name: EMPTY })
+    expect(sides.winner).toEqual({ id: STRICKLAND, name: EMPTY })
   })
 
   it('has no winner for a draw or no contest', () => {
@@ -135,5 +136,65 @@ describe('resolveFightSides - other cases', () => {
     const pred = { ...ufc293Prediction(), fighter_a_name: 'Sean Strickland vs. Israel Adesanya' }
     const sides = resolveFightSides(ufc293Fight(), pred)
     expect(sides.a.name).toBe('Sean Strickland')
+  })
+})
+
+/** UFC 293 as /fights and /events/{id} list it: fight_details order, Adesanya first. */
+function ufc293ListItem(overrides: Partial<FightListItem> = {}): FightListItem {
+  return {
+    id: '7f16e772',
+    event_id: 'ece28074',
+    bout: 'Israel Adesanya vs. Sean Strickland',
+    fighter_a_id: ADESANYA,
+    fighter_b_id: STRICKLAND,
+    fighter_a_name: 'Israel Adesanya',
+    fighter_b_name: 'Sean Strickland',
+    weight_class: 'Middleweight',
+    method: 'Decision - Unanimous',
+    round: 5,
+    winner_id: STRICKLAND,
+    is_title_fight: true,
+    is_interim_title: false,
+    ...overrides,
+  }
+}
+
+describe('listedFight - fight lists (event card, fighter history)', () => {
+  it('marks Strickland as the winner of UFC 293', () => {
+    const { a, b, won } = listedFight(ufc293ListItem())
+    expect(won).toBe('b')
+    expect(b).toEqual({ id: STRICKLAND, name: 'Sean Strickland' })
+    expect(a).toEqual({ id: ADESANYA, name: 'Israel Adesanya' })
+  })
+
+  it('ignores a bout string listed in the opposite order', () => {
+    const fight = ufc293ListItem({ bout: 'Sean Strickland vs. Israel Adesanya' })
+    const { a, b, won } = listedFight(fight)
+    expect(a.name).toBe('Israel Adesanya')
+    expect(b.name).toBe('Sean Strickland')
+    expect(won).toBe('b')
+  })
+
+  it('has no winner for a draw, or for a winner id that is neither fighter', () => {
+    expect(listedFight(ufc293ListItem({ winner_id: null })).won).toBeNull()
+    expect(listedFight(ufc293ListItem({ winner_id: 'QYXLMV' })).won).toBeNull()
+  })
+
+  it('leaves names empty, not guessed from the bout, when the API sent none', () => {
+    const { a, b } = listedFight(ufc293ListItem({ fighter_a_name: undefined, fighter_b_name: null }))
+    expect(a.name).toBe(EMPTY)
+    expect(b.name).toBe(EMPTY)
+  })
+})
+
+describe('opponentOf - recent fights mini list', () => {
+  it("gives each fighter the other one's id and name", () => {
+    const fight = ufc293ListItem({ bout: 'Sean Strickland vs. Israel Adesanya' })
+    expect(opponentOf(fight, STRICKLAND)).toEqual({ id: ADESANYA, name: 'Israel Adesanya' })
+    expect(opponentOf(fight, ADESANYA)).toEqual({ id: STRICKLAND, name: 'Sean Strickland' })
+  })
+
+  it('returns null when the viewing fighter is in neither seat', () => {
+    expect(opponentOf(ufc293ListItem(), 'UNKNWN')).toBeNull()
   })
 })

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { FightListItem } from '@t/api'
 import { Badge } from '@components/common'
 import { EMPTY } from '@utils/format'
+import { listedFight } from '@utils/fightSides'
 
 interface FightRowProps {
   fight: FightListItem
@@ -22,25 +23,19 @@ function ResultBadge({ fight, fighterId }: { fight: FightListItem; fighterId?: s
 /**
  * Renders "A vs. B" with the winner at full weight and the loser muted.
  *
- * Falls back to flat, unemphasised text whenever the winner cannot be resolved:
- * a draw or no-contest (null winner_id), an unmatched fighter FK, or a BOUT
- * string that does not split cleanly on " vs. ".
+ * Each name is the one the API joined to that fighter's id; the BOUT string is
+ * never split by position. Falls back to flat, unemphasised text whenever the
+ * winner cannot be resolved: a draw or no-contest, a winner id that is neither
+ * fighter, or a response without the joined names.
  */
 function Bout({ fight }: { fight: FightListItem }) {
-  const { bout, winner_id, fighter_a_id, fighter_b_id } = fight
+  const { a, b, won } = listedFight(fight)
 
-  if (!bout) return <>{EMPTY}</>
+  if (a.name === EMPTY || b.name === EMPTY) return <>{fight.bout || EMPTY}</>
+  if (won === null) return <>{`${a.name} vs. ${b.name}`}</>
 
-  const sides = bout.split(' vs. ')
-  const resolvable =
-    sides.length === 2 &&
-    winner_id !== null &&
-    (winner_id === fighter_a_id || winner_id === fighter_b_id)
-
-  if (!resolvable) return <>{bout}</>
-
-  const [nameA, nameB] = sides
-  const aWon = winner_id === fighter_a_id
+  const [nameA, nameB] = [a.name, b.name]
+  const aWon = won === 'a'
   // The loser's name is content, not decoration, so it stays on the secondary text
   // token rather than muted — muted lands at 3.5:1 on the card surface, under AA.
   const winnerClass = 'font-semibold text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]'

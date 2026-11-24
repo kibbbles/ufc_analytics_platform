@@ -52,16 +52,3 @@ export function ageFromDob(dob: string): number {
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
   return age
 }
-
-/**
- * Given a bout string "Fighter A vs. Fighter B" and the viewing fighter's full name,
- * return the opponent's name. Falls back to the full bout string if parsing fails.
- */
-export function parseOpponent(bout: string, fighterName: string): string {
-  const parts = bout.split(' vs. ')
-  if (parts.length !== 2) return bout
-  const nameLower = fighterName.toLowerCase()
-  if (parts[0].toLowerCase().includes(nameLower)) return parts[1].trim()
-  if (parts[1].toLowerCase().includes(nameLower)) return parts[0].trim()
-  return bout
-}

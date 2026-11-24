@@ -108,6 +108,9 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
             fd."BOUT"       AS bout,
             fd.fighter_a_id,
             fd.fighter_b_id,
+            -- Names joined by id, so a caller never has to split BOUT by position.
+            NULLIF(TRIM(COALESCE(fa."FIRST", '') || ' ' || COALESCE(fa."LAST", '')), '') AS fighter_a_name,
+            NULLIF(TRIM(COALESCE(fb."FIRST", '') || ' ' || COALESCE(fb."LAST", '')), '') AS fighter_b_name,
             CASE WHEN fr.is_winner = TRUE THEN fr.fighter_id ELSE NULL END AS winner_id,
             fr.weight_class,
             fr."METHOD"     AS method,
@@ -116,6 +119,8 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
             fr.is_interim_title
         FROM fight_details fd
         LEFT JOIN fight_results fr ON fr.fight_id = fd.id
+        LEFT JOIN fighter_details fa ON fa.id = fd.fighter_a_id
+        LEFT JOIN fighter_details fb ON fb.id = fd.fighter_b_id
         WHERE fd.event_id = :event_id
         ORDER BY fd.position ASC NULLS LAST, fd.id
     """), {"event_id": event_id}).mappings().all()

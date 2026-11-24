@@ -1,4 +1,4 @@
-import type { FightResponse, PastPredictionItem } from '@t/api'
+import type { FightListItem, FightResponse, PastPredictionItem } from '@t/api'
 import { EMPTY } from './format'
 
 export interface FightSide {
@@ -78,4 +78,42 @@ export function orientById<T>(
     a: (sides.a.id && byId.get(sides.a.id)) || null,
     b: (sides.b.id && byId.get(sides.b.id)) || null,
   }
+}
+
+/** A fight-list row's two fighters, each named by its own id, and who won. */
+export interface ListedFight {
+  a: FightSide
+  b: FightSide
+  /** 'a' or 'b' when the winner is one of the two ids; null for a draw, a no contest or an unknown id. */
+  won: 'a' | 'b' | null
+}
+
+/**
+ * Names both fighters of a fight-list row from the names the API joined to
+ * each id. The BOUT string is never split: its order is the UFCStats listing,
+ * and matching its halves to ids by position is the mistake that put the
+ * wrong winner on past prediction pages.
+ */
+export function listedFight(fight: FightListItem): ListedFight {
+  const won =
+    fight.winner_id == null
+      ? null
+      : fight.winner_id === fight.fighter_a_id
+        ? 'a'
+        : fight.winner_id === fight.fighter_b_id
+          ? 'b'
+          : null
+  return {
+    a: { id: fight.fighter_a_id, name: fight.fighter_a_name || EMPTY },
+    b: { id: fight.fighter_b_id, name: fight.fighter_b_name || EMPTY },
+    won,
+  }
+}
+
+/** The other fighter in a row, seen from viewingFighterId. Null when that id is in neither seat. */
+export function opponentOf(fight: FightListItem, viewingFighterId: string): FightSide | null {
+  const { a, b } = listedFight(fight)
+  if (a.id === viewingFighterId) return b
+  if (b.id === viewingFighterId) return a
+  return null
 }
