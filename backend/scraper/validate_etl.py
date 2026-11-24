@@ -706,6 +706,47 @@ def check_identity_integrity(conn):
     )
     r.log(); results.append(r)
 
+    # past_predictions keeps its own copy of who fought and who won. An identity
+    # repair that re-points fighter_a_id/fighter_b_id but not the winner columns
+    # leaves a winner who is neither fighter in the row (migration 014 repaired
+    # 21 such rows). Every consumer reads "A won" as actual_winner_id =
+    # fighter_a_id, so a stale id is silently scored as a B win. Blocking, at
+    # zero: one stale row changes Brier, ROC-AUC and the winner shown.
+    for col, label in [("actual_winner_id", "stored winner"),
+                       ("predicted_winner_id", "stored pick")]:
+        rows = conn.execute(text(f"""
+            SELECT fight_id, prediction_source, {col}
+            FROM past_predictions
+            WHERE {col} IS NOT NULL
+              AND {col} NOT IN (fighter_a_id, fighter_b_id)
+            ORDER BY fight_id
+        """)).fetchall()
+        r = CheckResult(
+            f"past_predictions - {label} is neither fighter in the row",
+            len(rows), 0, "max_count",
+            ", ".join(f"{fid}({src}):{wid}" for fid, src, wid in rows[:6])
+            or f"every {label} is one of the row's two fighters"
+        )
+        r.log(); results.append(r)
+
+    # The winner can also be one of the two fighters and still be the wrong
+    # one. fight_results is the record the scorecard is graded against.
+    rows = conn.execute(text("""
+        SELECT pp.fight_id, pp.prediction_source, pp.actual_winner_id, fr.fighter_id
+        FROM past_predictions pp
+        JOIN fight_results fr ON fr.fight_id = pp.fight_id
+        WHERE pp.actual_winner_id IS NOT NULL
+          AND pp.actual_winner_id IS DISTINCT FROM fr.fighter_id
+        ORDER BY pp.fight_id
+    """)).fetchall()
+    r = CheckResult(
+        "past_predictions - stored winner disagrees with fight_results",
+        len(rows), 0, "max_count",
+        ", ".join(f"{fid}({src}):{pw}!={fw}" for fid, src, pw, fw in rows[:6])
+        or "every stored winner matches fight_results"
+    )
+    r.log(); results.append(r)
+
     # Fights with no stored URL can only be checked by name, which is the
     # method the check above exists to replace. Tracked so the gap stays visible.
     total, with_urls = conn.execute(text("""
