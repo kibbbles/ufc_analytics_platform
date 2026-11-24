@@ -55,6 +55,8 @@ class FightResponse(BaseModel):
     bout: Optional[str] = None
     fighter_a_id: Optional[str] = None
     fighter_b_id: Optional[str] = None
+    fighter_a_name: Optional[str] = None
+    fighter_b_name: Optional[str] = None
     winner_id: Optional[str] = None
     weight_class: Optional[str] = None
     method: Optional[str] = None

@@ -159,6 +159,10 @@ export interface FightResponse {
   bout: string | null
   fighter_a_id: string | null
   fighter_b_id: string | null
+  // Joined by id from fighter_details. Optional so the page still renders
+  // against an API deployed before these fields existed.
+  fighter_a_name?: string | null
+  fighter_b_name?: string | null
   winner_id: string | null
   weight_class: string | null
   method: string | null
