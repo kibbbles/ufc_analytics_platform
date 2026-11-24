@@ -162,32 +162,32 @@ python backend/scraper/validate_etl.py                # standalone validation
 ```sql
 -- Core historical tables
 event_details (756 rows)
-    id VARCHAR(6) PRIMARY KEY,
+    id VARCHAR(8) PRIMARY KEY,
     "EVENT" TEXT,
     "URL" TEXT,
     date_proper DATE,
     "LOCATION" TEXT
 
 fighter_details (4,449 rows)
-    id VARCHAR(6) PRIMARY KEY,
+    id VARCHAR(8) PRIMARY KEY,
     "FIRST" TEXT,
     "LAST" TEXT,
     "NICKNAME" TEXT,
     "URL" TEXT
 
 fight_details (8,482 rows)
-    id VARCHAR(6) PRIMARY KEY,
+    id VARCHAR(8) PRIMARY KEY,
     "EVENT" TEXT,
     "BOUT" TEXT,  -- Format: "Fighter A vs. Fighter B"
     "URL" TEXT,
-    event_id VARCHAR(6) REFERENCES event_details(id),
-    fighter_a_id VARCHAR(6),
-    fighter_b_id VARCHAR(6),
+    event_id VARCHAR(8) REFERENCES event_details(id),
+    fighter_a_id VARCHAR(8),
+    fighter_b_id VARCHAR(8),
     fighter_a_url TEXT,  -- UFCStats profile URL, identity key for fighter_a_id (008; NULL on pre-008 rows)
     fighter_b_url TEXT
 
 fight_results (8,482 rows)  -- ONE row per fight
-    id VARCHAR(6) PRIMARY KEY,
+    id VARCHAR(8) PRIMARY KEY,
     "EVENT" TEXT,
     "BOUT" TEXT,
     "OUTCOME" TEXT,  -- "W/L" or "L/W" (winner listed first)
@@ -195,10 +195,10 @@ fight_results (8,482 rows)  -- ONE row per fight
     "METHOD" TEXT,
     "ROUND" TEXT,
     "TIME" TEXT,
-    event_id VARCHAR(6) REFERENCES event_details(id),
-    fight_id VARCHAR(6) REFERENCES fight_details(id),
-    fighter_id VARCHAR(6),      -- winner FK
-    opponent_id VARCHAR(6),     -- loser FK
+    event_id VARCHAR(8) REFERENCES event_details(id),
+    fight_id VARCHAR(8) REFERENCES fight_details(id),
+    fighter_id VARCHAR(8),      -- winner FK
+    opponent_id VARCHAR(8),     -- loser FK
     fight_time_seconds INTEGER,
     total_fight_time_seconds INTEGER,
     weight_class TEXT,          -- derived
@@ -207,16 +207,16 @@ fight_results (8,482 rows)  -- ONE row per fight
     is_championship_rounds BOOLEAN  -- derived
 
 fighter_tott (4,435 rows)  -- Tale of the Tape
-    id VARCHAR(6) PRIMARY KEY,
+    id VARCHAR(8) PRIMARY KEY,
     "FIGHTER" TEXT,
     "HEIGHT" TEXT, "WEIGHT" TEXT, "REACH" TEXT, "STANCE" TEXT, "DOB" TEXT,
     "URL" TEXT,
-    fighter_id VARCHAR(6) REFERENCES fighter_details(id),
+    fighter_id VARCHAR(8) REFERENCES fighter_details(id),
     height_inches FLOAT, weight_lbs FLOAT, reach_inches FLOAT,
     dob_date DATE
 
 fight_stats (39,912 rows)  -- per fighter, per round
-    id VARCHAR(6) PRIMARY KEY,
+    id VARCHAR(8) PRIMARY KEY,
     "EVENT" TEXT, "BOUT" TEXT, "ROUND" TEXT,
     "FIGHTER" TEXT,       -- name only, no FK
     "KD" TEXT,
@@ -227,9 +227,9 @@ fight_stats (39,912 rows)  -- per fighter, per round
     "TD%" TEXT, "SUB.ATT" TEXT, "REV." TEXT, "CTRL" TEXT,
     "HEAD" TEXT, "BODY" TEXT, "LEG" TEXT,
     "DISTANCE" TEXT, "CLINCH" TEXT, "GROUND" TEXT,
-    event_id VARCHAR(6) REFERENCES event_details(id),
-    fight_id VARCHAR(6) REFERENCES fight_details(id),
-    fighter_id VARCHAR(6) REFERENCES fighter_details(id),
+    event_id VARCHAR(8) REFERENCES event_details(id),
+    fight_id VARCHAR(8) REFERENCES fight_details(id),
+    fighter_id VARCHAR(8) REFERENCES fighter_details(id),
     sig_str_landed INT, sig_str_attempted INT, sig_str_pct FLOAT,
     kd_int INT, ctrl_seconds INT
 
@@ -245,8 +245,8 @@ upcoming_fights
     id VARCHAR(6) PRIMARY KEY,
     event_id VARCHAR(6) REFERENCES upcoming_events(id),
     fighter_a_name TEXT, fighter_b_name TEXT,
-    fighter_a_id VARCHAR(6) REFERENCES fighter_details(id),  -- nullable
-    fighter_b_id VARCHAR(6) REFERENCES fighter_details(id),  -- nullable
+    fighter_a_id TEXT REFERENCES fighter_details(id),  -- nullable
+    fighter_b_id TEXT REFERENCES fighter_details(id),  -- nullable
     fighter_a_url TEXT, fighter_b_url TEXT,
     weight_class TEXT, is_title_fight BOOLEAN,
     ufcstats_url TEXT,
