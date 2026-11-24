@@ -9,6 +9,7 @@ chain stopped. This runs each such step's own script under those conditions,
 so the next one fails on the developer's machine instead of on a Sunday.
 """
 
+import os
 import shlex
 import shutil
 import subprocess
@@ -45,10 +46,22 @@ def _added_paths(script):
     return paths
 
 
+def _isolated_env():
+    """The environment minus every GIT_* variable.
+
+    Git exports GIT_DIR (and friends) to hooks, and this file runs from the
+    pre-push hook. Inherited, GIT_DIR makes every git command below act on the
+    developer's real repository instead of the throwaway one in its cwd. From a
+    worktree it points at a repo whose origin is GitHub, and on 2026-11-24 this
+    test pushed its seed commits, placeholder model files included, to main.
+    """
+    return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+
 def _git(cwd, *args):
     return subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd, check=True, capture_output=True, text=True,
+        cwd=cwd, check=True, capture_output=True, text=True, env=_isolated_env(),
     ).stdout
 
 
@@ -58,8 +71,9 @@ def _write(root, rel, text):
     path.write_text(text, encoding="utf-8")
 
 
-@pytest.mark.parametrize("script", list(_pushing_steps()))
-def test_bot_push_survives_moved_main_and_dirty_tree(script, tmp_path):
+def _replay(script, tmp_path):
+    """Runs one pushing step against a throwaway origin whose main moved mid-run."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
     bash = shutil.which("bash")
     assert bash, "bash is needed to run workflow steps"
     owned = _added_paths(script)
@@ -93,10 +107,37 @@ def test_bot_push_survives_moved_main_and_dirty_tree(script, tmp_path):
     step.write_text(script, encoding="utf-8")
     result = subprocess.run(
         [bash, "-e", str(step)], cwd=runner, capture_output=True, text=True,
+        env=_isolated_env(),
     )
     assert result.returncode == 0, result.stdout + result.stderr
+    return origin, owned
+
+
+@pytest.mark.parametrize("script", list(_pushing_steps()))
+def test_bot_push_survives_moved_main_and_dirty_tree(script, tmp_path):
+    origin, owned = _replay(script, tmp_path)
 
     log = _git(origin, "log", "--format=%s", "main")
     assert "upstream" in log, "the bot's push dropped a commit from main"
     pushed = set(_git(origin, "show", "--name-only", "--format=", "main").split())
     assert pushed == set(owned), "the bot commit should touch only its own files"
+
+
+def test_replay_never_touches_the_repo_named_by_git_dir(tmp_path, monkeypatch):
+    """The pre-push hook runs this file with GIT_DIR set. Nothing may reach it."""
+    decoy = tmp_path / "decoy"
+    _git(tmp_path, "init", "-q", "-b", "main", str(decoy))
+    _write(decoy, "keep.txt", "untouched\n")
+    _git(decoy, "add", "-A")
+    _git(decoy, "commit", "-qm", "decoy")
+    before = _git(decoy, "rev-parse", "HEAD")
+
+    monkeypatch.setenv("GIT_DIR", str(decoy / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(decoy))
+    script = next(iter(_pushing_steps())).values[0]
+    _replay(script, tmp_path / "replay")
+
+    monkeypatch.delenv("GIT_DIR")
+    monkeypatch.delenv("GIT_WORK_TREE")
+    assert _git(decoy, "rev-parse", "HEAD") == before
+    assert _git(decoy, "status", "--porcelain") == ""

@@ -501,7 +501,10 @@ def betting_insights_fights(db: Session = Depends(get_db)) -> BettingFightsRespo
         model_won    = bool(r["is_correct"])
         fav_won      = winner_is_a == fav_is_a
         dog_won      = not fav_won
-        winner_name  = r["fighter_a_name"] if winner_is_a else r["fighter_b_name"]
+        # By id, never by elimination: a winner id that is neither fighter in
+        # the row would otherwise be shown as fighter B.
+        winner_name  = {r["fighter_a_id"]: r["fighter_a_name"],
+                        r["fighter_b_id"]: r["fighter_b_name"]}.get(r["actual_winner_id"])
 
         # Younger-fighter baseline: later DOB = younger. Undefined when either
         # DOB is missing or the two fighters share a birthdate (no younger one).
@@ -778,8 +781,10 @@ def betting_upsets(
                 fr."METHOD"                    AS method,
                 CASE WHEN pp.win_prob_a >= 0.5 THEN pp.fighter_a_name ELSE pp.fighter_b_name END
                     AS model_pick_name,
-                CASE WHEN pp.actual_winner_id = pp.fighter_a_id THEN pp.fighter_a_name ELSE pp.fighter_b_name END
-                    AS winner_name,
+                CASE pp.actual_winner_id
+                    WHEN pp.fighter_a_id THEN pp.fighter_a_name
+                    WHEN pp.fighter_b_id THEN pp.fighter_b_name
+                END                            AS winner_name,
                 CASE WHEN pp.win_prob_a >= 0.5 THEN pp.odds_a ELSE pp.odds_b END
                     AS model_pick_odds
             FROM scored_predictions pp

@@ -1,5 +1,5 @@
 export { getStoredItem, setStoredItem, removeStoredItem, STORAGE_KEYS } from './localStorage'
-export { formatDate, inchesToFeet, ageFromDob, parseOpponent } from './format'
+export { formatDate, inchesToFeet, ageFromDob } from './format'
 export {
   EDGE_THRESHOLD,
   americanToImplied,

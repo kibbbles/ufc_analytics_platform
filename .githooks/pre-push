@@ -2,27 +2,45 @@
 # Blocks a push that would break the weekly pipeline against today's data.
 # Enable once per clone:  git config core.hooksPath .githooks
 # Skip in an emergency:   git push --no-verify
+#
+# Every outcome prints a line. If the hook cannot tell which files a push
+# changes, it runs the check rather than guess, and if it cannot run the
+# check it blocks the push.
 
 set -euo pipefail
 
 zero=0000000000000000000000000000000000000000
 pipeline_paths='^(backend/|scripts/|\.github/)'
 
+fail() { echo "pre-push: $1 - push blocked (git push --no-verify to override)" >&2; exit 1; }
+
 needs_check=false
+reason=""
 while read -r _local_ref local_sha _remote_ref remote_sha; do
     [ "$local_sha" = "$zero" ] && continue          # deleting a branch
     if [ "$remote_sha" = "$zero" ]; then
-        range="$local_sha"                           # new branch: everything not on any remote
-        files=$(git rev-list "$range" --not --remotes | xargs -r git diff-tree --no-commit-id --name-only -r)
+        # New branch: every file touched by a commit no remote has yet.
+        # (git diff-tree given several commits reads the third as a path and
+        # listed nothing, so new branches of 3+ commits skipped the check.)
+        files=$(git log --format= --name-only "$local_sha" --not --remotes) \
+            || { needs_check=true; reason="could not list the new branch's files"; continue; }
     else
-        files=$(git diff --name-only "$remote_sha" "$local_sha")
+        files=$(git diff --name-only "$remote_sha" "$local_sha" 2>/dev/null) \
+            || { needs_check=true; reason="remote commit ${remote_sha:0:7} is not local"; continue; }
     fi
     if printf '%s\n' "$files" | grep -Eq "$pipeline_paths"; then
         needs_check=true
+        reason="pipeline files changed"
     fi
 done
 
-if [ "$needs_check" = true ]; then
-    echo "pre-push: pipeline files changed - running scripts/check-pipeline.sh"
-    "$(git rev-parse --show-toplevel)/scripts/check-pipeline.sh"
+if [ "$needs_check" != true ]; then
+    echo "pre-push: no backend/, scripts/ or .github/ changes - pipeline check not needed"
+    exit 0
 fi
+
+check="$(git rev-parse --show-toplevel)/scripts/check-pipeline.sh"
+[ -f "$check" ] || fail "$reason, but $check is missing"
+
+echo "pre-push: $reason - running scripts/check-pipeline.sh"
+bash "$check" || fail "pipeline check failed"

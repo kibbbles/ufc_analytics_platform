@@ -8,6 +8,7 @@ import TaleOfTape from '@components/features/TaleOfTape'
 import RecentFightMini from '@components/features/RecentFightMini'
 import { splitFavoredFeatures } from '@components/features/fightPrediction/featureMeta'
 import { formatPct as pct, formatDate } from '@utils/format'
+import { resolveFightSides, orientById } from '@utils/fightSides'
 import type { PastPredictionItem } from '@t/api'
 
 export default function PastPredictionFightPage() {
@@ -26,30 +27,43 @@ export default function PastPredictionFightPage() {
     [fight_id],
   )
 
-  const faId = fightDetail?.fighter_a_id ?? null
-  const fbId = fightDetail?.fighter_b_id ?? null
+  // Fetched in fight_details order as soon as the fight loads, then matched to
+  // the page's sides by id below, never by position.
+  const fdAId = fightDetail?.fighter_a_id ?? null
+  const fdBId = fightDetail?.fighter_b_id ?? null
 
-  const { data: fighterA } = useApi(
-    () => faId ? fightersService.getById(faId) : Promise.resolve(null),
-    [faId],
+  const { data: profileFdA } = useApi(
+    () => fdAId ? fightersService.getById(fdAId) : Promise.resolve(null),
+    [fdAId],
   )
-  const { data: fighterB } = useApi(
-    () => fbId ? fightersService.getById(fbId) : Promise.resolve(null),
-    [fbId],
+  const { data: profileFdB } = useApi(
+    () => fdBId ? fightersService.getById(fdBId) : Promise.resolve(null),
+    [fdBId],
   )
-  const { data: fightsA } = useApi(
-    () => faId ? fightsService.getList({ fighter_id: faId, page_size: 5 }) : Promise.resolve(null),
-    [faId],
+  const { data: fightsFdA } = useApi(
+    () => fdAId ? fightsService.getList({ fighter_id: fdAId, page_size: 5 }) : Promise.resolve(null),
+    [fdAId],
   )
-  const { data: fightsB } = useApi(
-    () => fbId ? fightsService.getList({ fighter_id: fbId, page_size: 5 }) : Promise.resolve(null),
-    [fbId],
+  const { data: fightsFdB } = useApi(
+    () => fdBId ? fightsService.getList({ fighter_id: fdBId, page_size: 5 }) : Promise.resolve(null),
+    [fdBId],
   )
 
-  // Resolve names: prediction has clean full names; fall back to parsing bout string
-  const boutParts = (fightDetail?.bout ?? '').split(' vs. ')
-  const nameA = predItem?.fighter_a_name ?? boutParts[0]?.trim() ?? '—'
-  const nameB = predItem?.fighter_b_name ?? boutParts[1]?.trim() ?? '—'
+  // One order for the whole page (the prediction's, when there is one), and
+  // every name looked up by fighter id. See resolveFightSides.
+  const sides = fightDetail ? resolveFightSides(fightDetail, predItem) : null
+  const faId  = sides?.a.id ?? null
+  const fbId  = sides?.b.id ?? null
+  const nameA = sides?.a.name ?? '—'
+  const nameB = sides?.b.name ?? '—'
+
+  const noSides = { a: null, b: null }
+  const { a: fighterA, b: fighterB } = sides
+    ? orientById(sides, [[fdAId, profileFdA], [fdBId, profileFdB]])
+    : noSides
+  const { a: fightsA, b: fightsB } = sides
+    ? orientById(sides, [[fdAId, fightsFdA], [fdBId, fightsFdB]])
+    : noSides
 
   // Win probability (prediction only)
   const hasPred   = predItem?.win_prob_a != null && predItem?.win_prob_b != null
@@ -57,9 +71,9 @@ export default function PastPredictionFightPage() {
   const probB     = predItem?.win_prob_b ?? 0
   const predAWins = probA >= probB
 
-  // Actual result from base fight data
-  const winnerId        = fightDetail?.winner_id
-  const actualWinnerName = winnerId === faId ? nameA : winnerId === fbId ? nameB : '—'
+  // Actual result from base fight data, named by the winner's own id
+  const winnerId         = fightDetail?.winner_id
+  const actualWinnerName = sides?.winner?.name ?? '—'
 
   const methods = [
     { label: 'KO/TKO', value: predItem?.pred_method_ko_tko },

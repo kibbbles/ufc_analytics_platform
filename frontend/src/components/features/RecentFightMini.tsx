@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { FightListItem } from '@t/api'
 import { EMPTY } from '@utils/format'
+import { opponentOf } from '@utils/fightSides'
 
 interface Props {
   fights: FightListItem[]
@@ -12,11 +13,12 @@ export default function RecentFightMini({ fights, viewingFighterId }: Props) {
   return (
     <div className="space-y-2">
       {fights.map((f) => {
-        const parts = (f.bout ?? '').split(' vs. ')
-        const isA = f.fighter_a_id === viewingFighterId
-        const opponentRaw = (isA ? parts[1] : parts[0] ?? '').trim()
-        const opponentLastName = opponentRaw.split(' ').at(-1) ?? EMPTY
-        const opponentId = isA ? f.fighter_b_id : f.fighter_a_id
+        // The opponent is found by id and named by the name joined to that id,
+        // never by splitting the bout string by position.
+        const opponent = opponentOf(f, viewingFighterId)
+        const opponentLastName =
+          opponent && opponent.name !== EMPTY ? (opponent.name.split(' ').at(-1) ?? EMPTY) : EMPTY
+        const opponentId = opponent?.id ?? null
         const isWin = f.winner_id === viewingFighterId
         const isLoss = f.winner_id !== null && f.winner_id !== viewingFighterId
         return (
