@@ -107,7 +107,16 @@ def list_fighters(
         LEFT JOIN losses    l   ON l.fighter_id  = fd.id
         LEFT JOIN {_LATEST_WC} ON lwc.fighter_id = fd.id
         {where}
-        ORDER BY fd."LAST", fd."FIRST"
+        -- Fighters with no weight class and a 0-0 record (no fights on file)
+        -- go after everyone else, so the first pages show fighters with a
+        -- record. Within each group the order stays last name, first name.
+        -- fd.id breaks ties between same-named fighters so pages never
+        -- repeat or skip one.
+        ORDER BY
+            (lwc.weight_class IS NULL AND COALESCE(w.n, 0) + COALESCE(l.n, 0) = 0),
+            fd."LAST",
+            fd."FIRST",
+            fd.id
         LIMIT :limit OFFSET :offset
     """), params).mappings().all()
 
