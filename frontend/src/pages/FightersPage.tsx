@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { useApi } from '@hooks/useApi'
 import { useDebounce } from '@hooks/useDebounce'
+import { useListParams } from '@hooks/useListParams'
 import { fightersService } from '@services/fightersService'
 import { LoadingSkeleton, Pagination } from '@components/common'
 import { FighterCard, FighterSearchBar } from '@components/features'
@@ -8,8 +9,9 @@ import { FighterCard, FighterSearchBar } from '@components/features'
 const PAGE_SIZE = 20
 
 export default function FightersPage() {
-  const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
+  // Page and search live in the URL (?page=, ?q=) so Back from a fighter
+  // returns to the same page of the same search.
+  const { page, query, setPage, setQuery } = useListParams()
   const debouncedQuery = useDebounce(query, 300)
 
   const { data, loading, error } = useApi(
@@ -22,10 +24,11 @@ export default function FightersPage() {
     [debouncedQuery, page],
   )
 
-  function handleSearch(value: string) {
-    setQuery(value)
-    setPage(1)
-  }
+  // A ?page= past the end (an old link, or a search with fewer pages) goes to the last page.
+  const totalPages = data?.meta.total_pages ?? 0
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages, { replace: true })
+  }, [page, totalPages, setPage])
 
   const totalLabel = data?.meta.total.toLocaleString() ?? '4,449'
 
@@ -37,7 +40,7 @@ export default function FightersPage() {
       </p>
 
       <div className="mt-6">
-        <FighterSearchBar value={query} onChange={handleSearch} />
+        <FighterSearchBar value={query} onChange={setQuery} />
       </div>
 
       <div className="mt-4 space-y-2">
@@ -71,8 +74,9 @@ export default function FightersPage() {
             <Pagination
               page={page}
               totalPages={data.meta.total_pages}
-              onPrev={() => setPage((p) => p - 1)}
-              onNext={() => setPage((p) => p + 1)}
+              onPrev={() => setPage(page - 1)}
+              onNext={() => setPage(page + 1)}
+              onPageChange={setPage}
             />
           </>
         )}
