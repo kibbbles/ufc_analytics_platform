@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { useDebounce } from '@hooks/useDebounce'
+import { useListParams } from '@hooks/useListParams'
 import { useFilters } from '@hooks/useFilters'
 import { eventsService } from '@services/eventsService'
 import { LoadingSkeleton, Pagination } from '@components/common'
@@ -23,10 +24,11 @@ export default function EventsPage() {
   }
 
   // ── Events tab state ───────────────────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('')
+  // Page and search live in the URL (?page=, ?q=) so Back from an event
+  // returns to the same page of the same search.
+  const { page, query: searchQuery, setPage, setQuery: setSearchQuery } = useListParams()
   const debouncedSearch = useDebounce(searchQuery, 300)
   const { filters, setYear } = useFilters()
-  const [page, setPage] = useState(1)
 
   const { data: completedData, loading: completedLoading, error: completedError } = useApi(
     () =>
@@ -39,16 +41,15 @@ export default function EventsPage() {
     [page, filters.year, debouncedSearch],
   )
 
-  // Reset page when debounced search fires (adjust-during-render, no effect)
-  const [prevSearch, setPrevSearch] = useState(debouncedSearch)
-  if (debouncedSearch !== prevSearch) {
-    setPrevSearch(debouncedSearch)
-    setPage(1)
-  }
+  // A ?page= past the end (an old link, or a filter with fewer pages) goes to the last page.
+  const totalPages = completedData?.meta.total_pages ?? 0
+  useEffect(() => {
+    if (activeTab === 'events' && totalPages > 0 && page > totalPages) setPage(totalPages, { replace: true })
+  }, [activeTab, page, totalPages, setPage])
 
   function handleYearChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setYear(e.target.value ? Number(e.target.value) : null)
-    setPage(1)
+    setPage(1, { replace: true })
   }
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -102,7 +103,7 @@ export default function EventsPage() {
               />
               {searchQuery && (
                 <button
-                  onClick={() => { setSearchQuery(''); setPage(1) }}
+                  onClick={() => setSearchQuery('')}
                   aria-label="Clear search"
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-lg leading-none text-[var(--color-text-muted)] hover:text-[var(--color-text-primary-light)] dark:hover:text-[var(--color-text-primary)]"
                 >
@@ -159,8 +160,9 @@ export default function EventsPage() {
                   totalPages={completedData.meta.total_pages}
                   total={completedData.meta.total}
                   pageSize={PAGE_SIZE}
-                  onPrev={() => setPage((p) => p - 1)}
-                  onNext={() => setPage((p) => p + 1)}
+                  onPrev={() => setPage(page - 1)}
+                  onNext={() => setPage(page + 1)}
+                  onPageChange={setPage}
                 />
               </>
             )}
