@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { resolvePageInput } from '@utils/pagination'
 
 interface PaginationProps {
@@ -29,9 +29,12 @@ function showingLabel(page: number, total: number, pageSize: number) {
 }
 
 /**
- * The page field. Typing does nothing until Enter; Escape or leaving the field
- * puts the current page back. Out-of-range numbers are clamped, anything that
- * is not a number is discarded.
+ * The page field. Typing does nothing until the user leaves the field, by
+ * pressing Enter or Go, tapping the keyboard's Done/✓, or tapping elsewhere;
+ * then it jumps. Leaving is the one commit path: the iOS number pad has no
+ * Enter key, only Done, which just closes the keyboard. Escape puts the
+ * current page back. Out-of-range numbers are clamped, anything that is not a
+ * number is discarded.
  */
 function PageField({
   page,
@@ -45,9 +48,12 @@ function PageField({
   // null while the user is not editing: the field shows the current page.
   const [draft, setDraft] = useState<string | null>(null)
   const ofId = useId()
+  // Set by Escape so the blur it triggers puts the current page back instead of jumping.
+  const discard = useRef(false)
 
   function commit() {
-    const target = resolvePageInput(draft ?? '', totalPages)
+    const target = discard.current ? null : resolvePageInput(draft ?? '', totalPages)
+    discard.current = false
     setDraft(null)
     if (target !== null && target !== page) onPageChange(target)
   }
@@ -66,13 +72,14 @@ function PageField({
         value={draft ?? String(page)}
         onChange={e => setDraft(e.target.value)}
         onFocus={e => e.target.select()}
-        onBlur={() => setDraft(null)}
+        onBlur={commit}
         onKeyDown={e => {
           if (e.key === 'Enter') {
             e.preventDefault()
-            commit()
+            e.currentTarget.blur()
           } else if (e.key === 'Escape') {
-            setDraft(null)
+            discard.current = true
+            e.currentTarget.blur()
           }
         }}
         className="min-h-11 w-16 rounded-md border border-[var(--color-border)] bg-transparent px-2 text-center font-mono tabular-nums text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
@@ -105,15 +112,22 @@ export default function Pagination({
     )
   }
 
+  // The page-field layout drops the words "Prev"/"Next" in a container narrower
+  // than 340px (phones under about 372px wide), keeping the arrows and a 44px
+  // square target, so all three controls stay on one row.
+  const compact = Boolean(onPageChange)
+  const word = compact ? 'hidden @min-[340px]:inline' : undefined
+
   const prev = (
     <button
       type="button"
       onClick={onPrev}
       disabled={page <= 1}
       aria-label="Previous page"
-      className={BUTTON}
+      className={`${BUTTON} min-w-11`}
     >
-      ← Prev
+      <span aria-hidden="true">←</span>
+      <span className={word}> Prev</span>
     </button>
   )
   const next = (
@@ -122,9 +136,10 @@ export default function Pagination({
       onClick={onNext}
       disabled={page >= totalPages}
       aria-label="Next page"
-      className={BUTTON}
+      className={`${BUTTON} min-w-11`}
     >
-      Next →
+      <span className={word}>Next </span>
+      <span aria-hidden="true">→</span>
     </button>
   )
 
@@ -140,20 +155,19 @@ export default function Pagination({
     )
   }
 
-  // Red Hat layout: arrows together, page field to their right; in a container
-  // narrower than 375px the field moves below the arrows. DOM order (prev, next,
-  // field) keeps focus order left to right, top to bottom in both layouts.
+  // Page field in the middle at every size: Prev, field, Next on one row, which
+  // is also the focus order. (Red Hat puts the field after numbered page links
+  // on desktop and below the arrows on phones; this list has no numbered links,
+  // so the field takes the middle instead.)
   return (
     <nav
       aria-label="Page navigation"
       className="@container mt-6 pt-4 border-t border-[var(--color-border)]"
     >
-      <div className="flex flex-col gap-3 @min-[375px]:flex-row @min-[375px]:items-center @min-[375px]:justify-between">
-        <div className="flex justify-between gap-2 @min-[375px]:justify-start">
-          {prev}
-          {next}
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        {prev}
         <PageField page={page} totalPages={totalPages} onPageChange={onPageChange} />
+        {next}
       </div>
       {range && <p className="mt-3 text-center text-xs text-[var(--color-text-muted)]">{range}</p>}
     </nav>
