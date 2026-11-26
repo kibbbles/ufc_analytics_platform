@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
+import { useClampPage } from '@hooks/useClampPage'
 import { pastPredictionsService } from '@services/pastPredictionsService'
 import { LoadingSkeleton, Pagination } from '@components/common'
 import ScorecardModal, { type ScorecardModalMode } from '@components/features/ScorecardModal'
@@ -67,6 +68,9 @@ function ModelScorecard() {
         : Promise.resolve(null),
     [tab, page, debouncedSearch, year],
   )
+
+  // A page past the end of the events list (fewer pages after a reload) goes to the last page.
+  useClampPage(page, tab === 'events' ? (eventsData?.total_pages ?? 0) : 0, setPage)
 
   // Fights tab — show most recent by default, filter by search/year when provided
   const { data: fightsData, loading: fightsLoading, error: fightsError } = useApi(
@@ -367,6 +371,7 @@ function ModelScorecard() {
               totalPages={eventsData.total_pages}
               onPrev={() => setPage((p) => p - 1)}
               onNext={() => setPage((p) => p + 1)}
+              onPageChange={setPage}
             />
           </>
         ) : (

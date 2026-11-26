@@ -100,3 +100,19 @@ body {
 .dark ::-webkit-scrollbar { width: 6px; }
 .dark ::-webkit-scrollbar-track { background: var(--color-surface); }
 .dark ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+
+/* ─── Form fields: no iOS focus zoom ──────────────────────────────────────── */
+/* iOS Safari zooms the page in when a focused field's text is under 16px, and
+   leaves it zoomed after the keyboard closes. Every field on touch screens and
+   phone widths is held at 16px, which stops that without turning off pinch-zoom
+   in the viewport tag. Unlayered, so it wins over Tailwind's text-sm utility.
+   text-sm's line-height is a ratio that would grow with the font, so the line is
+   pinned at text-sm's 20px and the fields keep the height they have on desktop. */
+@media (pointer: coarse), (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px;
+    line-height: 20px;
+  }
+}

@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { resolvePageInput } from '@utils/pagination'
+import { keepAboveKeyboard } from '@hooks/keepAboveKeyboard'
 
 interface PaginationProps {
   page: number
@@ -34,7 +35,8 @@ function showingLabel(page: number, total: number, pageSize: number) {
  * then it jumps. Leaving is the one commit path: the iOS number pad has no
  * Enter key, only Done, which just closes the keyboard. Escape puts the
  * current page back. Out-of-range numbers are clamped, anything that is not a
- * number is discarded.
+ * number is discarded. While focused on a phone, the field is kept above the
+ * keyboard and clear of the floating chat button.
  */
 function PageField({
   page,
@@ -71,7 +73,10 @@ function PageField({
         aria-describedby={ofId}
         value={draft ?? String(page)}
         onChange={e => setDraft(e.target.value)}
-        onFocus={e => e.target.select()}
+        onFocus={e => {
+          e.target.select()
+          keepAboveKeyboard(e.target)
+        }}
         onBlur={commit}
         onKeyDown={e => {
           if (e.key === 'Enter') {
