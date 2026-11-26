@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApi } from '@hooks/useApi'
 import { useDebounce } from '@hooks/useDebounce'
 import { useListParams } from '@hooks/useListParams'
+import { useClampPage } from '@hooks/useClampPage'
 import { useFilters } from '@hooks/useFilters'
 import { eventsService } from '@services/eventsService'
 import { LoadingSkeleton, Pagination } from '@components/common'
@@ -43,9 +43,7 @@ export default function EventsPage() {
 
   // A ?page= past the end (an old link, or a filter with fewer pages) goes to the last page.
   const totalPages = completedData?.meta.total_pages ?? 0
-  useEffect(() => {
-    if (activeTab === 'events' && totalPages > 0 && page > totalPages) setPage(totalPages, { replace: true })
-  }, [activeTab, page, totalPages, setPage])
+  useClampPage(page, activeTab === 'events' ? totalPages : 0, last => setPage(last, { replace: true }))
 
   function handleYearChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setYear(e.target.value ? Number(e.target.value) : null)

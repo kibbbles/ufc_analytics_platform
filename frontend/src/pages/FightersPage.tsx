@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
 import { useApi } from '@hooks/useApi'
 import { useDebounce } from '@hooks/useDebounce'
 import { useListParams } from '@hooks/useListParams'
+import { useClampPage } from '@hooks/useClampPage'
 import { fightersService } from '@services/fightersService'
 import { LoadingSkeleton, Pagination } from '@components/common'
 import { FighterCard, FighterSearchBar } from '@components/features'
@@ -26,9 +26,7 @@ export default function FightersPage() {
 
   // A ?page= past the end (an old link, or a search with fewer pages) goes to the last page.
   const totalPages = data?.meta.total_pages ?? 0
-  useEffect(() => {
-    if (totalPages > 0 && page > totalPages) setPage(totalPages, { replace: true })
-  }, [page, totalPages, setPage])
+  useClampPage(page, totalPages, last => setPage(last, { replace: true }))
 
   const totalLabel = data?.meta.total.toLocaleString() ?? '4,449'
 
