@@ -230,6 +230,30 @@ def get_past_predictions(
     base_dis       = int(base_row["disagree_count"] or 0)
     base_dis_acc   = (int(base_row["disagree_correct"] or 0) / base_dis) if base_dis > 0 else None
 
+    # ---- Live method pick vs always-Decision --------------------------------
+    # The method pick is the argmax of the three method probabilities, frozen
+    # with the winner pick. Its only honest comparator is always guessing
+    # Decision, the most common outcome. actual_method is the raw UFCStats
+    # string ("Decision - Split", "TKO - Doctor's Stoppage"), so it is bucketed
+    # here. A DQ or overturned result matches no pick and still counts.
+    method_row = db.execute(text("""
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN (predicted_method = 'Decision'   AND actual_method LIKE 'Decision%')
+                       OR (predicted_method = 'KO/TKO'     AND (actual_method = 'KO/TKO' OR actual_method LIKE 'TKO%'))
+                       OR (predicted_method = 'Submission' AND actual_method = 'Submission')
+                     THEN 1 ELSE 0 END) AS model_correct,
+            SUM(CASE WHEN actual_method LIKE 'Decision%' THEN 1 ELSE 0 END) AS decision_count
+        FROM scored_predictions
+        WHERE prediction_source = 'pre_fight_archive'
+          AND is_correct IS NOT NULL
+          AND predicted_method IS NOT NULL
+          AND actual_method IS NOT NULL
+          AND (:test_from = '' OR event_date >= CAST(:test_from AS date))
+    """), {"test_from": test_from}).mappings().first()
+
+    method_total = int(method_row["total"] or 0)
+
     summary = PastPredictionSummary(
         total_fights=total_fights,
         correct=correct,
@@ -267,6 +291,11 @@ def get_past_predictions(
         baseline_model_accuracy=base_model_acc,
         baseline_disagree_count=base_dis,
         baseline_disagree_accuracy=base_dis_acc,
+        baseline_vegas_correct=int(base_row["vegas_correct"] or 0),
+        baseline_model_correct=int(base_row["model_correct"] or 0),
+        method_total=method_total,
+        method_correct=int(method_row["model_correct"] or 0),
+        method_decision_count=int(method_row["decision_count"] or 0),
     )
 
     # ---- Recent predictions -------------------------------------------------
