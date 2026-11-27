@@ -16,6 +16,14 @@
   --color-primary-hover: #c1121f;
   --color-secondary:     #f77f00;   /* orange accent */
   --color-accent:        #4cc9f0;   /* cyan — data highlights */
+  --color-accent-light:  #0e7490;   /* cyan on white: 5.4:1, where #4cc9f0 is 1.9:1 */
+
+  /* Win-probability bar: the two fighters' shares of one fight. The left
+     fighter takes the higher-contrast ink in each mode. */
+  --color-prob-a:       #cbd5e1;
+  --color-prob-a-light: #475569;
+  --color-prob-b:       #475569;
+  --color-prob-b-light: #cbd5e1;
 
   /* Semantic status colours.
      These must never alias the brand colours. --color-error was previously
@@ -54,12 +62,21 @@
   /* Text */
   --color-text-primary:   #f1f5f9;   /* slate-100 */
   --color-text-secondary: #94a3b8;   /* slate-400 */
-  --color-text-muted:     #64748b;   /* slate-500 */
+  /* Muted text is theme-aware: this light value applies everywhere, and the
+     .dark rule below swaps in the dark one. About two thirds of muted text uses
+     this token alone in both modes, so a dark-only value here would fail
+     contrast on white. 5.2:1 on light cards, 5.3:1 on dark cards (AA). */
+  --color-text-muted:     #5b6b82;
 
   /* Light text */
   --color-text-primary-light:   #0f172a;   /* slate-900 */
   --color-text-secondary-light: #475569;   /* slate-600 */
-  --color-text-muted-light:     #64748b;   /* slate-500 */
+  --color-text-muted-light:     #5b6b82;
+
+  /* Small text is 13px, not Tailwind's 12px: the labels, captions and
+     record lines set in text-xs were too small to read comfortably. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: calc(1.125 / 0.8125);
 
   /* Typography */
   --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -88,6 +105,12 @@ body {
   background-color: var(--color-bg-light);
   color: var(--color-text-primary-light);
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Dark-mode muted text (see --color-text-muted). Unlayered, so it wins over
+   the theme layer's value. */
+.dark {
+  --color-text-muted: #8391a7;
 }
 
 /* Dark mode body */

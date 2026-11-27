@@ -6,8 +6,8 @@ import { pastPredictionsService } from '@services/pastPredictionsService'
 import { LoadingSkeleton, Pagination } from '@components/common'
 import ScorecardModal, { type ScorecardModalMode } from '@components/features/ScorecardModal'
 import PastPredictionCard from '@components/features/PastPredictionCard'
+import ScorecardSummary from '@components/features/ScorecardSummary'
 import { formatDate } from '@utils/format'
-import type { PastPredictionSummary } from '@t/api'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,21 +15,6 @@ import type { PastPredictionSummary } from '@t/api'
 
 function formatPct(v: number): string {
   return (v * 100).toFixed(1) + '%'
-}
-
-/** The live-record callout: the corrected model's live results against the pre-fix ones, plus test calibration. */
-function liveRecordNote(s: PastPredictionSummary): string {
-  const legacyCorrect = s.pre_fight_correct - s.pre_fight_corrected_correct
-  let note =
-    s.pre_fight_corrected_total > 0
-      ? `Since the July 2026 feature fixes, the corrected model has made ${s.pre_fight_corrected_total} live predictions and got ${s.pre_fight_corrected_correct} right (${formatPct(s.pre_fight_corrected_accuracy)})`
-      : 'The corrected model has no live track record yet'
-  if (s.pre_fight_corrected_total > 0 && s.pre_fight_legacy_total > 0) {
-    note += `, against ${legacyCorrect}/${s.pre_fight_legacy_total} (${formatPct(legacyCorrect / s.pre_fight_legacy_total)}) before them`
-  }
-  note += '.'
-  if (s.test_ece != null) note += ` On held-out test data its expected calibration error is ${formatPct(s.test_ece)}.`
-  return note
 }
 
 const PAGE_SIZE = 10
@@ -144,125 +129,7 @@ function ModelScorecard() {
       ) : summaryError ? (
         <p className="text-sm text-[var(--color-error-light)] dark:text-[var(--color-error)]">Failed to load scorecard: {summaryError}</p>
       ) : summary && summary.total_fights > 0 ? (
-        <div className="mb-4">
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            {/* Live track record — the model's real predictions, frozen pre-event */}
-            {summary.pre_fight_total > 0 ? (
-              <button
-                onClick={() => setModal('pre_fight')}
-                className="rounded-lg border border-[var(--color-primary)]/40 px-4 py-3 text-left w-full hover:border-[var(--color-primary)]/70 transition-colors"
-              >
-                <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-1.5">
-                  Live track record
-                </p>
-                <p className="font-mono text-xl font-bold tabular-nums text-[var(--color-primary)]">
-                  {formatPct(summary.pre_fight_accuracy)}
-                </p>
-                <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  {summary.pre_fight_correct}/{summary.pre_fight_total} fights
-                </p>
-                <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  avg conviction {formatPct(summary.pre_fight_avg_confidence)}
-                </p>
-                <p className="mt-2 text-xs italic text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  Frozen before each fight · no look-ahead
-                </p>
-              </button>
-            ) : (
-              <div className="rounded-lg border border-dashed border-[var(--color-border-light)] dark:border-[var(--color-border)] px-4 py-3 flex items-center justify-center">
-                <p className="text-xs text-center text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  Live track record<br />accumulates over time
-                </p>
-              </div>
-            )}
-
-            {/* Backtested — current model reconstructed over past fights */}
-            <button
-              onClick={() => setModal('backtest')}
-              className="rounded-lg border border-[var(--color-border-light)] dark:border-[var(--color-border)] px-4 py-3 text-left w-full hover:border-[var(--color-primary)]/50 transition-colors"
-            >
-              <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-1.5">
-                Backtested
-              </p>
-              <p className="font-mono text-xl font-bold tabular-nums">
-                {formatPct(summary.backtest_accuracy)}
-              </p>
-              <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                {summary.backtest_correct}/{summary.backtest_total} fights
-              </p>
-              {summary.backtest_avg_confidence > 0 && (
-                <p className="mt-0.5 text-xs font-mono tabular-nums text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  avg conviction {formatPct(summary.backtest_avg_confidence)}
-                </p>
-              )}
-              <p className="mt-2 text-xs italic text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                Corrected model · reconstructed
-              </p>
-            </button>
-          </div>
-          {/* Versus what baseline — the first question anyone asks; not buried */}
-          {summary.baseline_sample > 0 && (
-            <div className="mb-3 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-4 py-3">
-              <p className="text-xs uppercase tracking-wide font-semibold text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)] mb-2">
-                Versus what baseline?
-              </p>
-              <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-xs mb-2">
-                <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  Always pick the Vegas favorite
-                </span>
-                <span className="text-right font-mono tabular-nums font-semibold">
-                  {formatPct(summary.baseline_vegas_accuracy)}
-                </span>
-                <span className="text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-                  Model, same {summary.baseline_sample} fights
-                </span>
-                <span className="text-right font-mono tabular-nums font-semibold">
-                  {formatPct(summary.baseline_model_accuracy)}
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-                On the {summary.baseline_sample} live fights with betting odds, the model{' '}
-                {summary.baseline_model_accuracy > summary.baseline_vegas_accuracy ? 'beat' : 'did not beat'}{' '}
-                always picking the Vegas favorite. Its only potential edge is where it{' '}
-                <span className="font-semibold">disagrees</span> with the market —{' '}
-                {summary.baseline_disagree_count} fights — and there it was right{' '}
-                {summary.baseline_disagree_accuracy != null && summary.baseline_disagree_accuracy < 0.5 ? 'just ' : ''}
-                <span className="font-semibold text-[var(--color-primary)]">
-                  {summary.baseline_disagree_accuracy != null ? formatPct(summary.baseline_disagree_accuracy) : '—'}
-                </span>{' '}
-                of the time.
-                {summary.baseline_disagree_accuracy != null &&
-                  (summary.baseline_disagree_accuracy < 0.5
-                    ? ' When this model departs from Vegas, it has mostly been wrong.'
-                    : ' When this model departs from Vegas, it has more often been right.')}
-              </p>
-            </div>
-          )}
-          {summary.pre_fight_total > 0 && (
-            <p className="mb-3 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-4 py-3 text-xs font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">
-              {liveRecordNote(summary)}{' '}
-              <button
-                onClick={() => setModal('pre_fight')}
-                className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-primary)]"
-              >
-                See calibration
-              </button>.
-            </p>
-          )}
-          <p className="mb-2 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            {summary.model_name ? `${summary.model_name} model` : 'A model'} using {summary.n_features > 0 ? `${summary.n_features} ` : ''}features including physical differentials, career striking and grappling metrics, and recent fight history. It is pinned, chosen for best calibration from logistic regression, random forest, and gradient boosting rather than re-selected each retrain, which only added noise among three statistically tied models.{' '}
-            <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Live track record</span> is the model's real predictions, frozen once each fight starts and never rewritten: the honest number, with no look-ahead.{' '}
-            <span className="font-medium text-[var(--color-text-primary-light)] dark:text-[var(--color-text-primary)]">Backtested</span> is the current model reconstructed over past fights; it benefits from hindsight in the code (features rebuilt after the fact), so it is not a live record.{' '}
-            {summary.pre_fight_legacy_total > 0 &&
-              `${summary.pre_fight_legacy_total === summary.pre_fight_total ? 'Every one' : `${summary.pre_fight_legacy_total}`} of these ${summary.pre_fight_total} live predictions ${summary.pre_fight_legacy_total === summary.pre_fight_total || summary.pre_fight_legacy_total === 1 ? 'was' : 'were'} made with a corrupted win/loss streak feature and with win_rate_diff silently imputed to the population mean; both were fixed in July 2026, and those predictions are kept unchanged.`}
-          </p>
-          <p className="mb-2 text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            UFC 329 (2026-07-11) has no live pre-fight prediction. The archive workflow was down due to a credential failure, and a subsequent recompute overwrote the snapshot before it could be frozen. The event's results are included; its prediction is not.
-          </p>
-          <p className="text-xs text-[var(--color-text-muted-light)] dark:text-[var(--color-text-muted)]">
-            Conviction measures how far the model's prediction is from a coin flip, scaled to 0–100%. A 60/40 prediction = 20% conviction, a 75/25 pick = 50% conviction, an 85/15 pick = 70% conviction. It is not a statistical confidence interval — it reflects how decisive the model is on a given matchup based on the feature differentials going in.
-          </p>
-        </div>
+        <ScorecardSummary summary={summary} onOpen={setModal} />
       ) : null}
 
       {/* Events | Fights tab toggle */}

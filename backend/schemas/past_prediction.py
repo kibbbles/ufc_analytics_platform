@@ -98,6 +98,13 @@ class PastPredictionSummary(BaseModel):
     baseline_model_accuracy: float = 0.0        # model on those same fights
     baseline_disagree_count: int = 0            # fights where model disagreed with Vegas
     baseline_disagree_accuracy: Optional[float] = None  # model accuracy when it disagreed
+    baseline_vegas_correct: int = 0             # counts behind the two accuracies above,
+    baseline_model_correct: int = 0             # so the page can show "173 of 298"
+    # Live method pick vs always guessing Decision. Any method accuracy on the
+    # site is shown beside this baseline; so far the pick has not beaten it.
+    method_total: int = 0                       # live fights with a method pick and a result
+    method_correct: int = 0                     # method pick matched the result
+    method_decision_count: int = 0              # fights that went to a decision
 
 
 class PastPredictionsResponse(BaseModel):

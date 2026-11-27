@@ -540,6 +540,12 @@ export interface PastPredictionSummary {
   baseline_model_accuracy: number
   baseline_disagree_count: number
   baseline_disagree_accuracy: number | null
+  baseline_vegas_correct: number
+  baseline_model_correct: number
+  /** Live method pick vs always guessing Decision. */
+  method_total: number
+  method_correct: number
+  method_decision_count: number
 }
 
 export interface PastPredictionsResponse {
